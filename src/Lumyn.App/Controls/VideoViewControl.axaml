@@ -1,0 +1,6 @@
+<UserControl
+    x:Class="Lumyn.App.Controls.VideoViewControl"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid Name="VideoHost" Background="#050608" />
+</UserControl>

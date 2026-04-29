@@ -1,0 +1,46 @@
+<Styles xmlns="https://github.com/avaloniaui">
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="Cantarell, Ubuntu, Inter, Segoe UI, sans-serif" />
+  </Style>
+
+  <Style Selector="Button">
+    <Setter Property="Background" Value="#3D3846" />
+    <Setter Property="Foreground" Value="#F7F5F3" />
+    <Setter Property="BorderBrush" Value="#5E5968" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="MinHeight" Value="34" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="Background" Value="#4D4658" />
+  </Style>
+
+  <Style Selector="Button:pressed">
+    <Setter Property="Background" Value="#2D2834" />
+  </Style>
+
+  <Style Selector="Button.accent">
+    <Setter Property="Background" Value="#E95420" />
+    <Setter Property="BorderBrush" Value="#F27835" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+
+  <Style Selector="Button.accent:pointerover">
+    <Setter Property="Background" Value="#F15D22" />
+  </Style>
+
+  <Style Selector="Button.accent:pressed">
+    <Setter Property="Background" Value="#C34113" />
+  </Style>
+
+  <Style Selector="Slider">
+    <Setter Property="Foreground" Value="#E95420" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="#F7F5F3" />
+  </Style>
+</Styles>

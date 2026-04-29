@@ -1,0 +1,72 @@
+<Window
+    x:Class="Lumyn.App.Views.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="clr-namespace:Lumyn.App.Controls"
+    Title="{Binding Title}"
+    Width="980"
+    Height="620"
+    MinWidth="760"
+    MinHeight="430"
+    Background="#2C001E"
+    ExtendClientAreaToDecorationsHint="False">
+
+  <Grid Name="Root" RowDefinitions="*,Auto" Background="#2C001E">
+    <Border Grid.Row="0" Background="#111111">
+      <controls:VideoViewControl MediaPlayer="{Binding Player}" />
+    </Border>
+
+    <StackPanel
+        Grid.Row="0"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Spacing="14"
+        IsVisible="{Binding !HasMedia}">
+      <Viewbox Width="132" Height="132" Opacity="0.92">
+        <Canvas Width="256" Height="256">
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 71.5L135 19" />
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 103.5L234 5" />
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 135.5L234 37" />
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 167.5L234 69" />
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M155 118L229 83.5" />
+          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" StrokeJoin="Round" Data="M96 118V181H62L67 207H189L194 181H159V130" />
+          <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M71 217L184 197" />
+          <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M75 239L176 221" />
+          <Path Fill="#F7F5F3" Data="M118 148L151 167.5L118 187V148Z" />
+        </Canvas>
+      </Viewbox>
+      <TextBlock Text="Lumyn" FontSize="30" FontWeight="SemiBold" Foreground="#F7F5F3" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <TextBlock
+        Grid.Row="0"
+        Text="{Binding ErrorMessage}"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Top"
+        IsVisible="{Binding HasError}"
+        Margin="16"
+        Padding="12,7"
+        Background="#CC77216F"
+        Foreground="#FFFFFF"
+        TextWrapping="Wrap" />
+
+    <Border
+        Grid.Row="1"
+        Name="ControlBar"
+        Padding="14,9"
+        Background="#F02C001E"
+        BorderBrush="#5E2750"
+        BorderThickness="0,1,0,0"
+        IsVisible="{Binding ControlsVisible}">
+      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
+        <Button Grid.Column="0" Classes="accent" Content="Open" Name="OpenButton" Click="OpenButton_OnClick" MinWidth="64" />
+        <Button Grid.Column="1" Content="{Binding PlayPauseText}" Command="{Binding TogglePlayPauseCommand}" MinWidth="70" />
+        <TextBlock Grid.Column="2" Text="{Binding TimeText}" VerticalAlignment="Center" MinWidth="112" Foreground="#DEDAD5" />
+        <Slider Grid.Column="3" Name="SeekSlider" Minimum="0" Maximum="1000" Value="{Binding SeekValue}" VerticalAlignment="Center" PointerPressed="SeekSlider_OnPointerPressed" PointerReleased="SeekSlider_OnPointerReleased" />
+        <Button Grid.Column="4" Content="{Binding MuteButtonText}" Command="{Binding ToggleMuteCommand}" MinWidth="74" />
+        <Slider Grid.Column="5" Width="120" Minimum="0" Maximum="100" Value="{Binding Volume}" VerticalAlignment="Center" />
+        <Button Grid.Column="6" Content="Full" Name="FullscreenButton" Click="FullscreenButton_OnClick" MinWidth="62" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

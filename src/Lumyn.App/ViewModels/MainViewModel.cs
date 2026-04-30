@@ -327,7 +327,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _playback.SetSubtitleTrack(-1);
 
         // Keep appearance settings but update the file path so the dialog reopens correctly.
-        CurrentSubtitleSettings = CurrentSubtitleSettings with { FilePath = path };
+        CurrentSubtitleSettings = CurrentSubtitleSettings with { FilePath = path, EmbeddedTrackId = null };
         if (!string.IsNullOrWhiteSpace(_playback.CurrentFilePath))
             _settings.SaveSubtitleSettings(_playback.CurrentFilePath, SubtitleEntryFromSettings(CurrentSubtitleSettings));
 
@@ -351,7 +351,22 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         CurrentSubtitleSettings = s;
         ApplySubtitleAppearance(s);
 
-        if (s.FilePath is null)
+        if (s.EmbeddedTrackId is not null)
+        {
+            _subtitleLines = [];
+            _useSubtitleOverlay = false;
+            CurrentSubtitleText = null;
+            _playback.SetSubtitleTrack(s.EmbeddedTrackId.Value);
+            _playback.SubtitleDelayMs = s.DelayMs;
+            RefreshTracks();
+
+            var name = _subtitleTracks.FirstOrDefault(t => t.Id == s.EmbeddedTrackId.Value)?.Name
+                ?? $"Subtitle {s.EmbeddedTrackId.Value}";
+            ShowOsd($"Subtitle: {name}");
+            if (s.DelayMs != 0)
+                ShowOsd($"Subtitle delay: {s.DelayMs:+0;-0} ms");
+        }
+        else if (s.FilePath is null)
         {
             // Disable subtitles: clear parsed lines + reset delay
             _subtitleLines = [];
@@ -371,7 +386,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (saveToCache && !string.IsNullOrWhiteSpace(_playback.CurrentFilePath))
         {
-            if (s.FilePath is null)
+            if (s.FilePath is null && s.EmbeddedTrackId is null)
                 _settings.ClearSubtitleSettings(_playback.CurrentFilePath);
             else
                 _settings.SaveSubtitleSettings(_playback.CurrentFilePath, SubtitleEntryFromSettings(s));
@@ -411,7 +426,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         Enum.TryParse<SubtitleFontSize>(e.FontSize, out var sz) ? sz : SubtitleFontSize.Medium,
         Enum.TryParse<SubtitleFont>(e.Font,     out var fn) ? fn : SubtitleFont.SansSerif,
         Enum.TryParse<SubtitleColor>(e.Color,   out var cl) ? cl : SubtitleColor.White,
-        e.DelayMs);
+        e.DelayMs,
+        e.EmbeddedTrackId);
 
     private static SubtitleEntry SubtitleEntryFromSettings(SubtitleSettings s) => new()
     {
@@ -419,7 +435,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         FontSize = s.FontSize.ToString(),
         Font     = s.Font.ToString(),
         Color    = s.Color.ToString(),
-        DelayMs  = s.DelayMs
+        DelayMs  = s.DelayMs,
+        EmbeddedTrackId = s.EmbeddedTrackId
     };
 
     public void JumpTo(TimeSpan position)
@@ -594,6 +611,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _subtitleLines = [];
             CurrentSubtitleText = null;
         }
+        CurrentSubtitleSettings = CurrentSubtitleSettings with
+        {
+            FilePath = null,
+            EmbeddedTrackId = id < 0 ? null : id
+        };
         var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
         ShowOsd($"Subtitle: {name}");
     }
@@ -618,9 +640,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _subtitleLines = [];
             CurrentSubtitleText = null;
         }
+        CurrentSubtitleSettings = CurrentSubtitleSettings with
+        {
+            FilePath = null,
+            EmbeddedTrackId = id < 0 ? null : id
+        };
         var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
         ShowOsd($"Subtitle: {name}");
     }
+
+    public void RefreshTracksNow() => RefreshTracks();
 
     private void RefreshTracks()
     {

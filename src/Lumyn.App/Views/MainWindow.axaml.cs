@@ -383,7 +383,11 @@ public partial class MainWindow : Window
     private async Task OpenSubtitleSettingsDialogAsync()
     {
         if (ViewModel is null) return;
-        var dialog = new SubtitleSettingsDialog(ViewModel.CurrentSubtitleSettings, ViewModel.CurrentFilePath);
+        ViewModel.RefreshTracksNow();
+        var dialog = new SubtitleSettingsDialog(
+            ViewModel.CurrentSubtitleSettings,
+            ViewModel.CurrentFilePath,
+            ViewModel.SubtitleTracks);
         var result = await RunWithPlaybackPausedAsync(() =>
             dialog.ShowDialog<Lumyn.App.Models.SubtitleSettings?>(this));
         if (result is not null)

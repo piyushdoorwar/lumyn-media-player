@@ -5,6 +5,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Lumyn.App.Models;
+using Lumyn.App.ViewModels;
 using Lumyn.Core.Models;
 using Lumyn.Core.Services;
 
@@ -36,6 +37,8 @@ public partial class SubtitleSettingsDialog : Window
     private SubtitleFont     _font     = SubtitleFont.SansSerif;
     private SubtitleColor    _color    = SubtitleColor.White;
     private long             _delayMs  = 0;
+    private int?             _embeddedTrackId;
+    private readonly TrackInfo[] _embeddedSubtitleTracks;
 
     // ── Search state ─────────────────────────────────────────────────────────
     private readonly SubtitleSearchService _service = new();
@@ -50,7 +53,10 @@ public partial class SubtitleSettingsDialog : Window
     public SubtitleSettingsDialog() : this(new SubtitleSettings(null,
         SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0)) { }
 
-    public SubtitleSettingsDialog(SubtitleSettings current, string? mediaFilePath = null)
+    public SubtitleSettingsDialog(
+        SubtitleSettings current,
+        string? mediaFilePath = null,
+        IEnumerable<TrackInfo>? embeddedSubtitleTracks = null)
     {
         AvaloniaXamlLoader.Load(this);
 
@@ -59,8 +65,13 @@ public partial class SubtitleSettingsDialog : Window
         _font     = current.Font;
         _color    = current.Color;
         _delayMs  = current.DelayMs;
+        _embeddedTrackId = current.EmbeddedTrackId;
+        _embeddedSubtitleTracks = [.. (embeddedSubtitleTracks ?? [])
+            .Where(t => t.Id >= 0)];
 
         // ── Init inline search ────────────────────────────────────────────────
+        InitEmbeddedTracks();
+
         var langBox = this.FindControl<ComboBox>("LanguageBox")!;
         langBox.ItemsSource   = SubtitleSearchService.Languages.Select(l => l.Display).ToList();
         langBox.SelectedIndex = 0;
@@ -88,6 +99,33 @@ public partial class SubtitleSettingsDialog : Window
         RefreshAll();
     }
 
+    private void InitEmbeddedTracks()
+    {
+        var panel = this.FindControl<StackPanel>("EmbeddedTracksPanel");
+        var list = this.FindControl<ListBox>("EmbeddedTracksList");
+        if (panel is null || list is null) return;
+
+        panel.IsVisible = _embeddedSubtitleTracks.Length > 0;
+        list.ItemsSource = _embeddedSubtitleTracks;
+
+        var selected = _embeddedSubtitleTracks.FirstOrDefault(t => t.Id == _embeddedTrackId);
+        if (selected is null && _filePath is null)
+            selected = _embeddedSubtitleTracks.FirstOrDefault(t => t.IsSelected);
+        if (selected is not null)
+        {
+            _embeddedTrackId = selected.Id;
+            list.SelectedItem = selected;
+        }
+
+        list.SelectionChanged += (_, _) =>
+        {
+            if (list.SelectedItem is not TrackInfo track) return;
+            _embeddedTrackId = track.Id;
+            _filePath = null;
+            RefreshFilePath();
+        };
+    }
+
     // ── File tab: browse ─────────────────────────────────────────────────────
 
     private async void BrowseButton_Click(object? sender, RoutedEventArgs e)
@@ -109,6 +147,8 @@ public partial class SubtitleSettingsDialog : Window
         if (!string.IsNullOrWhiteSpace(path))
         {
             _filePath = path;
+            _embeddedTrackId = null;
+            ClearEmbeddedTrackSelection();
             RefreshFilePath();
         }
     }
@@ -206,6 +246,8 @@ public partial class SubtitleSettingsDialog : Window
             if (!string.IsNullOrWhiteSpace(path))
             {
                 _filePath = path;
+                _embeddedTrackId = null;
+                ClearEmbeddedTrackSelection();
                 RefreshFilePath();
                 SetSearchStatus($"Ready: {Path.GetFileName(path)}", loading: false);
             }
@@ -256,7 +298,7 @@ public partial class SubtitleSettingsDialog : Window
     // ── Action buttons ────────────────────────────────────────────────────────
 
     private void ApplyButton_Click(object? sender, RoutedEventArgs e)
-        => Close(new SubtitleSettings(_filePath, _fontSize, _font, _color, _delayMs));
+        => Close(new SubtitleSettings(_filePath, _fontSize, _font, _color, _delayMs, _embeddedTrackId));
 
     private void DisableButton_Click(object? sender, RoutedEventArgs e)
         => Close(new SubtitleSettings(null, _fontSize, _font, _color, 0));
@@ -282,7 +324,16 @@ public partial class SubtitleSettingsDialog : Window
     {
         var box = this.FindControl<TextBox>("FilePathBox");
         if (box is not null)
-            box.Text = _filePath is null ? string.Empty : Path.GetFileName(_filePath);
+            box.Text = _embeddedTrackId is not null || _filePath is null
+                ? string.Empty
+                : Path.GetFileName(_filePath);
+    }
+
+    private void ClearEmbeddedTrackSelection()
+    {
+        var list = this.FindControl<ListBox>("EmbeddedTracksList");
+        if (list is not null)
+            list.SelectedItem = null;
     }
 
     private void RefreshSizeButtons()

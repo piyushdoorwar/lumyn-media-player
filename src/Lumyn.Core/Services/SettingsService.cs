@@ -141,4 +141,5 @@ public sealed class SubtitleEntry
     public string  Font      { get; set; } = "SansSerif";
     public string  Color     { get; set; } = "White";
     public long    DelayMs   { get; set; }
+    public int?    EmbeddedTrackId { get; set; }
 }

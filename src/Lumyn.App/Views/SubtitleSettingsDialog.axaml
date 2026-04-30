@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:Lumyn.Core.Models"
+    xmlns:viewModels="using:Lumyn.App.ViewModels"
     Title="Subtitles"
     Width="620"
     Height="540"
@@ -18,10 +19,46 @@
 
       <!-- File tab: current file + inline search -->
       <TabItem Header="Subtitle file">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" Margin="0,12,0,0">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" Margin="0,12,0,0">
+
+          <!-- Embedded tracks from the current media file -->
+          <StackPanel Grid.Row="0"
+                      Name="EmbeddedTracksPanel"
+                      Spacing="6"
+                      Margin="0,0,0,12"
+                      IsVisible="False">
+            <TextBlock Text="Embedded subtitles"
+                       Foreground="#DEDAD5"
+                       FontSize="12"
+                       FontWeight="SemiBold" />
+            <ListBox Name="EmbeddedTracksList"
+                     MaxHeight="96"
+                     Background="#161616"
+                     BorderBrush="#333333"
+                     BorderThickness="1"
+                     CornerRadius="4">
+              <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="viewModels:TrackInfo">
+                  <Grid ColumnDefinitions="*,Auto" Margin="6,5">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Name}"
+                               Foreground="#F7F5F3"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="1"
+                               Text="selected"
+                               IsVisible="{Binding IsSelected}"
+                               Foreground="#3A9B4B"
+                               FontSize="11"
+                               FontWeight="SemiBold"
+                               Margin="12,0,0,0" />
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
 
           <!-- Current file path + browse -->
-          <Grid Grid.Row="0" ColumnDefinitions="*,8,Auto" Margin="0,0,0,10">
+          <Grid Grid.Row="1" ColumnDefinitions="*,8,Auto" Margin="0,0,0,10">
             <TextBox Grid.Column="0"
                      Name="FilePathBox"
                      IsReadOnly="True"
@@ -35,7 +72,7 @@
           </Grid>
 
           <!-- Divider -->
-          <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" Margin="0,0,0,10">
+          <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" Margin="0,0,0,10">
             <Border Grid.Column="0" Height="1" Background="#3D3846" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="or search online"
                        Foreground="#807C79" FontSize="11" Margin="12,0"
@@ -44,7 +81,7 @@
           </Grid>
 
           <!-- Search query + language + button -->
-          <Grid Grid.Row="2" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,0,0,8">
+          <Grid Grid.Row="3" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,0,0,8">
             <TextBox Grid.Column="0"
                      Name="SearchBox"
                      Watermark="Movie or show name…"
@@ -66,7 +103,7 @@
           </Grid>
 
           <!-- Status -->
-          <Grid Grid.Row="3" ColumnDefinitions="Auto,*" MinHeight="18" Margin="0,0,0,6">
+          <Grid Grid.Row="4" ColumnDefinitions="Auto,*" MinHeight="18" Margin="0,0,0,6">
             <ProgressBar Grid.Column="0"
                          Name="LoadingBar"
                          IsIndeterminate="True"
@@ -82,7 +119,7 @@
           </Grid>
 
           <!-- Results -->
-          <ListBox Grid.Row="4"
+          <ListBox Grid.Row="5"
                    Name="ResultsList"
                    Background="#161616"
                    BorderBrush="#333333"
@@ -146,7 +183,7 @@
           </ListBox>
 
           <!-- Use selected -->
-          <StackPanel Grid.Row="5" Orientation="Horizontal"
+          <StackPanel Grid.Row="6" Orientation="Horizontal"
                       HorizontalAlignment="Right" Margin="0,8,0,0">
             <Button Name="UseButton"
                     Content="Use selected subtitle"

@@ -28,5 +28,6 @@ public sealed record SubtitleSettings(
     SubtitleFontSize FontSize,
     SubtitleFont     Font,
     SubtitleColor    Color,
-    long             DelayMs   // signed ms; positive = later, negative = earlier
+    long             DelayMs,   // signed ms; positive = later, negative = earlier
+    int?             EmbeddedTrackId = null
 );

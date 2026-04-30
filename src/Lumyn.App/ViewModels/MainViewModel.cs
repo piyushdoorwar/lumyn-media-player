@@ -8,7 +8,7 @@ using Lumyn.Core.Services;
 
 namespace Lumyn.App.ViewModels;
 
-public sealed record TrackInfo(int Id, string Name);
+public sealed record TrackInfo(int Id, string Name, bool IsSelected = false);
 
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
@@ -37,6 +37,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Subtitle overlay (Avalonia-rendered, replaces VLC's --no-spu path) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
+    private bool _useSubtitleOverlay;
 
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
@@ -285,8 +286,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var lines = await Task.Run(() => Lumyn.Core.Services.SubtitleParser.Parse(path));
         _subtitleLines = lines;
 
-        // VLC slave registration (fast, no I/O) + OSD — back on UI thread.
+        // Add the subtitle to mpv so it is available in the track menu. If our
+        // parser can render it, keep mpv subtitles off to avoid duplicate text.
         _playback.LoadSubtitleFile(path);
+        _useSubtitleOverlay = lines.Count > 0;
+        if (_useSubtitleOverlay)
+            _playback.SetSubtitleTrack(-1);
+
         ShowOsd($"Subtitle: {Path.GetFileName(path)}");
     }
 
@@ -310,6 +316,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             // Disable subtitles: clear parsed lines + reset delay
             _subtitleLines = [];
+            _useSubtitleOverlay = false;
             CurrentSubtitleText = null;
             _playback.SetSubtitleTrack(-1);
             _playback.SubtitleDelayMs = 0;
@@ -394,7 +401,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RefreshTracks();
 
         // Update Avalonia subtitle overlay text.
-        if (_subtitleLines.Count > 0 && state.IsPlaying)
+        if (_useSubtitleOverlay && _subtitleLines.Count > 0 && state.IsPlaying)
         {
             var pos = state.Position;
             var hit = _subtitleLines.FirstOrDefault(l => pos >= l.Start && pos < l.End);
@@ -496,6 +503,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         if (parameter is not int id) return;
         _playback.SetSubtitleTrack(id);
+        if (id < 0 || _useSubtitleOverlay)
+        {
+            _useSubtitleOverlay = false;
+            _subtitleLines = [];
+            CurrentSubtitleText = null;
+        }
         var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
         ShowOsd($"Subtitle: {name}");
     }
@@ -514,6 +527,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback.CycleSubtitleTrack();
         RefreshTracks();
         var id = _playback.CurrentSubtitleTrack;
+        if (id < 0 || _useSubtitleOverlay)
+        {
+            _useSubtitleOverlay = false;
+            _subtitleLines = [];
+            CurrentSubtitleText = null;
+        }
         var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
         ShowOsd($"Subtitle: {name}");
     }
@@ -521,10 +540,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void RefreshTracks()
     {
         AudioTracks = [.. _playback.GetAudioTracks()
-            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? $"Track {t.Id}" : t.Name))];
+            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? $"Track {t.Id}" : t.Name, t.IsSelected))];
 
         SubtitleTracks = [.. _playback.GetSubtitleTracks()
-            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name))];
+            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name, t.IsSelected))];
     }
 
     private static string FormatTime(TimeSpan value)

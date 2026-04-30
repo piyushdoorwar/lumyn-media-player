@@ -14,6 +14,7 @@ public sealed class PlaybackService : IDisposable
     private bool _loop;
     private bool _pause = true;
     private bool _rendererReady;
+    private long _trackRevision;
     private IntPtr _renderContext;
     private MpvNative.MpvRenderUpdateCallback? _renderUpdateCallback;
     private MpvNative.MpvOpenGlGetProcAddress? _getProcAddressCallback;
@@ -50,6 +51,8 @@ public sealed class PlaybackService : IDisposable
             Observe("mute", MpvFormat.Flag);
             Observe("volume", MpvFormat.Double);
             Observe("speed", MpvFormat.Double);
+            Observe("aid", MpvFormat.String);
+            Observe("sid", MpvFormat.String);
 
             SetVolume(_state.Volume);
 
@@ -79,6 +82,7 @@ public sealed class PlaybackService : IDisposable
     public int Volume => Snapshot().Volume;
     public float Speed => Snapshot().Speed;
     public bool IsLooping => _loop;
+    public long TrackRevision => Interlocked.Read(ref _trackRevision);
 
     public event EventHandler<MediaState>? StateChanged;
     public event EventHandler? EndReached;
@@ -211,18 +215,35 @@ public sealed class PlaybackService : IDisposable
     public void LoadSubtitleFile(string path)
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
-        Command("sub-add", path, "select");
+        Command("sub-add", path, "cached");
+        MarkTracksChanged();
     }
 
-    public MediaTrack[] GetAudioTracks() => [];
-    public MediaTrack[] GetSubtitleTracks() => [new(-1, "Off")];
-    public int CurrentAudioTrack => -1;
-    public int CurrentSubtitleTrack => -1;
-    public void SetAudioTrack(int id) { }
+    public MediaTrack[] GetAudioTracks() => GetTracks("audio");
+
+    public MediaTrack[] GetSubtitleTracks() =>
+    [
+        new(-1, "Off", CurrentSubtitleTrack < 0),
+        .. GetTracks("sub")
+    ];
+
+    public int CurrentAudioTrack => GetSelectedTrackId("audio");
+    public int CurrentSubtitleTrack => GetSelectedTrackId("sub");
+
+    public void SetAudioTrack(int id)
+    {
+        if (id >= 0)
+            SetPropertyString("aid", id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        MarkTracksChanged();
+    }
+
     public void SetSubtitleTrack(int id)
     {
         if (id < 0)
-            SetFlag("sub-visibility", false);
+            SetPropertyString("sid", "no");
+        else
+            SetPropertyString("sid", id.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        MarkTracksChanged();
     }
 
     public long SubtitleDelayMs
@@ -231,8 +252,27 @@ public sealed class PlaybackService : IDisposable
         set => SetDouble("sub-delay", value / 1000.0);
     }
 
-    public void CycleAudioTrack() { }
-    public void CycleSubtitleTrack() { }
+    public void CycleAudioTrack()
+    {
+        var tracks = GetAudioTracks();
+        if (tracks.Length == 0) return;
+
+        var current = CurrentAudioTrack;
+        var idx = Array.FindIndex(tracks, t => t.Id == current);
+        var next = tracks[(idx + 1 + tracks.Length) % tracks.Length];
+        SetAudioTrack(next.Id);
+    }
+
+    public void CycleSubtitleTrack()
+    {
+        var tracks = GetSubtitleTracks();
+        if (tracks.Length == 0) return;
+
+        var current = CurrentSubtitleTrack;
+        var idx = Array.FindIndex(tracks, t => t.Id == current);
+        var next = tracks[(idx + 1 + tracks.Length) % tracks.Length];
+        SetSubtitleTrack(next.Id);
+    }
 
     public void InitializeRenderer(Func<string, IntPtr> getProcAddress, Action requestRender)
     {
@@ -307,13 +347,17 @@ public sealed class PlaybackService : IDisposable
         {
             var position = GetDouble("time-pos");
             var duration = GetDouble("duration");
+            var volume = GetDouble("volume");
+            var speed = GetDouble("speed");
             if (!double.IsNaN(position))
                 _state.Position = TimeSpan.FromSeconds(Math.Max(0, position));
             if (!double.IsNaN(duration))
                 _state.Duration = TimeSpan.FromSeconds(Math.Max(0, duration));
             _state.IsMuted = GetFlag("mute");
-            _state.Volume = (int)Math.Round(Math.Clamp(GetDouble("volume"), 0, 100));
-            _state.Speed = (float)Math.Clamp(GetDouble("speed"), 0.25, 4.0);
+            if (!double.IsNaN(volume))
+                _state.Volume = (int)Math.Round(Math.Clamp(volume, 0, 100));
+            if (!double.IsNaN(speed))
+                _state.Speed = (float)Math.Clamp(speed, 0.25, 4.0);
         }
 
         lock (_stateLock)
@@ -347,6 +391,12 @@ public sealed class PlaybackService : IDisposable
                     return;
                 case MpvEventId.FileLoaded:
                     lock (_stateLock) _pause = GetFlag("pause");
+                    MarkTracksChanged();
+                    RaiseStateChanged();
+                    break;
+                case MpvEventId.TracksChanged:
+                case MpvEventId.TrackSwitched:
+                    MarkTracksChanged();
                     RaiseStateChanged();
                     break;
                 case MpvEventId.EndFile:
@@ -363,19 +413,20 @@ public sealed class PlaybackService : IDisposable
                     RaiseStateChanged();
                     break;
                 case MpvEventId.PropertyChange:
-                    ApplyPropertyChange(evt.data);
-                    RaiseStateChanged();
+                    if (ApplyPropertyChange(evt.data))
+                        RaiseStateChanged();
                     break;
             }
         }
     }
 
-    private void ApplyPropertyChange(IntPtr data)
+    private bool ApplyPropertyChange(IntPtr data)
     {
-        if (data == IntPtr.Zero) return;
+        if (data == IntPtr.Zero) return false;
         var property = Marshal.PtrToStructure<MpvNative.MpvEventProperty>(data);
         var name = Marshal.PtrToStringAnsi(property.name);
-        if (string.IsNullOrWhiteSpace(name) || property.data == IntPtr.Zero) return;
+        if (string.IsNullOrWhiteSpace(name) || property.data == IntPtr.Zero) return false;
+        var shouldRaise = true;
 
         lock (_stateLock)
         {
@@ -383,9 +434,11 @@ public sealed class PlaybackService : IDisposable
             {
                 case "time-pos" when property.format == MpvFormat.Double:
                     _state.Position = TimeSpan.FromSeconds(Math.Max(0, Marshal.PtrToStructure<double>(property.data)));
+                    shouldRaise = false;
                     break;
                 case "duration" when property.format == MpvFormat.Double:
                     _state.Duration = TimeSpan.FromSeconds(Math.Max(0, Marshal.PtrToStructure<double>(property.data)));
+                    shouldRaise = false;
                     break;
                 case "pause" when property.format == MpvFormat.Flag:
                     _pause = Marshal.PtrToStructure<int>(property.data) != 0;
@@ -399,11 +452,21 @@ public sealed class PlaybackService : IDisposable
                 case "speed" when property.format == MpvFormat.Double:
                     _state.Speed = (float)Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0.25, 4.0);
                     break;
+                case "aid" or "sid":
+                    MarkTracksChanged();
+                    break;
+                default:
+                    shouldRaise = false;
+                    break;
             }
         }
+
+        return shouldRaise;
     }
 
     private void RaiseStateChanged() => StateChanged?.Invoke(this, Snapshot());
+
+    private void MarkTracksChanged() => Interlocked.Increment(ref _trackRevision);
 
     private int Command(params string[] args)
     {
@@ -434,6 +497,13 @@ public sealed class PlaybackService : IDisposable
     {
         if (_mpv != IntPtr.Zero)
             MpvNative.mpv_set_option_string(_mpv, name, value);
+    }
+
+    private void SetPropertyString(string name, string value)
+    {
+        if (_mpv != IntPtr.Zero)
+            MpvNative.mpv_set_property_string(_mpv, name, value);
+        RaiseStateChanged();
     }
 
     private void Observe(string name, MpvFormat format)
@@ -482,6 +552,89 @@ public sealed class PlaybackService : IDisposable
         return value;
     }
 
+    private long GetInt64(string name, long fallback = 0)
+    {
+        if (_mpv == IntPtr.Zero) return fallback;
+        long value = fallback;
+        unsafe
+        {
+            return MpvNative.mpv_get_property(_mpv, name, MpvFormat.Int64, (IntPtr)(&value)) >= 0
+                ? value
+                : fallback;
+        }
+    }
+
+    private string? GetString(string name)
+    {
+        if (_mpv == IntPtr.Zero) return null;
+        var ptr = MpvNative.mpv_get_property_string(_mpv, name);
+        if (ptr == IntPtr.Zero) return null;
+        try
+        {
+            return Marshal.PtrToStringUTF8(ptr);
+        }
+        finally
+        {
+            MpvNative.mpv_free(ptr);
+        }
+    }
+
+    private MediaTrack[] GetTracks(string type)
+    {
+        if (_mpv == IntPtr.Zero) return [];
+
+        var count = GetInt64("track-list/count");
+        if (count <= 0) return [];
+
+        var tracks = new List<MediaTrack>();
+        for (var i = 0; i < count; i++)
+        {
+            var prefix = $"track-list/{i}";
+            if (!string.Equals(GetString($"{prefix}/type"), type, StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            var id = (int)GetInt64($"{prefix}/id", -1);
+            if (id < 0) continue;
+
+            var selected = GetFlag($"{prefix}/selected");
+            tracks.Add(new MediaTrack(id, BuildTrackName(prefix, type, id), selected));
+        }
+
+        return [.. tracks];
+    }
+
+    private int GetSelectedTrackId(string type)
+    {
+        foreach (var track in GetTracks(type))
+        {
+            if (track.IsSelected)
+                return track.Id;
+        }
+
+        return -1;
+    }
+
+    private string BuildTrackName(string prefix, string type, int id)
+    {
+        var title = GetString($"{prefix}/title");
+        var lang = GetString($"{prefix}/lang");
+        var codec = GetString($"{prefix}/codec");
+        var external = GetFlag($"{prefix}/external");
+
+        var fallback = type == "audio" ? $"Audio {id}" : $"Subtitle {id}";
+        var main = !string.IsNullOrWhiteSpace(title) ? title! : fallback;
+        var details = new List<string>();
+
+        if (!string.IsNullOrWhiteSpace(lang))
+            details.Add(lang!);
+        if (!string.IsNullOrWhiteSpace(codec))
+            details.Add(codec!);
+        if (external)
+            details.Add("external");
+
+        return details.Count == 0 ? main : $"{main} ({string.Join(", ", details)})";
+    }
+
     private static IntPtr StringToUtf8(string value)
     {
         var bytes = Encoding.UTF8.GetBytes(value);
@@ -510,7 +663,7 @@ public sealed class PlaybackService : IDisposable
     }
 }
 
-public sealed record MediaTrack(int Id, string Name);
+public sealed record MediaTrack(int Id, string Name, bool IsSelected = false);
 
 internal enum MpvFormat
 {
@@ -620,7 +773,16 @@ internal static partial class MpvNative
     public static partial int mpv_set_property(IntPtr ctx, string name, MpvFormat format, IntPtr data);
 
     [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_set_property_string(IntPtr ctx, string name, string value);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
     public static partial int mpv_get_property(IntPtr ctx, string name, MpvFormat format, IntPtr data);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial IntPtr mpv_get_property_string(IntPtr ctx, string name);
+
+    [LibraryImport(Library)]
+    public static partial void mpv_free(IntPtr data);
 
     [LibraryImport(Library)]
     public static partial int mpv_command(IntPtr ctx, IntPtr args);

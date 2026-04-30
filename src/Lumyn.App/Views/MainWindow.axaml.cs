@@ -236,7 +236,7 @@ public partial class MainWindow : Window
             foreach (var track in tracks)
             {
                 var t = track;
-                audioMenuItem.Items.Add(new MenuItem { Header = t.Name }
+                audioMenuItem.Items.Add(new MenuItem { Header = t.IsSelected ? $"✓ {t.Name}" : t.Name }
                     .Also(mi => mi.Click += (_, _) => ViewModel.SetAudioTrackCommand.Execute(t.Id)));
             }
         }
@@ -251,7 +251,7 @@ public partial class MainWindow : Window
             foreach (var track in tracks)
             {
                 var t = track;
-                subMenuItem.Items.Add(new MenuItem { Header = t.Name }
+                subMenuItem.Items.Add(new MenuItem { Header = t.IsSelected ? $"✓ {t.Name}" : t.Name }
                     .Also(mi => mi.Click += (_, _) => ViewModel.SetSubtitleTrackCommand.Execute(t.Id)));
             }
         }

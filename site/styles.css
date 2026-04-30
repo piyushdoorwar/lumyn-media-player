@@ -348,7 +348,8 @@ h3 {
   padding: clamp(56px, 8vw, 90px) clamp(18px, 5vw, 64px);
 }
 
-.download div {
+.download div,
+.support div {
   max-width: 720px;
 }
 
@@ -375,6 +376,20 @@ code {
   font-family: "Ubuntu Mono", "Cascadia Code", monospace;
 }
 
+.support {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 28px;
+  padding: clamp(56px, 8vw, 90px) clamp(18px, 5vw, 64px);
+  background: var(--panel);
+  border-top: 1px solid var(--line);
+}
+
+.support p {
+  color: var(--muted);
+}
+
 footer {
   display: flex;
   justify-content: space-between;
@@ -390,7 +405,8 @@ footer a {
 
 @media (max-width: 900px) {
   .hero,
-  .download {
+  .download,
+  .support {
     grid-template-columns: 1fr;
   }
 

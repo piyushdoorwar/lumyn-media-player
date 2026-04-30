@@ -27,7 +27,7 @@ public partial class SubtitleSettingsDialog : Window
     private SubtitleSearchResult?          _selectedResult;
 
     // ── Selected button styling ───────────────────────────────────────────────
-    private static readonly IBrush SelectedBg     = new SolidColorBrush(Color.Parse("#E95420"));
+    private static readonly IBrush SelectedBg     = new SolidColorBrush(Color.Parse("#3A9B4B"));
     private static readonly IBrush NormalBg       = new SolidColorBrush(Color.Parse("#3D3846"));
     private static readonly IBrush NormalBorder   = new SolidColorBrush(Color.Parse("#5E5968"));
 

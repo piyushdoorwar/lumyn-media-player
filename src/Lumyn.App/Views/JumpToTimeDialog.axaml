@@ -16,7 +16,7 @@
         Background="#2D2D2D"
         Foreground="#F7F5F3"
         BorderBrush="#4D4658"
-        CaretBrush="#E95420" />
+        CaretBrush="#3A9B4B" />
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
       <Button Name="OkButton" Content="Jump" Classes="accent" Click="OkButton_Click" />
       <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" />

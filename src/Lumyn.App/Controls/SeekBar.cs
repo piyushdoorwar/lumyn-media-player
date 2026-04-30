@@ -9,7 +9,7 @@ namespace Lumyn.App.Controls;
 public sealed class SeekBar : Control
 {
     private static readonly IBrush TrackBrush = new SolidColorBrush(Color.Parse("#554A4A4A"));
-    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#E95420"));
+    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#3A9B4B"));
     private static readonly IBrush ThumbBrush = new SolidColorBrush(Color.Parse("#F7F5F3"));
     private static readonly IPen ThumbPen = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
 

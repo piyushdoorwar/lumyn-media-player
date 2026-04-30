@@ -24,17 +24,17 @@
   </Style>
 
   <Style Selector="Button.accent">
-    <Setter Property="Background" Value="#E95420" />
-    <Setter Property="BorderBrush" Value="#F27835" />
+    <Setter Property="Background" Value="#3A9B4B" />
+    <Setter Property="BorderBrush" Value="#48B35A" />
     <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
 
   <Style Selector="Button.accent:pointerover">
-    <Setter Property="Background" Value="#F15D22" />
+    <Setter Property="Background" Value="#43AD56" />
   </Style>
 
   <Style Selector="Button.accent:pressed">
-    <Setter Property="Background" Value="#C34113" />
+    <Setter Property="Background" Value="#2F7D3D" />
   </Style>
 
   <Style Selector="Button.icon">
@@ -72,7 +72,7 @@
   </Style>
 
   <Style Selector="Slider">
-    <Setter Property="Foreground" Value="#E95420" />
+    <Setter Property="Foreground" Value="#3A9B4B" />
     <Setter Property="Focusable" Value="False" />
   </Style>
 

@@ -38,6 +38,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private TrackInfo[] _subtitleTracks = [];
     private WriteableBitmap? _videoBitmap;
 
+    // Video frame double-buffering: VLC decode thread writes into _stagingBuffer,
+    // UI thread reads from it. _frameReady acts as a cheap lock-free "new frame" flag.
+    private byte[]? _stagingBuffer;
+    private int _stagingWidth, _stagingHeight, _stagingPitch;
+    private int _frameReady; // 0 = idle, 1 = new frame available (Interlocked)
+    private readonly object _stagingLock = new();
+
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
         _playback = playback;
@@ -343,53 +350,62 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Video frame rendering ────────────────────────────────────────────────
 
+    // Called on VLC decode thread — copy pixels to staging buffer, never touch bitmap here
     private void OnVideoFrameReady(object? sender, VideoFrameData frame)
     {
-        // Recreate bitmap if dimensions changed
-        if (_videoBitmap is null ||
-            _videoBitmap.PixelSize.Width  != (int)frame.Width ||
-            _videoBitmap.PixelSize.Height != (int)frame.Height)
+        var needed = (int)(frame.Pitch * frame.Height);
+        lock (_stagingLock)
         {
-            var newBitmap = new WriteableBitmap(
-                new Avalonia.PixelSize((int)frame.Width, (int)frame.Height),
+            if (_stagingBuffer is null || _stagingBuffer.Length < needed ||
+                _stagingWidth != (int)frame.Width || _stagingHeight != (int)frame.Height)
+            {
+                _stagingBuffer = new byte[needed];
+                _stagingWidth  = (int)frame.Width;
+                _stagingHeight = (int)frame.Height;
+                _stagingPitch  = (int)frame.Pitch;
+            }
+            System.Runtime.InteropServices.Marshal.Copy(frame.Buffer, _stagingBuffer, 0, needed);
+        }
+        // Signal that a new frame is staged; if a signal was already pending we skip
+        // posting again — the UI will pick it up on the next render tick
+        if (Interlocked.Exchange(ref _frameReady, 1) == 0)
+            Dispatcher.UIThread.Post(FlushVideoFrame, DispatcherPriority.Render);
+    }
+
+    // Called on UI thread — writes staged pixels into the WriteableBitmap
+    public void FlushVideoFrame()
+    {
+        Interlocked.Exchange(ref _frameReady, 0);
+
+        byte[]? src;
+        int w, h, pitch;
+        lock (_stagingLock)
+        {
+            if (_stagingBuffer is null) return;
+            src   = _stagingBuffer;
+            w     = _stagingWidth;
+            h     = _stagingHeight;
+            pitch = _stagingPitch;
+        }
+
+        if (_videoBitmap is null || _videoBitmap.PixelSize.Width != w || _videoBitmap.PixelSize.Height != h)
+        {
+            _videoBitmap?.Dispose();
+            _videoBitmap = new WriteableBitmap(
+                new Avalonia.PixelSize(w, h),
                 new Avalonia.Vector(96, 96),
                 PixelFormat.Bgra8888,
                 AlphaFormat.Premul);
-
-            // Copy pixels into new bitmap immediately
-            using var fb = newBitmap.Lock();
-            unsafe
-            {
-                Buffer.MemoryCopy(
-                    (void*)frame.Buffer,
-                    (void*)fb.Address,
-                    (long)(frame.Pitch * frame.Height),
-                    (long)(frame.Pitch * frame.Height));
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                _videoBitmap?.Dispose();
-                VideoBitmap = newBitmap;
-            }, DispatcherPriority.Render);
         }
-        else
+
+        using var fb = _videoBitmap.Lock();
+        unsafe
         {
-            // Copy pixels into existing bitmap (no allocation)
-            using var fb = _videoBitmap.Lock();
-            unsafe
-            {
-                Buffer.MemoryCopy(
-                    (void*)frame.Buffer,
-                    (void*)fb.Address,
-                    (long)(frame.Pitch * frame.Height),
-                    (long)(frame.Pitch * frame.Height));
-            }
-
-            Dispatcher.UIThread.Post(
-                () => OnPropertyChanged(nameof(VideoBitmap)),
-                DispatcherPriority.Render);
+            fixed (byte* srcPtr = src)
+                Buffer.MemoryCopy(srcPtr, (void*)fb.Address, (long)(pitch * h), (long)(pitch * h));
         }
+
+        OnPropertyChanged(nameof(VideoBitmap));
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

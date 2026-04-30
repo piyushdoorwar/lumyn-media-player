@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.X11;
 
 namespace Lumyn.App;
 
@@ -7,7 +8,6 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        // Suppress harmless ICELib "SESSION_MANAGER not defined" message on X11
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SESSION_MANAGER")))
             Environment.SetEnvironmentVariable("SESSION_MANAGER", "");
 
@@ -20,6 +20,9 @@ internal static class Program
         return AppBuilder.Configure<App>()
             .UsePlatformDetect()
             .WithInterFont()
-            .LogToTrace();
+            .LogToTrace()
+            // Disable IBus IME — Ubuntu 26.04 IBus dropped several methods that
+            // Avalonia still calls, causing cascading DBus errors in every dialog.
+            .With(new X11PlatformOptions { EnableIme = false });
     }
 }

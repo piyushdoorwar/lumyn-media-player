@@ -87,7 +87,10 @@ public partial class MainWindow : Window
     private void SeekSlider_OnPointerPressed(object? sender, PointerPressedEventArgs e)
         => ViewModel?.BeginSeek();
 
-    private void SeekSlider_OnPointerReleased(object? sender, PointerReleasedEventArgs e)
+    // PointerReleased is not fired reliably on Slider (Avalonia routing swallows it).
+    // PointerCaptureLost fires when the user releases the thumb after a drag, or
+    // clicks anywhere else — both are valid "seek done" signals.
+    private void SeekSlider_OnPointerCaptureLost(object? sender, PointerCaptureLostEventArgs e)
         => ViewModel?.EndSeek();
 
     // ── Top-bar buttons ──────────────────────────────────────────────────────

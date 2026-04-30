@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using Lumyn.Core.Models;
@@ -701,7 +702,36 @@ internal enum MpvRenderParamType
 
 internal static partial class MpvNative
 {
-    private const string Library = "libmpv.so.2";
+    private const string Library = "mpv";
+
+    static MpvNative()
+    {
+        NativeLibrary.SetDllImportResolver(typeof(MpvNative).Assembly, ResolveLibrary);
+    }
+
+    private static IntPtr ResolveLibrary(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+    {
+        if (!string.Equals(libraryName, Library, StringComparison.Ordinal))
+            return IntPtr.Zero;
+
+        var candidates = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+            ? new[] { "mpv-2.dll", "libmpv-2.dll", "mpv.dll" }
+            : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+                ? new[] { "libmpv.2.dylib", "libmpv.dylib" }
+                : new[] { "libmpv.so.2", "libmpv.so" };
+
+        foreach (var candidate in candidates)
+        {
+            if (NativeLibrary.TryLoad(candidate, assembly, searchPath, out var handle))
+                return handle;
+
+            var localPath = Path.Combine(AppContext.BaseDirectory, candidate);
+            if (NativeLibrary.TryLoad(localPath, out handle))
+                return handle;
+        }
+
+        return IntPtr.Zero;
+    }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate IntPtr MpvOpenGlGetProcAddress(IntPtr ctx, IntPtr name);

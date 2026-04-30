@@ -38,7 +38,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private TrackInfo[] _subtitleTracks = [];
     private string? _currentSubtitleText;
 
-    // ── Subtitle overlay (Avalonia-rendered, replaces VLC's --no-spu path) ───
+    // ── Subtitle overlay (Avalonia-rendered to avoid duplicate native subtitles) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
     private bool _useSubtitleOverlay;
 
@@ -301,7 +301,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             var restored = SubtitleSettingsFromEntry(cached);
             CurrentSubtitleSettings = restored;
-            // Small delay so VLC has time to initialise the media before we add the slave
+            // Small delay so mpv has time to initialise media tracks before we restore subtitles.
             await Task.Delay(400);
             await ApplySubtitleSettingsAsync(restored, saveToCache: false);
         }
@@ -342,7 +342,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     /// <summary>
     /// Applies subtitle settings from the dialog: loads a file if selected and
-    /// adjusts the sync delay immediately via VLC's native API.
+    /// adjusts the sync delay immediately via mpv's native API.
     /// </summary>
     public Task ApplySubtitleSettingsAsync(SubtitleSettings s) => ApplySubtitleSettingsAsync(s, saveToCache: true);
 

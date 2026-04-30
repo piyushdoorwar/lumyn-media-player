@@ -7,7 +7,7 @@ using Avalonia.Platform;
 namespace Lumyn.App.Controls;
 
 /// <summary>
-/// Lightweight custom control that renders libvlc software-decoded frames.
+/// Lightweight custom control that renders software-decoded frames.
 /// <para>
 /// Unlike binding a <see cref="WriteableBitmap"/> to an <c>&lt;Image&gt;</c>,
 /// this control calls <see cref="InvalidateVisual"/> directly so Avalonia always
@@ -16,7 +16,7 @@ namespace Lumyn.App.Controls;
 /// </para>
 /// <para>
 /// <b>Thread safety</b>: <see cref="PushFrame"/> MUST be called on the UI thread.
-/// The staging buffer is written on the VLC decode thread (see <c>MainViewModel</c>).
+/// The staging buffer is written on the decode thread (see <c>MainViewModel</c>).
 /// </para>
 /// </summary>
 public sealed class VideoSurface : Control

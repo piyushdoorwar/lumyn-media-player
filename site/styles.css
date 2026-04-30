@@ -382,36 +382,362 @@ code {
 }
 
 .support {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 28px;
-  padding: clamp(56px, 8vw, 90px) clamp(18px, 5vw, 64px);
-  background: var(--panel);
-  border-top: 1px solid var(--line);
-}
-
-.support p {
-  color: var(--muted);
+  display: none;
 }
 
 footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 16px;
   padding: 24px clamp(18px, 5vw, 64px);
   color: var(--muted);
   border-top: 1px solid var(--line);
 }
 
-footer a {
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+footer a,
+.footer-links a {
   color: var(--soft);
+}
+
+footer a:hover,
+.footer-links a:hover {
+  color: var(--text);
+}
+
+.footer-support-link {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--soft);
+  font-family: inherit;
+  font-size: inherit;
+  padding: 0;
+}
+
+.footer-support-link:hover {
+  color: var(--text);
+}
+
+/* ── Support modal ──────────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.modal-backdrop.hidden {
+  display: none;
+}
+
+.modal-box {
+  width: 100%;
+  max-width: 520px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 28px 32px 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.modal-title {
+  margin-bottom: 10px;
+  font-size: clamp(22px, 4vw, 30px);
+  line-height: 1.1;
+}
+
+.modal-body {
+  color: var(--muted);
+  margin-bottom: 22px;
+  font-size: 15px;
+}
+
+.modal-close {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+/* ── Releases page ──────────────────────────────────────────────────────── */
+
+.releases-main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: clamp(40px, 7vw, 80px) clamp(18px, 5vw, 48px) 80px;
+}
+
+.releases-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 36px;
+}
+
+.releases-title {
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.releases-subtitle {
+  color: var(--muted);
+  margin: 0;
+  font-size: 15px;
+}
+
+.os-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.os-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.os-tab img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(0.6);
+}
+
+.os-tab:hover {
+  color: var(--text);
+  border-color: var(--button-border);
+}
+
+.os-tab.active {
+  background: var(--button);
+  border-color: var(--button-border);
+  color: var(--text);
+}
+
+.os-tab.active img {
+  filter: brightness(0) invert(1);
+}
+
+.release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.release-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.release-item:last-child {
+  border-bottom: none;
+}
+
+.release-item:nth-child(even) {
+  background: var(--panel-2);
+}
+
+.release-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.release-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.release-version {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: "Ubuntu Mono", "Cascadia Code", monospace;
+}
+
+.badge-latest {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.badge-pre {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #5c4a1e;
+  color: #f5c842;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.release-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.release-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.release-dl-btn {
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.release-dl-btn img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
+}
+
+.release-gh-link {
+  font-size: 13px;
+  color: var(--soft);
+}
+
+.release-gh-link:hover {
+  color: var(--text);
+}
+
+.releases-state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 22px;
+  color: var(--muted);
+  font-size: 14px;
+  background: var(--panel);
+}
+
+.releases-state.hidden {
+  display: none;
+}
+
+.releases-state a {
+  color: var(--soft);
+}
+
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.page-btn {
+  height: 36px;
+  padding: 0 16px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--soft);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.page-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--button-border);
+}
+
+.page-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.page-label {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 100px;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
   .hero,
-  .download,
-  .support {
+  .download {
     grid-template-columns: 1fr;
   }
 
@@ -453,5 +779,15 @@ footer a {
 
   footer {
     flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-links {
+    gap: 14px;
+  }
+
+  .releases-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

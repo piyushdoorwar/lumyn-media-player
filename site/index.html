@@ -20,6 +20,7 @@
       <nav aria-label="Primary navigation">
         <a href="#features">Features</a>
         <a href="#download">Download</a>
+        <a href="releases.html">Releases</a>
         <a href="https://github.com/piyushdoorwar/lumyn-media-player" rel="noreferrer">GitHub</a>
       </nav>
     </header>
@@ -118,29 +119,47 @@
           </a>
         </div>
       </section>
-
-      <section class="support" id="support">
-        <div>
-          <p class="eyebrow">Support and issues</p>
-          <h2>Need help with Lumyn?</h2>
-          <p>
-            Found a bug, hit a playback issue, or want to share feedback? Send an email and include your OS,
-            Lumyn version, and a short note about what happened.
-          </p>
-        </div>
-        <a class="button secondary large email-link" href="mailto:piyushdoorwar+lumyn.mp@gmail.com">
-          <img src="assets/mail.svg" alt="" />
-          <span>piyushdoorwar+lumyn.mp@gmail.com</span>
-        </a>
-      </section>
     </main>
 
     <footer>
       <span>Lumyn Media Player</span>
-      <a href="https://github.com/piyushdoorwar/lumyn-media-player" rel="noreferrer">GitHub</a>
+      <div class="footer-links">
+        <a href="releases.html">All releases</a>
+        <a href="https://github.com/piyushdoorwar/lumyn-media-player" rel="noreferrer">GitHub</a>
+        <button class="footer-support-link" id="footerSupportBtn">Support</button>
+      </div>
     </footer>
 
+    <!-- Support modal -->
+    <div class="modal-backdrop hidden" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportModalTitle">
+      <div class="modal-box">
+        <div class="modal-header">
+          <p class="eyebrow" style="margin:0">Support and issues</p>
+          <button class="modal-close" aria-label="Close support dialog" id="closeSupportModal">✕</button>
+        </div>
+        <h2 id="supportModalTitle" class="modal-title">Need help with Lumyn?</h2>
+        <p class="modal-body">
+          Found a bug, hit a playback issue, or want to share feedback? Send an email and include your OS,
+          Lumyn version, and a short note about what happened.
+        </p>
+        <a class="button secondary large email-link" href="mailto:piyushdoorwar+lumyn.mp@gmail.com">
+          <img src="assets/mail.svg" alt="" />
+          <span>piyushdoorwar+lumyn.mp@gmail.com</span>
+        </a>
+      </div>
+    </div>
+
     <script src="app.js"></script>
+    <script>
+      // Support modal
+      const supportBtn   = document.getElementById("footerSupportBtn");
+      const supportModal = document.getElementById("supportModal");
+      const closeModal   = document.getElementById("closeSupportModal");
+      supportBtn.addEventListener("click", () => { supportModal.classList.remove("hidden"); document.body.style.overflow = "hidden"; });
+      closeModal.addEventListener("click",  () => { supportModal.classList.add("hidden");    document.body.style.overflow = ""; });
+      supportModal.addEventListener("click", e => { if (e.target === supportModal) { supportModal.classList.add("hidden"); document.body.style.overflow = ""; } });
+      document.addEventListener("keydown", e => { if (e.key === "Escape" && !supportModal.classList.contains("hidden")) { supportModal.classList.add("hidden"); document.body.style.overflow = ""; } });
+    </script>
     <!-- Cloudflare Web Analytics -->
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e9cd556fb46f4880a8842d37e2dfe3fb"}'></script>
     <!-- End Cloudflare Web Analytics -->

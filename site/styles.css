@@ -158,6 +158,12 @@ h3 {
   color: var(--soft);
 }
 
+.button.disabled {
+  cursor: default;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .button.large {
   min-height: 52px;
   padding: 0 22px;
@@ -344,6 +350,24 @@ h3 {
 
 .download div {
   max-width: 720px;
+}
+
+.download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.platform-download {
+  gap: 10px;
+}
+
+.platform-download svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  flex: 0 0 auto;
 }
 
 code {

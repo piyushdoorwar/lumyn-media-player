@@ -8,6 +8,11 @@ namespace Lumyn.App.Controls;
 
 public sealed class SeekBar : Control
 {
+    private static readonly IBrush TrackBrush = new SolidColorBrush(Color.Parse("#554A4A4A"));
+    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#E95420"));
+    private static readonly IBrush ThumbBrush = new SolidColorBrush(Color.Parse("#F7F5F3"));
+    private static readonly IPen ThumbPen = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
+
     public static readonly StyledProperty<double> MinimumProperty =
         AvaloniaProperty.Register<SeekBar, double>(nameof(Minimum), 0);
 
@@ -25,6 +30,7 @@ public sealed class SeekBar : Control
             RoutingStrategies.Bubble);
 
     private bool _isDragging;
+    private double _displayValue;
 
     public double Minimum
     {
@@ -56,10 +62,24 @@ public sealed class SeekBar : Control
         FocusableProperty.OverrideDefaultValue<SeekBar>(false);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == ValueProperty && !_isDragging)
+            _displayValue = Value;
+    }
+
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = double.IsInfinity(availableSize.Width) ? 240 : availableSize.Width;
         return new Size(width, 16);
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        _displayValue = Value;
     }
 
     public override void Render(DrawingContext context)
@@ -76,11 +96,11 @@ public sealed class SeekBar : Control
         var filled = new Rect(0, trackY, width * ratio, trackHeight);
         var thumbX = width * ratio;
 
-        context.DrawRectangle(new SolidColorBrush(Color.Parse("#554A4A4A")), null, track, radius, radius);
-        context.DrawRectangle(new SolidColorBrush(Color.Parse("#E95420")), null, filled, radius, radius);
+        context.DrawRectangle(TrackBrush, null, track, radius, radius);
+        context.DrawRectangle(FillBrush, null, filled, radius, radius);
         context.DrawEllipse(
-            new SolidColorBrush(Color.Parse("#F7F5F3")),
-            new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1),
+            ThumbBrush,
+            ThumbPen,
             new Point(thumbX, height / 2),
             6,
             6);
@@ -129,6 +149,7 @@ public sealed class SeekBar : Control
     {
         _isDragging = false;
         pointer.Capture(null);
+        Value = _displayValue;
         RaiseEvent(new RoutedEventArgs(SeekCommittedEvent));
     }
 
@@ -138,13 +159,15 @@ public sealed class SeekBar : Control
 
         var point = e.GetPosition(this);
         var ratio = Math.Clamp(point.X / Bounds.Width, 0, 1);
-        Value = Minimum + ratio * (Maximum - Minimum);
+        _displayValue = Minimum + ratio * (Maximum - Minimum);
+        InvalidateVisual();
     }
 
     private double GetRatio()
     {
         var range = Maximum - Minimum;
         if (range <= 0) return 0;
-        return Math.Clamp((Value - Minimum) / range, 0, 1);
+        var value = _isDragging ? _displayValue : Value;
+        return Math.Clamp((value - Minimum) / range, 0, 1);
     }
 }

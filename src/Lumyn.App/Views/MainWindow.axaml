@@ -28,6 +28,26 @@
     <Border Name="VideoClickLayer" Background="Transparent"
             PointerPressed="VideoClickLayer_OnPointerPressed" />
 
+    <!-- ── Subtitle overlay (Avalonia-rendered; VLC SPU is disabled) ───────── -->
+    <Border VerticalAlignment="Bottom"
+            HorizontalAlignment="Stretch"
+            Margin="24,0,24,72"
+            IsHitTestVisible="False"
+            IsVisible="{Binding CurrentSubtitleText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Text="{Binding CurrentSubtitleText}"
+                 HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 FontSize="22"
+                 FontWeight="SemiBold"
+                 Foreground="White"
+                 TextWrapping="Wrap"
+                 MaxWidth="900">
+        <TextBlock.Effect>
+          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="Black" Opacity="0.9" />
+        </TextBlock.Effect>
+      </TextBlock>
+    </Border>
+
     <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
     <StackPanel
         HorizontalAlignment="Center"

@@ -45,7 +45,11 @@ public sealed class PlaybackService : IDisposable
 
             // On X11 (including XWayland) VLC embeds directly into the VideoView
             // X11 sub-window — no extra flags needed beyond title suppression.
-            _libVlc = new LibVLC("--no-video-title-show");
+            _libVlc = new LibVLC("--no-video-title-show", "--no-spu");
+            // --no-spu disables VLC's built-in subtitle blending into the video buffer.
+            // Without this, VLC's SPU heap overflows ('subpicture heap full') when using
+            // software rendering because the frame display rate can't keep up with the
+            // subtitle generation rate.  We render subtitles ourselves as an Avalonia overlay.
             MediaPlayer = new MediaPlayer(_libVlc)
             {
                 Volume = _state.Volume,

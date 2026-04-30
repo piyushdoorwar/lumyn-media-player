@@ -29,12 +29,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isMuted;
     private bool _controlsVisible = true;
     private bool _isSeeking;
+    private long _lastSeekTickMs;          // Interlocked, throttles live-drag seeks
+    private const long SeekThrottleMs = 150;
     private float _speed = 1.0f;
     private bool _isLooping;
     private bool _isAlwaysOnTop;
     private string? _osdMessage;
     private TrackInfo[] _audioTracks = [];
     private TrackInfo[] _subtitleTracks = [];
+    private string? _currentSubtitleText;
+
+    // ── Subtitle overlay (Avalonia-rendered, replaces VLC's --no-spu path) ───
+    private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
 
     // Video frame double-buffering: VLC decode thread writes into _stagingBuffer,
     // UI thread reads from it. _frameReady acts as a cheap lock-free "new frame" flag.
@@ -133,6 +139,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasMedia => !string.IsNullOrWhiteSpace(CurrentFilePath);
 
+    /// <summary>Current subtitle text to display as an overlay (null = hidden).</summary>
+    public string? CurrentSubtitleText
+    {
+        get => _currentSubtitleText;
+        private set => SetField(ref _currentSubtitleText, value);
+    }
+
     public double SeekValue
     {
         get => _seekValue;
@@ -140,9 +153,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             if (SetField(ref _seekValue, Math.Clamp(value, 0, 1000)) && _isSeeking)
             {
-                var duration = _playback.Duration;
-                if (duration > TimeSpan.Zero)
-                    _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
+                // Throttle live-drag seeks so we don't flood VLC with hundreds of
+                // consecutive Seek() calls. EndSeek() always does the final accurate seek.
+                var nowMs = Environment.TickCount64;
+                var lastMs = Interlocked.Read(ref _lastSeekTickMs);
+                if (nowMs - lastMs >= SeekThrottleMs)
+                {
+                    Interlocked.Exchange(ref _lastSeekTickMs, nowMs);
+                    var duration = _playback.Duration;
+                    if (duration > TimeSpan.Zero)
+                        _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
+                }
             }
         }
     }
@@ -283,7 +304,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             CurrentSubtitleSettings = restored;
             // Small delay so VLC has time to initialise the media before we add the slave
             await Task.Delay(400);
-            ApplySubtitleSettings(restored, saveToCache: false);
+            await ApplySubtitleSettingsAsync(restored, saveToCache: false);
         }
         else
         {
@@ -293,8 +314,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public void LoadSubtitleFile(string path)
+    public async Task LoadSubtitleFileAsync(string path)
     {
+        // Parse off the UI thread so large SRT files don't freeze the window.
+        var lines = await Task.Run(() => Lumyn.Core.Services.SubtitleParser.Parse(path));
+        _subtitleLines = lines;
+
+        // VLC slave registration (fast, no I/O) + OSD — back on UI thread.
         _playback.LoadSubtitleFile(path);
         ShowOsd($"Subtitle: {Path.GetFileName(path)}");
     }
@@ -309,22 +335,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     /// Applies subtitle settings from the dialog: loads a file if selected and
     /// adjusts the sync delay immediately via VLC's native API.
     /// </summary>
-    public void ApplySubtitleSettings(SubtitleSettings s) => ApplySubtitleSettings(s, saveToCache: true);
+    public Task ApplySubtitleSettingsAsync(SubtitleSettings s) => ApplySubtitleSettingsAsync(s, saveToCache: true);
 
-    private void ApplySubtitleSettings(SubtitleSettings s, bool saveToCache)
+    private async Task ApplySubtitleSettingsAsync(SubtitleSettings s, bool saveToCache)
     {
         CurrentSubtitleSettings = s;
 
         if (s.FilePath is null)
         {
-            // Disable subtitles: turn off SPU track and reset delay
+            // Disable subtitles: clear parsed lines + reset delay
+            _subtitleLines = [];
+            CurrentSubtitleText = null;
             _playback.SetSubtitleTrack(-1);
             _playback.SubtitleDelayMs = 0;
             ShowOsd("Subtitles disabled");
         }
         else
         {
-            LoadSubtitleFile(s.FilePath);
+            await LoadSubtitleFileAsync(s.FilePath);
             _playback.SubtitleDelayMs = s.DelayMs;
             if (s.DelayMs != 0)
                 ShowOsd($"Subtitle delay: {s.DelayMs:+0;-0} ms");
@@ -399,6 +427,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasMedia));
         OnPropertyChanged(nameof(RecentFiles));
         RefreshTracks();
+
+        // Update Avalonia subtitle overlay text.
+        if (_subtitleLines.Count > 0 && state.IsPlaying)
+        {
+            var pos = state.Position;
+            var hit = _subtitleLines.FirstOrDefault(l => pos >= l.Start && pos < l.End);
+            CurrentSubtitleText = hit?.Text;
+        }
+        else
+        {
+            CurrentSubtitleText = null;
+        }
     }
 
     public void SaveResumePosition()

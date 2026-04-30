@@ -1,33 +1,40 @@
-using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Lumyn.App.Models;
+using Lumyn.Core.Models;
+using Lumyn.Core.Services;
 
 namespace Lumyn.App.Views;
 
 public partial class SubtitleSettingsDialog : Window
 {
-    // ── Step size for the delay ± buttons (ms) ───────────────────────────────
     private const long DelayStep = 500;
 
-    // ── Current values ───────────────────────────────────────────────────────
+    // ── Settings state ───────────────────────────────────────────────────────
     private string?          _filePath;
-    private SubtitleFontSize _fontSize  = SubtitleFontSize.Medium;
-    private SubtitleFont     _font      = SubtitleFont.SansSerif;
-    private SubtitleColor    _color     = SubtitleColor.White;
-    private long             _delayMs   = 0;
+    private SubtitleFontSize _fontSize = SubtitleFontSize.Medium;
+    private SubtitleFont     _font     = SubtitleFont.SansSerif;
+    private SubtitleColor    _color    = SubtitleColor.White;
+    private long             _delayMs  = 0;
 
-    // ── Colour lookup ────────────────────────────────────────────────────────
-    private static readonly IBrush SelectedBorder = new SolidColorBrush(Color.Parse("#E95420"));
-    private static readonly IBrush NormalBorder   = new SolidColorBrush(Color.Parse("#666666"));
+    // ── Search state ─────────────────────────────────────────────────────────
+    private readonly SubtitleSearchService _service = new();
+    private CancellationTokenSource?       _cts;
+    private SubtitleSearchResult?          _selectedResult;
+
+    // ── Selected button styling ───────────────────────────────────────────────
+    private static readonly IBrush SelectedBg     = new SolidColorBrush(Color.Parse("#E95420"));
+    private static readonly IBrush NormalBg       = new SolidColorBrush(Color.Parse("#3D3846"));
+    private static readonly IBrush NormalBorder   = new SolidColorBrush(Color.Parse("#5E5968"));
 
     public SubtitleSettingsDialog() : this(new SubtitleSettings(null,
         SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0)) { }
 
-    public SubtitleSettingsDialog(SubtitleSettings current)
+    public SubtitleSettingsDialog(SubtitleSettings current, string? mediaFilePath = null)
     {
         AvaloniaXamlLoader.Load(this);
 
@@ -37,10 +44,29 @@ public partial class SubtitleSettingsDialog : Window
         _color    = current.Color;
         _delayMs  = current.DelayMs;
 
+        // ── Init inline search ────────────────────────────────────────────────
+        var langBox = this.FindControl<ComboBox>("LanguageBox")!;
+        langBox.ItemsSource   = SubtitleSearchService.Languages.Select(l => l.Display).ToList();
+        langBox.SelectedIndex = 0;
+
+        var searchBox = this.FindControl<TextBox>("SearchBox")!;
+        searchBox.KeyDown += (_, e) => { if (e.Key == Key.Return) StartSearch(); };
+
+        if (!string.IsNullOrWhiteSpace(mediaFilePath))
+            searchBox.Text = Path.GetFileNameWithoutExtension(mediaFilePath);
+
+        var list = this.FindControl<ListBox>("ResultsList")!;
+        list.SelectionChanged += (_, _) =>
+        {
+            _selectedResult = list.SelectedItem as SubtitleSearchResult;
+            var btn = this.FindControl<Button>("UseButton");
+            if (btn is not null) btn.IsEnabled = _selectedResult is not null;
+        };
+
         RefreshAll();
     }
 
-    // ── Event handlers ───────────────────────────────────────────────────────
+    // ── File tab: browse ─────────────────────────────────────────────────────
 
     private async void BrowseButton_Click(object? sender, RoutedEventArgs e)
     {
@@ -65,6 +91,74 @@ public partial class SubtitleSettingsDialog : Window
         }
     }
 
+    // ── File tab: search ─────────────────────────────────────────────────────
+
+    private void SearchButton_Click(object? sender, RoutedEventArgs e) => StartSearch();
+
+    private void ResultsList_DoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (_selectedResult is not null) DownloadSelected();
+    }
+
+    private void UseButton_Click(object? sender, RoutedEventArgs e) => DownloadSelected();
+
+    private async void StartSearch()
+    {
+        var query = this.FindControl<TextBox>("SearchBox")?.Text?.Trim() ?? "";
+        if (string.IsNullOrWhiteSpace(query)) return;
+
+        var langIdx = this.FindControl<ComboBox>("LanguageBox")!.SelectedIndex;
+        var (_, osCode, pnCode) = SubtitleSearchService.Languages[Math.Max(0, langIdx)];
+
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
+        SetSearchStatus("Searching…", loading: true);
+        SetSearchInputEnabled(false);
+
+        try
+        {
+            var results = await _service.SearchAsync(query, osCode, pnCode, _cts.Token);
+            this.FindControl<ListBox>("ResultsList")!.ItemsSource = results;
+            SetSearchStatus(results.Count == 0
+                ? "No results found. Try a different title or language."
+                : $"{results.Count} results found.",
+                loading: false);
+        }
+        catch (OperationCanceledException) { SetSearchStatus("", loading: false); }
+        catch (Exception ex)              { SetSearchStatus($"Search failed: {ex.Message}", loading: false); }
+        finally                           { SetSearchInputEnabled(true); }
+    }
+
+    private async void DownloadSelected()
+    {
+        if (_selectedResult is null) return;
+
+        SetSearchStatus($"Downloading {_selectedResult.FileName}…", loading: true);
+        SetSearchInputEnabled(false);
+        var useBtn = this.FindControl<Button>("UseButton");
+        if (useBtn is not null) useBtn.IsEnabled = false;
+
+        try
+        {
+            var path = await _service.DownloadAsync(_selectedResult);
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                _filePath = path;
+                RefreshFilePath();
+                SetSearchStatus($"Ready: {Path.GetFileName(path)}", loading: false);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetSearchStatus($"Download failed: {ex.Message}", loading: false);
+            if (useBtn is not null) useBtn.IsEnabled = _selectedResult is not null;
+        }
+        finally { SetSearchInputEnabled(true); }
+    }
+
+    // ── Appearance tab handlers ───────────────────────────────────────────────
+
     private void SizeButton_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button btn && Enum.TryParse<SubtitleFontSize>(btn.Tag?.ToString(), out var size))
@@ -74,22 +168,20 @@ public partial class SubtitleSettingsDialog : Window
         }
     }
 
-    private void FontButton_Click(object? sender, RoutedEventArgs e)
+    private void FontCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is Button btn && Enum.TryParse<SubtitleFont>(btn.Tag?.ToString(), out var font))
-        {
+        if (sender is ComboBox combo &&
+            combo.SelectedItem is ComboBoxItem item &&
+            Enum.TryParse<SubtitleFont>(item.Tag?.ToString(), out var font))
             _font = font;
-            RefreshFontButtons();
-        }
     }
 
-    private void ColorButton_Click(object? sender, RoutedEventArgs e)
+    private void ColorCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is Button btn && Enum.TryParse<SubtitleColor>(btn.Tag?.ToString(), out var color))
-        {
+        if (sender is ComboBox combo &&
+            combo.SelectedItem is ComboBoxItem item &&
+            Enum.TryParse<SubtitleColor>(item.Tag?.ToString(), out var color))
             _color = color;
-            RefreshColorButtons();
-        }
     }
 
     private void DelayMinus_Click(object? sender, RoutedEventArgs e)
@@ -104,24 +196,28 @@ public partial class SubtitleSettingsDialog : Window
         RefreshDelayLabel();
     }
 
+    // ── Action buttons ────────────────────────────────────────────────────────
+
     private void ApplyButton_Click(object? sender, RoutedEventArgs e)
         => Close(new SubtitleSettings(_filePath, _fontSize, _font, _color, _delayMs));
 
     private void DisableButton_Click(object? sender, RoutedEventArgs e)
-        // FilePath = null signals "clear / disable" to the ViewModel
         => Close(new SubtitleSettings(null, _fontSize, _font, _color, 0));
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e)
-        => Close(null);
+    {
+        _cts?.Cancel();
+        Close(null);
+    }
 
-    // ── Refresh helpers ──────────────────────────────────────────────────────
+    // ── Refresh helpers ───────────────────────────────────────────────────────
 
     private void RefreshAll()
     {
         RefreshFilePath();
         RefreshSizeButtons();
-        RefreshFontButtons();
-        RefreshColorButtons();
+        RefreshFontCombo();
+        RefreshColorCombo();
         RefreshDelayLabel();
     }
 
@@ -129,7 +225,7 @@ public partial class SubtitleSettingsDialog : Window
     {
         var box = this.FindControl<TextBox>("FilePathBox");
         if (box is not null)
-            box.Text = _filePath is null ? string.Empty : System.IO.Path.GetFileName(_filePath);
+            box.Text = _filePath is null ? string.Empty : Path.GetFileName(_filePath);
     }
 
     private void RefreshSizeButtons()
@@ -139,21 +235,33 @@ public partial class SubtitleSettingsDialog : Window
         MarkSelected("SizeLargeBtn",  _fontSize == SubtitleFontSize.Large);
     }
 
-    private void RefreshFontButtons()
+    private void RefreshFontCombo()
     {
-        MarkSelected("FontSansBtn",  _font == SubtitleFont.SansSerif);
-        MarkSelected("FontSerifBtn", _font == SubtitleFont.Serif);
-        MarkSelected("FontMonoBtn",  _font == SubtitleFont.Monospace);
-        MarkSelected("FontArialBtn", _font == SubtitleFont.Arial);
+        var combo = this.FindControl<ComboBox>("FontCombo");
+        if (combo is null) return;
+        combo.SelectedIndex = _font switch
+        {
+            SubtitleFont.SansSerif => 0,
+            SubtitleFont.Serif     => 1,
+            SubtitleFont.Monospace => 2,
+            SubtitleFont.Arial     => 3,
+            _                      => 0
+        };
     }
 
-    private void RefreshColorButtons()
+    private void RefreshColorCombo()
     {
-        MarkColorSelected("ColorWhiteBtn",       _color == SubtitleColor.White);
-        MarkColorSelected("ColorWhiteBorderBtn", _color == SubtitleColor.WhiteWithBorder);
-        MarkColorSelected("ColorYellowBtn",      _color == SubtitleColor.Yellow);
-        MarkColorSelected("ColorGreyBtn",        _color == SubtitleColor.Grey);
-        MarkColorSelected("ColorBlackBtn",       _color == SubtitleColor.Black);
+        var combo = this.FindControl<ComboBox>("ColorCombo");
+        if (combo is null) return;
+        combo.SelectedIndex = _color switch
+        {
+            SubtitleColor.White           => 0,
+            SubtitleColor.WhiteWithBorder => 1,
+            SubtitleColor.Yellow          => 2,
+            SubtitleColor.Grey            => 3,
+            SubtitleColor.Black           => 4,
+            _                             => 0
+        };
     }
 
     private void RefreshDelayLabel()
@@ -163,22 +271,34 @@ public partial class SubtitleSettingsDialog : Window
             label.Text = _delayMs == 0 ? "0 ms" : $"{_delayMs:+0;-0} ms";
     }
 
-    /// <summary>Highlights a regular (text) button as selected / unselected.</summary>
     private void MarkSelected(string name, bool selected)
     {
         var btn = this.FindControl<Button>(name);
         if (btn is null) return;
-        btn.Background  = selected ? SelectedBorder : new SolidColorBrush(Color.Parse("#3D3846"));
-        btn.BorderBrush = selected ? SelectedBorder : new SolidColorBrush(Color.Parse("#5E5968"));
+        btn.Background  = selected ? SelectedBg   : NormalBg;
+        btn.BorderBrush = selected ? SelectedBg   : NormalBorder;
         btn.Foreground  = new SolidColorBrush(Colors.White);
     }
 
-    /// <summary>Highlights a colour swatch button with a thick accent ring.</summary>
-    private void MarkColorSelected(string name, bool selected)
+    private void SetSearchStatus(string text, bool loading)
     {
-        var btn = this.FindControl<Button>(name);
-        if (btn is null) return;
-        btn.BorderBrush     = selected ? SelectedBorder : NormalBorder;
-        btn.BorderThickness = selected ? new Thickness(3) : new Thickness(1);
+        var s = this.FindControl<TextBlock>("StatusText");
+        if (s is not null) s.Text = text;
+        var b = this.FindControl<ProgressBar>("LoadingBar");
+        if (b is not null) b.IsVisible = loading;
+    }
+
+    private void SetSearchInputEnabled(bool enabled)
+    {
+        foreach (var name in new[] { "SearchButton", "BrowseButton" })
+        {
+            var btn = this.FindControl<Button>(name);
+            if (btn is not null) btn.IsEnabled = enabled;
+        }
+        var box  = this.FindControl<TextBox>("SearchBox");
+        if (box  is not null) box.IsEnabled = enabled;
+        var lang = this.FindControl<ComboBox>("LanguageBox");
+        if (lang is not null) lang.IsEnabled = enabled;
     }
 }
+

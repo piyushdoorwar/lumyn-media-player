@@ -18,7 +18,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
+        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
         _positionTimer.Tick += (_, _) => ViewModel?.RefreshState();
         _positionTimer.Start();
 
@@ -341,7 +341,7 @@ public partial class MainWindow : Window
         var path = files.FirstOrDefault()?.TryGetLocalPath();
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
         {
-            ViewModel.LoadSubtitleFile(path);
+            await ViewModel.LoadSubtitleFileAsync(path);
             Focus();
         }
     }
@@ -349,11 +349,11 @@ public partial class MainWindow : Window
     private async Task OpenSubtitleSettingsDialogAsync()
     {
         if (ViewModel is null) return;
-        var dialog = new SubtitleSettingsDialog(ViewModel.CurrentSubtitleSettings);
+        var dialog = new SubtitleSettingsDialog(ViewModel.CurrentSubtitleSettings, ViewModel.CurrentFilePath);
         var result = await dialog.ShowDialog<Lumyn.App.Models.SubtitleSettings?>(this);
         if (result is not null)
         {
-            ViewModel.ApplySubtitleSettings(result);
+            await ViewModel.ApplySubtitleSettingsAsync(result);
             Focus();
         }
     }
@@ -387,7 +387,7 @@ public partial class MainWindow : Window
         {
             // Detect subtitle by extension; load instead of open
             if (IsSubtitleFile(path) && ViewModel.HasMedia)
-                ViewModel.LoadSubtitleFile(path);
+                await ViewModel.LoadSubtitleFileAsync(path);
             else
                 await ViewModel.OpenFileAsync(path);
             Focus();

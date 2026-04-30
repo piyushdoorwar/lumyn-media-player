@@ -247,6 +247,14 @@ public sealed class PlaybackService : IDisposable
     public void SetVideoZoom(double zoom) => SetDouble("video-zoom", Math.Clamp(zoom, -2.0, 2.0));
     public void SetVideoAspect(string aspect) => SetPropertyString("video-aspect-override", aspect);
 
+    // ── Metadata / track info ──────────────────────────────────────────────
+
+    /// <summary>Reads a metadata tag by key (e.g. "title", "artist", "album"). Returns null if unavailable.</summary>
+    public string? GetMetadata(string key) => GetString($"metadata/by-key/{key}");
+
+    /// <summary>Returns true if the loaded file has at least one video track with actual dimensions.</summary>
+    public bool HasVideoTrack => GetTracks("video").Length > 0;
+
     public void ToggleLoop()
     {
         _loop = !_loop;

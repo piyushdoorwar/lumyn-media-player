@@ -127,6 +127,75 @@
       </TextBlock>
     </Border>
 
+    <!-- ── Audio-only mode panel ─────────────────────────────────────────── -->
+    <Grid IsVisible="{Binding IsAudioMode}"
+          Background="#111111"
+          HorizontalAlignment="Stretch"
+          VerticalAlignment="Stretch"
+          RowDefinitions="*,Auto">
+
+      <!-- Center: cover art + info + visualizer -->
+      <StackPanel Grid.Row="0"
+                  VerticalAlignment="Center"
+                  HorizontalAlignment="Center"
+                  Spacing="22" Margin="24,0">
+
+        <!-- Cover art or placeholder circle -->
+        <Border Width="190" Height="190"
+                CornerRadius="16"
+                ClipToBounds="True"
+                Background="#1E1E1E"
+                BorderBrush="#303030"
+                BorderThickness="1"
+                HorizontalAlignment="Center">
+          <Panel>
+            <Image Source="{Binding CoverArtBitmap}"
+                   Stretch="UniformToFill"
+                   IsVisible="{Binding HasCoverArt}" />
+            <PathIcon Width="72" Height="72"
+                      Data="{StaticResource Icon.MusicNote}"
+                      Foreground="#353535"
+                      IsVisible="{Binding !HasCoverArt}"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center" />
+          </Panel>
+        </Border>
+
+        <!-- Track title -->
+        <StackPanel Spacing="5" HorizontalAlignment="Center">
+          <TextBlock Text="{Binding TrackTitle}"
+                     FontSize="18" FontWeight="SemiBold"
+                     Foreground="#F2EFEC"
+                     HorizontalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"
+                     MaxWidth="480"
+                     IsVisible="{Binding TrackTitle,
+                         Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Text="{Binding TrackArtistAlbum}"
+                     FontSize="13"
+                     Foreground="#7A7675"
+                     HorizontalAlignment="Center"
+                     TextTrimming="CharacterEllipsis"
+                     MaxWidth="480"
+                     IsVisible="{Binding TrackArtistAlbum,
+                         Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+
+        <!-- Animated equalizer bars -->
+        <controls:AudioBars Width="84" Height="32"
+                            HorizontalAlignment="Center"
+                            IsActive="{Binding IsPlaying}" />
+      </StackPanel>
+
+      <!-- Folder track label: "3 / 12" -->
+      <TextBlock Grid.Row="1"
+                 Text="{Binding FolderTrackLabel}"
+                 HorizontalAlignment="Center"
+                 Margin="0,0,0,76"
+                 FontSize="11" Foreground="#4A4948"
+                 IsVisible="{Binding HasFolderTracks}" />
+    </Grid>
+
     <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
     <StackPanel
         HorizontalAlignment="Center"
@@ -194,7 +263,7 @@
             SeekCommitted="SeekSlider_OnSeekCommitted" />
 
         <!-- Transport row -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="2" Margin="2,0">
 
           <!-- Seek back 5s -->
@@ -228,16 +297,32 @@
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
           </Button>
 
+          <!-- Previous track -->
+          <Button Grid.Column="4" Classes="ctrl"
+                  Classes.dim="{Binding !HasPreviousTrack}"
+                  Command="{Binding PreviousTrackCommand}"
+                  ToolTip.Tip="Previous track (P)">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SkipPrevious}" />
+          </Button>
+
+          <!-- Next track -->
+          <Button Grid.Column="5" Classes="ctrl"
+                  Classes.dim="{Binding !HasNextTrack}"
+                  Command="{Binding NextTrackCommand}"
+                  ToolTip.Tip="Next track (N)">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SkipNext}" />
+          </Button>
+
           <!-- Time display -->
-          <TextBlock Grid.Column="4" Text="{Binding TimeText}"
+          <TextBlock Grid.Column="6" Text="{Binding TimeText}"
                      VerticalAlignment="Center" FontSize="12"
                      Foreground="#C8C3C2" Margin="6,0" />
 
           <!-- Spacer -->
-          <Border Grid.Column="5" />
+          <Border Grid.Column="7" />
 
           <!-- Speed badge -->
-          <Button Grid.Column="6" Classes="ctrl"
+          <Button Grid.Column="8" Classes="ctrl"
                   Command="{Binding ResetSpeedCommand}"
                   IsVisible="{Binding !IsNormalSpeed}">
             <Border Background="#2A2A2A" CornerRadius="4" Padding="6,2">
@@ -248,14 +333,14 @@
           </Button>
 
           <!-- Loop -->
-          <Button Grid.Column="7" Classes="ctrl"
+          <Button Grid.Column="9" Classes="ctrl"
                   Classes.dim="{Binding !IsLooping}"
                   Command="{Binding ToggleLoopCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
           </Button>
 
           <!-- Mute / Unmute -->
-          <Button Grid.Column="8" Classes="ctrl"
+          <Button Grid.Column="10" Classes="ctrl"
                   Command="{Binding ToggleMuteCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
@@ -266,19 +351,19 @@
           </Button>
 
           <!-- Volume slider -->
-          <controls:VolumeSlider Grid.Column="9" Width="92" Minimum="0" Maximum="150"
+          <controls:VolumeSlider Grid.Column="11" Width="92" Minimum="0" Maximum="150"
                                  Value="{Binding Volume}"
                                  VerticalAlignment="Center"
                                  Margin="2,0,6,0" />
 
           <!-- Screenshot -->
-          <Button Grid.Column="10" Classes="ctrl"
+          <Button Grid.Column="12" Classes="ctrl"
                   Command="{Binding TakeScreenshotCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
           </Button>
 
           <!-- Fullscreen -->
-          <Button Grid.Column="11" Classes="ctrl"
+          <Button Grid.Column="13" Classes="ctrl"
                   Click="FullscreenButton_OnClick">
             <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                       Data="{StaticResource Icon.Fullscreen}" />

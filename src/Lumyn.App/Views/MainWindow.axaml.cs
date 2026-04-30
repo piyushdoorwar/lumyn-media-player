@@ -67,6 +67,8 @@ public partial class MainWindow : Window
     {
         _hideControlsTimer.Stop();
         if (ViewModel is null) return;
+        // In audio-only mode the controls stay visible at all times.
+        if (ViewModel.IsAudioOnly) return;
         if (ViewModel.IsPlaying || WindowState == WindowState.FullScreen)
         {
             if (!string.IsNullOrWhiteSpace(ViewModel.CurrentFilePath))
@@ -244,7 +246,13 @@ public partial class MainWindow : Window
             case Key.I when alt:
                 ViewModel.TakeScreenshotCommand.Execute(null);
                 e.Handled = true; break;
-        }
+            // ── Track navigation ──────────────────────────────────────────────────
+            case Key.N:
+                ViewModel.NextTrackCommand.Execute(null);
+                e.Handled = true; break;
+            case Key.P:
+                ViewModel.PreviousTrackCommand.Execute(null);
+                e.Handled = true; break;        }
     }
 
     // ── Context menu ─────────────────────────────────────────────────────────

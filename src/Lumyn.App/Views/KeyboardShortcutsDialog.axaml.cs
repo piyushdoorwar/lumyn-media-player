@@ -42,6 +42,8 @@ public partial class KeyboardShortcutsDialog : Window
     [
         ("A",            "Cycle audio track"),
         ("V",            "Cycle subtitle track"),
+        ("N",            "Next track in folder"),
+        ("P",            "Previous track in folder"),
     ];
 
     private static readonly (string Key, string Action)[] Window =

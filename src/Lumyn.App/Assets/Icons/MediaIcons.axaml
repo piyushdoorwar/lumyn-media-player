@@ -28,6 +28,11 @@
   <!-- Screenshot / Camera -->
   <StreamGeometry x:Key="Icon.Screenshot">M12 15.2c1.77 0 3.2-1.43 3.2-3.2S13.77 8.8 12 8.8 8.8 10.23 8.8 12s1.43 3.2 3.2 3.2zm0-4.4c.66 0 1.2.54 1.2 1.2s-.54 1.2-1.2 1.2-1.2-.54-1.2-1.2.54-1.2 1.2-1.2zM9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z</StreamGeometry>
 
+  <!-- Audio -->
+  <StreamGeometry x:Key="Icon.MusicNote">M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.SkipPrevious">M6 6h2v12H6zm3.5 6L18 18V6z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.SkipNext">M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z</StreamGeometry>
+
   <!-- Pin / Always on Top -->
   <StreamGeometry x:Key="Icon.AlwaysOnTop">M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z</StreamGeometry>
 

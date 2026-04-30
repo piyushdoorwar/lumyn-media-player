@@ -17,6 +17,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private static readonly float[] SpeedSteps = [0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f];
 
+    private static readonly string[] AudioExtensions =
+    [
+        ".mp3", ".flac", ".ogg", ".opus", ".aac", ".wav", ".m4a", ".m4b", ".wma",
+        ".aiff", ".aif", ".alac", ".ape", ".mka", ".mp2", ".ac3", ".dts",
+        ".amr", ".wv", ".tta", ".tak", ".dsf", ".dff"
+    ];
+
+    private static readonly string[] CoverArtNames =
+        ["cover", "folder", "album", "artwork", "front", "art"];
+
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
     private readonly DispatcherTimer _osdTimer;
@@ -50,6 +60,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private IBrush _subtitleForeground = Brushes.White;
     // ── Video adjustments ───────────────────────────────────────────────
     private Lumyn.App.Models.VideoAdjustments _videoAdjustments = Lumyn.App.Models.VideoAdjustments.Default;
+
+    // ── Audio mode ──────────────────────────────────────────────────────
+    private bool _isAudioOnly;
+    private string? _trackTitle;
+    private string? _trackArtist;
+    private string? _trackAlbum;
+    private Avalonia.Media.Imaging.Bitmap? _coverArtBitmap;
+    private string[] _folderTracks = [];
+    private int _folderTrackIndex = -1;
+
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
         _playback = playback;
@@ -92,6 +112,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         CycleAudioTrackCommand = new RelayCommand(_ => CycleAudioTrack());
         CycleSubtitleTrackCommand = new RelayCommand(_ => CycleSubtitleTrack());
         SetSpeedCommand        = new RelayCommand(p => ParseAndSetSpeed(p));
+        PreviousTrackCommand   = new RelayCommand(_ => { _ = NavigateTrackAsync(-1); });
+        NextTrackCommand       = new RelayCommand(_ => { _ = NavigateTrackAsync(+1); });
+
+        _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            // Auto-advance to next track in audio mode when not looping.
+            if (_isAudioOnly && !_playback.IsLooping && HasNextTrack)
+                _ = NavigateTrackAsync(+1);
+        });
 
         ErrorMessage = _playback.InitializationError;
     }
@@ -173,6 +202,82 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasVideoAdjustments => !_videoAdjustments.IsDefault;
+
+    // ── Audio mode properties ────────────────────────────────────────────
+
+    public bool IsAudioOnly
+    {
+        get => _isAudioOnly;
+        private set
+        {
+            if (SetField(ref _isAudioOnly, value))
+                OnPropertyChanged(nameof(IsAudioMode));
+        }
+    }
+
+    public bool IsAudioMode => _isAudioOnly && HasMedia;
+
+    public string? TrackTitle
+    {
+        get => _trackTitle;
+        private set => SetField(ref _trackTitle, value);
+    }
+
+    public string? TrackArtist
+    {
+        get => _trackArtist;
+        private set
+        {
+            if (SetField(ref _trackArtist, value))
+                OnPropertyChanged(nameof(TrackArtistAlbum));
+        }
+    }
+
+    public string? TrackAlbum
+    {
+        get => _trackAlbum;
+        private set
+        {
+            if (SetField(ref _trackAlbum, value))
+                OnPropertyChanged(nameof(TrackArtistAlbum));
+        }
+    }
+
+    public string? TrackArtistAlbum
+    {
+        get
+        {
+            var hasArtist = !string.IsNullOrWhiteSpace(_trackArtist);
+            var hasAlbum  = !string.IsNullOrWhiteSpace(_trackAlbum);
+            if (hasArtist && hasAlbum) return $"{_trackArtist} · {_trackAlbum}";
+            if (hasArtist) return _trackArtist;
+            if (hasAlbum)  return _trackAlbum;
+            return null;
+        }
+    }
+
+    public Avalonia.Media.Imaging.Bitmap? CoverArtBitmap
+    {
+        get => _coverArtBitmap;
+        private set
+        {
+            var old = _coverArtBitmap;
+            if (SetField(ref _coverArtBitmap, value))
+                OnPropertyChanged(nameof(HasCoverArt));
+            old?.Dispose();
+        }
+    }
+
+    public bool HasCoverArt => _coverArtBitmap is not null;
+
+    public bool HasFolderTracks => _folderTracks.Length > 1;
+
+    public string FolderTrackLabel => _folderTracks.Length > 1
+        ? $"{_folderTrackIndex + 1} / {_folderTracks.Length}"
+        : string.Empty;
+
+    public bool HasPreviousTrack => _folderTracks.Length > 1 && _folderTrackIndex > 0;
+    public bool HasNextTrack     => _folderTracks.Length > 1 && _folderTrackIndex < _folderTracks.Length - 1;
 
     public double SeekValue
     {
@@ -290,8 +395,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SetSubtitleTrackCommand { get; }
     public ICommand CycleAudioTrackCommand { get; }
     public ICommand CycleSubtitleTrackCommand { get; }
-    public ICommand SetSpeedCommand { get; }
-
+    public ICommand SetSpeedCommand { get; }    public ICommand PreviousTrackCommand { get; }
+    public ICommand NextTrackCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
     public void PausePlayback() => _playback.Pause();
@@ -302,6 +407,34 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         SaveResumePosition();
         ErrorMessage = null;
+
+        // ── Audio mode setup ────────────────────────────────────────────────
+        var ext = Path.GetExtension(filePath);
+        var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+        IsAudioOnly = audioOnly;
+        OnPropertyChanged(nameof(IsAudioMode));
+
+        if (audioOnly)
+        {
+            LoadFolderTracks(filePath);
+            CoverArtBitmap = FindCoverArt(filePath);
+            // Clear metadata until mpv loads the file.
+            TrackTitle  = null;
+            TrackArtist = null;
+            TrackAlbum  = null;
+        }
+        else
+        {
+            _folderTracks     = [];
+            _folderTrackIndex = -1;
+            CoverArtBitmap    = null;
+            TrackTitle        = null;
+            TrackArtist       = null;
+            TrackAlbum        = null;
+        }
+
+        NotifyFolderNavState();
+        // ────────────────────────────────────────────────────────────────────
 
         var resume = _settings.GetResumePosition(filePath);
         await _playback.OpenAsync(filePath, resume);
@@ -334,6 +467,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 await Task.Delay(400);
                 await LoadSubtitleFileAsync(matchingSubtitle);
             }
+        }
+
+        // Read ID3/metadata tags after mpv has loaded the file.
+        if (audioOnly)
+        {
+            await Task.Delay(600);
+            TrackTitle  = _playback.GetMetadata("title")  ?? Path.GetFileNameWithoutExtension(filePath);
+            TrackArtist = _playback.GetMetadata("artist");
+            TrackAlbum  = _playback.GetMetadata("album");
         }
     }
 
@@ -527,7 +669,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TimeText = $"{FormatTime(state.Position)} / {FormatTime(state.Duration)}";
         OnPropertyChanged(nameof(CurrentFilePath));
         OnPropertyChanged(nameof(HasMedia));
+        OnPropertyChanged(nameof(IsAudioMode));
         OnPropertyChanged(nameof(RecentFiles));
+        NotifyFolderNavState();
         RefreshTracksIfNeeded();
 
         // Update Avalonia subtitle overlay text.
@@ -567,6 +711,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         SaveResumePosition();
         _osdTimer.Stop();
+        _coverArtBitmap?.Dispose();
         _playback.Dispose();
     }
 
@@ -577,6 +722,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         _playback.Stop();
         Title = "Lumyn";
+        IsAudioOnly       = false;
+        TrackTitle        = null;
+        TrackArtist       = null;
+        TrackAlbum        = null;
+        CoverArtBitmap    = null;
+        _folderTracks     = [];
+        _folderTrackIndex = -1;
+        NotifyFolderNavState();
         RefreshState();
     }
 
@@ -748,6 +901,86 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             ? value.ToString(@"h\:mm\:ss")
             : value.ToString(@"mm\:ss");
     }
+
+    // ── Audio mode helpers ────────────────────────────────────────────────────
+
+    private void LoadFolderTracks(string filePath)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(dir))
+        {
+            _folderTracks     = [filePath];
+            _folderTrackIndex = 0;
+            return;
+        }
+
+        try
+        {
+            var files = Directory.EnumerateFiles(dir)
+                .Where(f => AudioExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
+                .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            _folderTracks     = files.Length > 0 ? files : [filePath];
+            _folderTrackIndex = Array.FindIndex(_folderTracks,
+                f => string.Equals(f, filePath, StringComparison.OrdinalIgnoreCase));
+            if (_folderTrackIndex < 0) _folderTrackIndex = 0;
+        }
+        catch
+        {
+            _folderTracks     = [filePath];
+            _folderTrackIndex = 0;
+        }
+    }
+
+    private static Avalonia.Media.Imaging.Bitmap? FindCoverArt(string filePath)
+    {
+        var dir = Path.GetDirectoryName(filePath);
+        if (string.IsNullOrWhiteSpace(dir)) return null;
+
+        // 1. Same name as the audio file with an image extension.
+        var baseName = Path.GetFileNameWithoutExtension(filePath);
+        foreach (var imgExt in new[] { ".jpg", ".jpeg", ".png", ".webp" })
+        {
+            var candidate = Path.Combine(dir, baseName + imgExt);
+            if (File.Exists(candidate)) return TryLoadBitmap(candidate);
+        }
+
+        // 2. Well-known cover art file names in the same folder.
+        foreach (var name in CoverArtNames)
+        {
+            foreach (var imgExt in new[] { ".jpg", ".jpeg", ".png", ".webp" })
+            {
+                var candidate = Path.Combine(dir, name + imgExt);
+                if (File.Exists(candidate)) return TryLoadBitmap(candidate);
+            }
+        }
+
+        return null;
+    }
+
+    private static Avalonia.Media.Imaging.Bitmap? TryLoadBitmap(string path)
+    {
+        try { return new Avalonia.Media.Imaging.Bitmap(path); }
+        catch { return null; }
+    }
+
+    private async Task NavigateTrackAsync(int delta)
+    {
+        if (_folderTracks.Length <= 1) return;
+        var next = _folderTrackIndex + delta;
+        if (next < 0 || next >= _folderTracks.Length) return;
+        await OpenFileAsync(_folderTracks[next]);
+    }
+
+    private void NotifyFolderNavState()
+    {
+        OnPropertyChanged(nameof(HasFolderTracks));
+        OnPropertyChanged(nameof(FolderTrackLabel));
+        OnPropertyChanged(nameof(HasPreviousTrack));
+        OnPropertyChanged(nameof(HasNextTrack));
+    }
+
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {

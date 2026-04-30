@@ -1074,6 +1074,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         NotifyPlaylistState();
     }
 
+    public void MovePlaylistItem(int from, int to)
+    {
+        if (from == to || from < 0 || to < 0 ||
+            from >= _playlist.Count || to >= _playlist.Count) return;
+        var item = _playlist[from];
+        _playlist.RemoveAt(from);
+        _playlist.Insert(to, item);
+        // Adjust the currently-playing index to follow the moved track.
+        if (_playlistIndex == from)
+            _playlistIndex = to;
+        else if (from < _playlistIndex && to >= _playlistIndex)
+            _playlistIndex--;
+        else if (from > _playlistIndex && to <= _playlistIndex)
+            _playlistIndex++;
+        RebuildPlaylistItems();
+        NotifyPlaylistState();
+    }
+
     private void ClearPlaylist()
     {
         _playlist.Clear();

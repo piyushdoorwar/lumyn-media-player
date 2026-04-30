@@ -1,9 +1,11 @@
 using System.ComponentModel;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Lumyn.App.ViewModels;
 
 namespace Lumyn.App.Views;
@@ -31,7 +33,17 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
 
         PointerMoved += (_, _) => ShowControls();
-        Opened += (_, _) => Focus();
+        Opened += (_, _) =>
+        {
+            Focus();
+            // Wire playlist reorder DragDrop after visual tree is ready.
+            var pic = this.FindControl<ItemsControl>("PlaylistItemsControl");
+            if (pic is not null)
+            {
+                pic.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
+                pic.AddHandler(DragDrop.DropEvent, PlaylistDrop);
+            }
+        };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
         PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) UpdateMaximizeIcon(); };
@@ -559,6 +571,87 @@ public partial class MainWindow : Window
         return ext is ".srt" or ".ass" or ".ssa" or ".vtt" or ".sub";
     }
 
+    // ── Playlist drag-to-reorder ──────────────────────────────────────────────
+
+    private const string PlaylistDragFormat = "lumyn/playlist-index";
+    private int _playlistDragFromIndex = -1;
+
+    private async void PlaylistDragHandle_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(null).Properties.IsLeftButtonPressed) return;
+        if ((sender as Avalonia.Visual)?.DataContext is not PlaylistItem item) return;
+        _playlistDragFromIndex = item.Index;
+        e.Handled = true;
+        await DragDrop.DoDragDropAsync(e, SentinelDataTransfer.Instance, DragDropEffects.Move);
+        _playlistDragFromIndex = -1;
+    }
+
+    private void PlaylistDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = _playlistDragFromIndex >= 0
+            ? DragDropEffects.Move
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void PlaylistDrop(object? sender, DragEventArgs e)
+    {
+        if (_playlistDragFromIndex < 0) return;
+        if (sender is not ItemsControl ic) return;
+        if (ViewModel is null) return;
+
+        var from = _playlistDragFromIndex;
+        var to = HitTestPlaylistIndex(ic, e.GetPosition(ic)) ?? from;
+        if (to != from)
+            ViewModel.MovePlaylistItem(from, to);
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Walks the visual tree at <paramref name="point"/> inside <paramref name="ic"/>
+    /// to find the <see cref="PlaylistItem.Index"/> of the item under the pointer.
+    /// </summary>
+    private static int? HitTestPlaylistIndex(ItemsControl ic, Point point)
+    {
+        var hit = ic.InputHitTest(point) as Avalonia.Visual;
+        while (hit is not null && !ReferenceEquals(hit, ic))
+        {
+            if (hit.DataContext is PlaylistItem item)
+                return item.Index;
+            hit = hit.GetVisualParent();
+        }
+        return null;
+    }
+
+    // ── Playlist item context menu ────────────────────────────────────────────
+
+    private static PlaylistItem? PlaylistCtxItem(object? sender)
+    {
+        if (sender is MenuItem { Parent: ContextMenu { PlacementTarget: { } t } })
+            return t.DataContext as PlaylistItem;
+        return null;
+    }
+
+    private void PlaylistCtx_Play(object? sender, RoutedEventArgs e)
+    {
+        var item = PlaylistCtxItem(sender);
+        if (item is not null)
+            ViewModel?.OpenPlaylistItemCommand.Execute(item.Index);
+    }
+
+    private void PlaylistCtx_Remove(object? sender, RoutedEventArgs e)
+    {
+        var item = PlaylistCtxItem(sender);
+        if (item is not null)
+            ViewModel?.RemovePlaylistItemCommand.Execute(item.Index);
+    }
+
+    private async void PlaylistCtx_AddFile(object? sender, RoutedEventArgs e)
+        => await AddToQueueAsync();
+
+    private async void PlaylistCtx_AddFolder(object? sender, RoutedEventArgs e)
+        => await OpenFolderAsync();
+
     // ── Fullscreen ───────────────────────────────────────────────────────────
 
     private void ToggleFullscreen()
@@ -612,4 +705,16 @@ public partial class MainWindow : Window
 internal static class ObjectExtensions
 {
     internal static T Also<T>(this T obj, Action<T> action) { action(obj); return obj; }
+}
+
+/// <summary>
+/// Minimal <see cref="IDataTransfer"/> sentinel used to initiate playlist drag-drop
+/// without carrying any payload (the dragged index is stored in a field).
+/// </summary>
+file sealed class SentinelDataTransfer : Avalonia.Input.IDataTransfer
+{
+    public static readonly SentinelDataTransfer Instance = new();
+    public IReadOnlyList<Avalonia.Input.DataFormat> Formats => [];
+    public IReadOnlyList<Avalonia.Input.IDataTransferItem> Items => [];
+    public void Dispose() { }
 }

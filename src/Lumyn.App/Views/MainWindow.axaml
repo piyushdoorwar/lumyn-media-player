@@ -454,38 +454,71 @@
         <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="#252525" />
         <!-- Item list -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-          <ItemsControl ItemsSource="{Binding PlaylistItems}">
+          <ItemsControl Name="PlaylistItemsControl"
+                        ItemsSource="{Binding PlaylistItems}"
+                        DragDrop.AllowDrop="True">
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Grid ColumnDefinitions="4,*,28"
-                      Cursor="Hand">
-                  <!-- Active indicator bar -->
-                  <Border Grid.Column="0" Width="3" HorizontalAlignment="Left"
-                          Margin="0,3" CornerRadius="2"
-                          IsVisible="{Binding IsCurrent}">
-                    <Border.Background>
-                      <SolidColorBrush Color="#3A9B4B" />
-                    </Border.Background>
+                <Grid ColumnDefinitions="26,4,*,28">
+
+                  <!-- ── Drag handle ──────────────────────────────────── -->
+                  <Border Grid.Column="0"
+                          Background="Transparent"
+                          Cursor="SizeAll"
+                          PointerPressed="PlaylistDragHandle_PointerPressed"
+                          ToolTip.Tip="Drag to reorder">
+                    <PathIcon Width="10" Height="10"
+                              Data="{StaticResource Icon.DragHandle}"
+                              Foreground="#3A3836"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center" />
                   </Border>
-                  <!-- Filename -->
-                  <Button Grid.Column="1"
+
+                  <!-- ── Active indicator bar ────────────────────────── -->
+                  <Border Grid.Column="1" Width="3" HorizontalAlignment="Left"
+                          Margin="0,4" CornerRadius="2"
+                          IsVisible="{Binding IsCurrent}"
+                          Background="#3A9B4B" />
+
+                  <!-- ── Filename (click to play) ────────────────────── -->
+                  <Button Grid.Column="2"
                           Command="{Binding $parent[Window].DataContext.OpenPlaylistItemCommand}"
                           CommandParameter="{Binding Index}"
                           Padding="4,8" HorizontalContentAlignment="Left"
-                          Background="Transparent" BorderThickness="0">
+                          Background="Transparent" BorderThickness="0"
+                          ToolTip.Tip="{Binding FilePath}">
                     <TextBlock Text="{Binding DisplayName}"
                                FontSize="12"
                                Foreground="#A09C99"
                                TextTrimming="CharacterEllipsis" />
                   </Button>
-                  <!-- Remove button -->
-                  <Button Grid.Column="2" Classes="ctrl"
+
+                  <!-- ── Remove button ───────────────────────────────── -->
+                  <Button Grid.Column="3" Classes="ctrl"
                           Command="{Binding $parent[Window].DataContext.RemovePlaylistItemCommand}"
                           CommandParameter="{Binding Index}"
                           Width="28" Height="28" MinWidth="28" MinHeight="28"
-                          Opacity="0.5">
+                          Opacity="0.4"
+                          ToolTip.Tip="Remove">
                     <PathIcon Width="10" Height="10" Data="{StaticResource Icon.WindowClose}" />
                   </Button>
+
+                  <!-- ── Right-click context menu ────────────────────── -->
+                  <Grid.ContextMenu>
+                    <ContextMenu>
+                      <MenuItem Header="▶  Play"
+                                Click="PlaylistCtx_Play" />
+                      <Separator />
+                      <MenuItem Header="Remove from queue"
+                                Click="PlaylistCtx_Remove" />
+                      <Separator />
+                      <MenuItem Header="Add file to queue…"
+                                Click="PlaylistCtx_AddFile" />
+                      <MenuItem Header="Add folder to queue…"
+                                Click="PlaylistCtx_AddFolder" />
+                    </ContextMenu>
+                  </Grid.ContextMenu>
+
                 </Grid>
               </DataTemplate>
             </ItemsControl.ItemTemplate>

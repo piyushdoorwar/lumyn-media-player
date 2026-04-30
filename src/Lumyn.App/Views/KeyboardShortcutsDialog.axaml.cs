@@ -56,6 +56,7 @@ public partial class KeyboardShortcutsDialog : Window
     private static readonly (string Key, string Action)[] FileAndDialogs =
     [
         ("O",            "Open file"),
+        ("Q",            "Toggle queue / playlist"),
         ("Ctrl + G",     "Jump to time"),
         ("Alt + I",      "Take screenshot"),
     ];

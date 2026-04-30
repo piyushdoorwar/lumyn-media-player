@@ -11,6 +11,12 @@ namespace Lumyn.App.ViewModels;
 
 public sealed record TrackInfo(int Id, string Name, bool IsSelected = false);
 
+/// <summary>One entry in the playlist / queue shown in the sidebar.</summary>
+public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent)
+{
+    public string DisplayName => Path.GetFileName(FilePath);
+}
+
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private static readonly string[] SubtitleExtensions = [".srt", ".ass", ".ssa", ".vtt", ".sub"];
@@ -67,8 +73,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _trackArtist;
     private string? _trackAlbum;
     private Avalonia.Media.Imaging.Bitmap? _coverArtBitmap;
-    private string[] _folderTracks = [];
-    private int _folderTrackIndex = -1;
+
+    // ── Playlist / queue ───────────────────────────────────────────────
+    private List<string> _playlist = [];
+    private int _playlistIndex = -1;
+    private bool _isPlaylistVisible;
 
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
@@ -83,13 +92,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         };
 
         _playback.StateChanged += (_, _) => QueueRefreshState();
-        _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
-        {
-            _settings.ClearResumePosition(CurrentFilePath);
-            RefreshState();
-        });
-        _playback.ErrorOccurred += (_, message) =>
-            Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
 
         TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
         StopCommand            = new RelayCommand(_ => Stop());
@@ -114,13 +116,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SetSpeedCommand        = new RelayCommand(p => ParseAndSetSpeed(p));
         PreviousTrackCommand   = new RelayCommand(_ => { _ = NavigateTrackAsync(-1); });
         NextTrackCommand       = new RelayCommand(_ => { _ = NavigateTrackAsync(+1); });
+        TogglePlaylistCommand  = new RelayCommand(_ => IsPlaylistVisible = !IsPlaylistVisible);
+        OpenPlaylistItemCommand   = new RelayCommand(p => { if (p is int i) _ = PlayFromIndexAsync(i); });
+        RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
+        ClearPlaylistCommand   = new RelayCommand(_ => ClearPlaylist());
 
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
-            // Auto-advance to next track in audio mode when not looping.
-            if (_isAudioOnly && !_playback.IsLooping && HasNextTrack)
+            _settings.ClearResumePosition(CurrentFilePath);
+            RefreshState();
+            // Auto-advance to next playlist item when not looping.
+            if (!_playback.IsLooping && HasNextTrack)
                 _ = NavigateTrackAsync(+1);
         });
+        _playback.ErrorOccurred += (_, message) =>
+            Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
 
         ErrorMessage = _playback.InitializationError;
     }
@@ -270,14 +280,33 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasCoverArt => _coverArtBitmap is not null;
 
-    public bool HasFolderTracks => _folderTracks.Length > 1;
+    // ── Playlist / queue properties ─────────────────────────────────────────
 
-    public string FolderTrackLabel => _folderTracks.Length > 1
-        ? $"{_folderTrackIndex + 1} / {_folderTracks.Length}"
+    public bool IsPlaylistVisible
+    {
+        get => _isPlaylistVisible;
+        set => SetField(ref _isPlaylistVisible, value);
+    }
+
+    public IReadOnlyList<PlaylistItem> PlaylistItems { get; private set; } = [];
+
+    public int PlaylistCount => _playlist.Count;
+
+    /// <summary>Shown in the audio panel: "3 / 12"</summary>
+    public string PlaylistPositionLabel => _playlist.Count > 1
+        ? $"{_playlistIndex + 1} / {_playlist.Count}"
         : string.Empty;
 
-    public bool HasPreviousTrack => _folderTracks.Length > 1 && _folderTrackIndex > 0;
-    public bool HasNextTrack     => _folderTracks.Length > 1 && _folderTrackIndex < _folderTracks.Length - 1;
+    /// <summary>Alias kept for AXAML bindings on the audio panel.</summary>
+    public string FolderTrackLabel => PlaylistPositionLabel;
+
+    public bool HasPlaylist => _playlist.Count > 1;
+
+    /// <summary>Alias kept for AXAML bindings on the audio panel.</summary>
+    public bool HasFolderTracks => HasPlaylist;
+
+    public bool HasPreviousTrack => _playlist.Count > 1 && _playlistIndex > 0;
+    public bool HasNextTrack     => _playlist.Count > 1 && _playlistIndex < _playlist.Count - 1;
 
     public double SeekValue
     {
@@ -397,6 +426,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand CycleSubtitleTrackCommand { get; }
     public ICommand SetSpeedCommand { get; }    public ICommand PreviousTrackCommand { get; }
     public ICommand NextTrackCommand { get; }
+    public ICommand TogglePlaylistCommand { get; }
+    public ICommand OpenPlaylistItemCommand { get; }
+    public ICommand RemovePlaylistItemCommand { get; }
+    public ICommand ClearPlaylistCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
     public void PausePlayback() => _playback.Pause();
@@ -405,77 +438,70 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task OpenFileAsync(string filePath)
     {
-        SaveResumePosition();
-        ErrorMessage = null;
-
-        // ── Audio mode setup ────────────────────────────────────────────────
+        // Single-file open: build playlist (folder-scanned for audio, single item for video).
         var ext = Path.GetExtension(filePath);
         var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
         IsAudioOnly = audioOnly;
         OnPropertyChanged(nameof(IsAudioMode));
 
         if (audioOnly)
-        {
-            LoadFolderTracks(filePath);
-            CoverArtBitmap = FindCoverArt(filePath);
-            // Clear metadata until mpv loads the file.
-            TrackTitle  = null;
-            TrackArtist = null;
-            TrackAlbum  = null;
-        }
+            SetPlaylistFromFolder(filePath);
         else
+            SetPlaylist([filePath], 0);
+
+        CoverArtBitmap = audioOnly ? FindCoverArt(filePath) : null;
+        TrackTitle = null; TrackArtist = null; TrackAlbum = null;
+
+        NotifyPlaylistState();
+
+        await OpenPlaylistIndexInternalAsync(_playlistIndex);
+    }
+
+    /// <summary>Replaces the playlist with the given files and starts playing the first one.</summary>
+    public async Task LoadFilesAsync(IReadOnlyList<string> paths)
+    {
+        var mediaPaths = paths.Where(p => !IsSubtitleFile(p))
+            .OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var subtitlePath = paths.FirstOrDefault(IsSubtitleFile);
+
+        if (mediaPaths.Count == 0) return;
+
+        var firstExt = Path.GetExtension(mediaPaths[0]);
+        var audioOnly = AudioExtensions.Contains(firstExt, StringComparer.OrdinalIgnoreCase);
+        IsAudioOnly = audioOnly;
+        OnPropertyChanged(nameof(IsAudioMode));
+
+        SetPlaylist(mediaPaths, 0);
+        CoverArtBitmap = audioOnly ? FindCoverArt(mediaPaths[0]) : null;
+        TrackTitle = null; TrackArtist = null; TrackAlbum = null;
+        NotifyPlaylistState();
+
+        await OpenPlaylistIndexInternalAsync(0);
+
+        if (!string.IsNullOrWhiteSpace(subtitlePath) && HasMedia)
+            await LoadSubtitleFileAsync(subtitlePath);
+    }
+
+    /// <summary>Appends files to the existing playlist without interrupting playback. Starts if nothing is playing.</summary>
+    public async Task AddFilesAsync(IReadOnlyList<string> paths)
+    {
+        var mediaPaths = paths
+            .Where(p => !IsSubtitleFile(p))
+            .OrderBy(p => Path.GetFileName(p), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (mediaPaths.Count == 0) return;
+
+        var firstNewIndex = _playlist.Count;
+        _playlist.AddRange(mediaPaths);
+        RebuildPlaylistItems();
+        NotifyPlaylistState();
+
+        if (!HasMedia)
         {
-            _folderTracks     = [];
-            _folderTrackIndex = -1;
-            CoverArtBitmap    = null;
-            TrackTitle        = null;
-            TrackArtist       = null;
-            TrackAlbum        = null;
-        }
-
-        NotifyFolderNavState();
-        // ────────────────────────────────────────────────────────────────────
-
-        var resume = _settings.GetResumePosition(filePath);
-        await _playback.OpenAsync(filePath, resume);
-        _settings.AddRecentFile(filePath);
-
-        var fileName = Path.GetFileName(filePath);
-        Title = string.IsNullOrWhiteSpace(fileName) ? "Lumyn" : $"{fileName} - Lumyn";
-        ShowOsd(Path.GetFileName(filePath) ?? "");
-        RefreshState();
-
-        // Restore cached subtitle settings for this file (if any)
-        var cached = _settings.GetSubtitleSettings(filePath);
-        if (cached is not null)
-        {
-            var restored = SubtitleSettingsFromEntry(cached);
-            CurrentSubtitleSettings = restored;
-            // Small delay so mpv has time to initialise media tracks before we restore subtitles.
-            await Task.Delay(400);
-            await ApplySubtitleSettingsAsync(restored, saveToCache: false);
-        }
-        else
-        {
-            // Reset to defaults so dialog opens clean for a new file
-            CurrentSubtitleSettings = new SubtitleSettings(
-                null, SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0);
-
-            var matchingSubtitle = FindMatchingSubtitleFile(filePath);
-            if (!string.IsNullOrWhiteSpace(matchingSubtitle))
-            {
-                await Task.Delay(400);
-                await LoadSubtitleFileAsync(matchingSubtitle);
-            }
-        }
-
-        // Read ID3/metadata tags after mpv has loaded the file.
-        if (audioOnly)
-        {
-            await Task.Delay(600);
-            TrackTitle  = _playback.GetMetadata("title")  ?? Path.GetFileNameWithoutExtension(filePath);
-            TrackArtist = _playback.GetMetadata("artist");
-            TrackAlbum  = _playback.GetMetadata("album");
+            _playlistIndex = firstNewIndex;
+            await OpenPlaylistIndexInternalAsync(_playlistIndex);
         }
     }
 
@@ -671,7 +697,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(HasMedia));
         OnPropertyChanged(nameof(IsAudioMode));
         OnPropertyChanged(nameof(RecentFiles));
-        NotifyFolderNavState();
+        NotifyPlaylistState();
         RefreshTracksIfNeeded();
 
         // Update Avalonia subtitle overlay text.
@@ -721,15 +747,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         SaveResumePosition();
         _playback.Stop();
-        Title = "Lumyn";
-        IsAudioOnly       = false;
-        TrackTitle        = null;
-        TrackArtist       = null;
-        TrackAlbum        = null;
-        CoverArtBitmap    = null;
-        _folderTracks     = [];
-        _folderTrackIndex = -1;
-        NotifyFolderNavState();
+        Title         = "Lumyn";
+        IsAudioOnly   = false;
+        TrackTitle    = null;
+        TrackArtist   = null;
+        TrackAlbum    = null;
+        CoverArtBitmap = null;
+        // Leave the playlist intact so the user can resume or navigate.
+        NotifyPlaylistState();
         RefreshState();
     }
 
@@ -769,8 +794,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             SetSpeed(v);
     }
 
-    private static string? FindMatchingSubtitleFile(string mediaPath)
-    {
+    private static bool IsSubtitleFile(string path) =>
+        SubtitleExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
+
+    private static string? FindMatchingSubtitleFile(string mediaPath)    {
         var directory = Path.GetDirectoryName(mediaPath);
         var name = Path.GetFileNameWithoutExtension(mediaPath);
         if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(name))
@@ -904,13 +931,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Audio mode helpers ────────────────────────────────────────────────────
 
-    private void LoadFolderTracks(string filePath)
+    private void SetPlaylistFromFolder(string filePath)
     {
         var dir = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(dir))
         {
-            _folderTracks     = [filePath];
-            _folderTrackIndex = 0;
+            SetPlaylist([filePath], 0);
             return;
         }
 
@@ -919,17 +945,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var files = Directory.EnumerateFiles(dir)
                 .Where(f => AudioExtensions.Contains(Path.GetExtension(f), StringComparer.OrdinalIgnoreCase))
                 .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+                .ToList();
 
-            _folderTracks     = files.Length > 0 ? files : [filePath];
-            _folderTrackIndex = Array.FindIndex(_folderTracks,
-                f => string.Equals(f, filePath, StringComparison.OrdinalIgnoreCase));
-            if (_folderTrackIndex < 0) _folderTrackIndex = 0;
+            if (files.Count == 0) files = [filePath];
+            var idx = files.FindIndex(f => string.Equals(f, filePath, StringComparison.OrdinalIgnoreCase));
+            SetPlaylist(files, Math.Max(0, idx));
         }
         catch
         {
-            _folderTracks     = [filePath];
-            _folderTrackIndex = 0;
+            SetPlaylist([filePath], 0);
         }
     }
 
@@ -967,15 +991,118 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private async Task NavigateTrackAsync(int delta)
     {
-        if (_folderTracks.Length <= 1) return;
-        var next = _folderTrackIndex + delta;
-        if (next < 0 || next >= _folderTracks.Length) return;
-        await OpenFileAsync(_folderTracks[next]);
+        if (_playlist.Count <= 1) return;
+        var next = _playlistIndex + delta;
+        if (next < 0 || next >= _playlist.Count) return;
+        _playlistIndex = next;
+        await OpenPlaylistIndexInternalAsync(_playlistIndex);
     }
 
-    private void NotifyFolderNavState()
+    private async Task PlayFromIndexAsync(int index)
     {
+        if (index < 0 || index >= _playlist.Count) return;
+        _playlistIndex = index;
+        await OpenPlaylistIndexInternalAsync(_playlistIndex);
+    }
+
+    /// <summary>
+    /// Core: opens the file at <paramref name="index"/> in the playlist, updating audio metadata.
+    /// Does NOT modify <c>_playlist</c> or <c>_playlistIndex</c>.
+    /// </summary>
+    private async Task OpenPlaylistIndexInternalAsync(int index)
+    {
+        var filePath = _playlist[index];
+        SaveResumePosition();
+        ErrorMessage = null;
+
+        var ext = Path.GetExtension(filePath);
+        var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
+        IsAudioOnly = audioOnly;
+        OnPropertyChanged(nameof(IsAudioMode));
+
+        CoverArtBitmap = audioOnly ? FindCoverArt(filePath) : null;
+        TrackTitle = null; TrackArtist = null; TrackAlbum = null;
+
+        RebuildPlaylistItems();
+        NotifyPlaylistState();
+
+        var resume = _settings.GetResumePosition(filePath);
+        await _playback.OpenAsync(filePath, resume);
+        _settings.AddRecentFile(filePath);
+
+        var fileName = Path.GetFileName(filePath);
+        Title = string.IsNullOrWhiteSpace(fileName) ? "Lumyn" : $"{fileName} - Lumyn";
+        ShowOsd(fileName ?? "");
+        RefreshState();
+
+        var cached = _settings.GetSubtitleSettings(filePath);
+        if (cached is not null)
+        {
+            var restored = SubtitleSettingsFromEntry(cached);
+            CurrentSubtitleSettings = restored;
+            await Task.Delay(400);
+            await ApplySubtitleSettingsAsync(restored, saveToCache: false);
+        }
+        else
+        {
+            CurrentSubtitleSettings = new SubtitleSettings(
+                null, SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0);
+            var matchingSubtitle = FindMatchingSubtitleFile(filePath);
+            if (!string.IsNullOrWhiteSpace(matchingSubtitle))
+            {
+                await Task.Delay(400);
+                await LoadSubtitleFileAsync(matchingSubtitle);
+            }
+        }
+
+        if (audioOnly)
+        {
+            await Task.Delay(600);
+            TrackTitle  = _playback.GetMetadata("title")  ?? Path.GetFileNameWithoutExtension(filePath);
+            TrackArtist = _playback.GetMetadata("artist");
+            TrackAlbum  = _playback.GetMetadata("album");
+        }
+    }
+
+    private void RemoveFromPlaylist(int index)
+    {
+        if (index < 0 || index >= _playlist.Count) return;
+        _playlist.RemoveAt(index);
+        if (_playlistIndex >= _playlist.Count)
+            _playlistIndex = Math.Max(0, _playlist.Count - 1);
+        RebuildPlaylistItems();
+        NotifyPlaylistState();
+    }
+
+    private void ClearPlaylist()
+    {
+        _playlist.Clear();
+        _playlistIndex = -1;
+        RebuildPlaylistItems();
+        NotifyPlaylistState();
+    }
+
+    private void SetPlaylist(IEnumerable<string> files, int activeIndex)
+    {
+        _playlist = [.. files];
+        _playlistIndex = _playlist.Count > 0 ? Math.Clamp(activeIndex, 0, _playlist.Count - 1) : -1;
+        RebuildPlaylistItems();
+    }
+
+    private void RebuildPlaylistItems()
+    {
+        PlaylistItems = _playlist.Count == 0
+            ? []
+            : [.. _playlist.Select((p, i) => new PlaylistItem(i, p, i == _playlistIndex))];
+        OnPropertyChanged(nameof(PlaylistItems));
+        OnPropertyChanged(nameof(PlaylistCount));
+    }
+
+    private void NotifyPlaylistState()
+    {
+        OnPropertyChanged(nameof(HasPlaylist));
         OnPropertyChanged(nameof(HasFolderTracks));
+        OnPropertyChanged(nameof(PlaylistPositionLabel));
         OnPropertyChanged(nameof(FolderTrackLabel));
         OnPropertyChanged(nameof(HasPreviousTrack));
         OnPropertyChanged(nameof(HasNextTrack));

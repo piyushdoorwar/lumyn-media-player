@@ -3,6 +3,7 @@
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:Lumyn.App.Controls"
+    xmlns:vm="using:Lumyn.App.ViewModels"
     Title="{Binding Title}"
     Width="980"
     Height="620"
@@ -50,6 +51,11 @@
                   Click="KeyboardShortcutsButton_OnClick" ToolTip.Tip="Keyboard shortcuts">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
           </Button>
+          <Button Classes="icon ctrl" Name="PlaylistButton"
+                  Classes.dim="{Binding !IsPlaylistVisible}"
+                  Command="{Binding TogglePlaylistCommand}" ToolTip.Tip="Queue (Q)">
+            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Playlist}" />
+          </Button>
         </StackPanel>
 
         <!-- Centre: drag region + title -->
@@ -93,7 +99,9 @@
     </Border>
 
     <!-- ── Video area (mpv + overlays + bottom bar) ──────────────────────── -->
-    <Panel Name="Root" Grid.Row="1" Background="#111111" DragDrop.AllowDrop="True">
+    <Grid Name="Root" Grid.Row="1" Background="#111111" DragDrop.AllowDrop="True"
+          ColumnDefinitions="*,Auto">
+    <Panel Grid.Column="0" Background="#111111" DragDrop.AllowDrop="True">
 
     <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
     <controls:MpvVideoSurface Name="VideoSurface"
@@ -381,6 +389,10 @@
         <MenuItem Name="RecentFilesMenuItem" Header="Open Recent" />
         <Separator />
 
+        <MenuItem Header="Open Folder..." Click="OpenFolder_Click" />
+        <MenuItem Header="Add to Queue..." Click="AddToQueue_Click" />
+        <Separator />
+
         <MenuItem Header="Jump to Time..." Click="JumpToTime_Click" InputGesture="Ctrl+G" />
         <MenuItem Header="Load Subtitle..." Click="LoadSubtitle_Click" InputGesture="S" />
         <MenuItem Header="Video Adjustments..." Click="VideoAdjustments_Click" />
@@ -414,6 +426,83 @@
     </Panel.ContextMenu>
 
     </Panel>
+
+    <!-- ── Playlist / Queue sidebar ─────────────────────────────────────── -->
+    <Border Grid.Column="1"
+            Width="260"
+            Background="#141414"
+            BorderBrush="#252525"
+            BorderThickness="1,0,0,0"
+            IsVisible="{Binding IsPlaylistVisible}">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="14,10,8,8">
+          <TextBlock Grid.Column="0" Text="Queue"
+                     FontSize="13" FontWeight="SemiBold"
+                     Foreground="#C8C3C2" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1"
+                     Text="{Binding PlaylistCount}"
+                     FontSize="11" Foreground="#5A5755"
+                     VerticalAlignment="Center" Margin="0,0,8,0" />
+          <Button Grid.Column="2" Classes="ctrl"
+                  Command="{Binding ClearPlaylistCommand}"
+                  ToolTip.Tip="Clear queue" Width="28" Height="28" MinWidth="28" MinHeight="28">
+            <PathIcon Width="12" Height="12" Data="{StaticResource Icon.Stop}" Foreground="#5A5755" />
+          </Button>
+        </Grid>
+        <!-- Divider -->
+        <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="#252525" />
+        <!-- Item list -->
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+          <ItemsControl ItemsSource="{Binding PlaylistItems}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Grid ColumnDefinitions="4,*,28"
+                      Cursor="Hand">
+                  <!-- Active indicator bar -->
+                  <Border Grid.Column="0" Width="3" HorizontalAlignment="Left"
+                          Margin="0,3" CornerRadius="2"
+                          IsVisible="{Binding IsCurrent}">
+                    <Border.Background>
+                      <SolidColorBrush Color="#3A9B4B" />
+                    </Border.Background>
+                  </Border>
+                  <!-- Filename -->
+                  <Button Grid.Column="1"
+                          Command="{Binding $parent[Window].DataContext.OpenPlaylistItemCommand}"
+                          CommandParameter="{Binding Index}"
+                          Padding="4,8" HorizontalContentAlignment="Left"
+                          Background="Transparent" BorderThickness="0">
+                    <TextBlock Text="{Binding DisplayName}"
+                               FontSize="12"
+                               Foreground="#A09C99"
+                               TextTrimming="CharacterEllipsis" />
+                  </Button>
+                  <!-- Remove button -->
+                  <Button Grid.Column="2" Classes="ctrl"
+                          Command="{Binding $parent[Window].DataContext.RemovePlaylistItemCommand}"
+                          CommandParameter="{Binding Index}"
+                          Width="28" Height="28" MinWidth="28" MinHeight="28"
+                          Opacity="0.5">
+                    <PathIcon Width="10" Height="10" Data="{StaticResource Icon.WindowClose}" />
+                  </Button>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+        <!-- Footer -->
+        <Border Grid.Row="2" Height="1" Background="#252525" VerticalAlignment="Top" />
+        <TextBlock Grid.Row="2"
+                   Text="{Binding PlaylistPositionLabel}"
+                   FontSize="11" Foreground="#4A4948"
+                   HorizontalAlignment="Center"
+                   Margin="0,8"
+                   IsVisible="{Binding HasPlaylist}" />
+      </Grid>
+    </Border>
+
+    </Grid>
   </Grid>
   </Border>
 </Window>

@@ -252,6 +252,9 @@ public partial class MainWindow : Window
                 e.Handled = true; break;
             case Key.P:
                 ViewModel.PreviousTrackCommand.Execute(null);
+                e.Handled = true; break;
+            case Key.Q:
+                ViewModel.TogglePlaylistCommand.Execute(null);
                 e.Handled = true; break;        }
     }
 
@@ -331,6 +334,12 @@ public partial class MainWindow : Window
     private void KeyboardShortcuts_Click(object? sender, RoutedEventArgs e)
         => OpenKeyboardShortcutsDialog();
 
+    private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
+        => await OpenFolderAsync();
+
+    private async void AddToQueue_Click(object? sender, RoutedEventArgs e)
+        => await AddToQueueAsync();
+
     private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
         => await OpenSubtitleSettingsDialogAsync();
 
@@ -359,7 +368,7 @@ public partial class MainWindow : Window
         var files = await RunWithPlaybackPausedAsync(() => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Open media",
-            AllowMultiple = false,
+            AllowMultiple = true,
             FileTypeFilter =
             [
                 new FilePickerFileType("Media files")
@@ -371,13 +380,60 @@ public partial class MainWindow : Window
             ]
         }));
 
-        var path = files.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
+        if (ViewModel is null) return;
+        var paths = files.Select(f => f.TryGetLocalPath())
+                         .Where(p => !string.IsNullOrWhiteSpace(p)).Cast<string>().ToList();
+        if (paths.Count == 0) return;
+
+        if (paths.Count == 1)
+            await ViewModel.OpenFileAsync(paths[0]);
+        else
+            await ViewModel.LoadFilesAsync(paths);
+
+        Focus(); ShowControls();
+    }
+
+    private async Task OpenFolderAsync()
+    {
+        if (ViewModel is null) return;
+        var folders = await RunWithPlaybackPausedAsync(() => StorageProvider.OpenFolderPickerAsync(
+            new FolderPickerOpenOptions { Title = "Open folder", AllowMultiple = false }));
+        var dir = folders.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(dir)) return;
+
+        var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".mp4",".mkv",".avi",".mov",".webm",".mp3",".flac",".ogg",".opus",".aac",".wav",".m4a",".m4b",".wma" };
+        var mediaFiles = Directory.EnumerateFiles(dir)
+            .Where(f => mediaExts.Contains(Path.GetExtension(f)))
+            .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (mediaFiles.Count == 0) return;
+
+        await ViewModel.LoadFilesAsync(mediaFiles);
+        Focus(); ShowControls();
+    }
+
+    private async Task AddToQueueAsync()
+    {
+        if (ViewModel is null) return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            await ViewModel.OpenFileAsync(path);
-            Focus();
-            ShowControls();
-        }
+            Title = "Add to queue",
+            AllowMultiple = true,
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Media files")
+                {
+                    Patterns = ["*.mp4","*.mkv","*.avi","*.mov","*.webm",
+                                "*.mp3","*.flac","*.wav","*.ogg","*.m4a","*.aac","*.opus"]
+                },
+                FilePickerFileTypes.All
+            ]
+        });
+        var paths = files.Select(f => f.TryGetLocalPath())
+                         .Where(p => !string.IsNullOrWhiteSpace(p)).Cast<string>().ToList();
+        if (paths.Count > 0)
+            await ViewModel.AddFilesAsync(paths);
     }
 
     private async Task OpenSubtitleFileAsync()
@@ -463,20 +519,32 @@ public partial class MainWindow : Window
 
     private async void OnDrop(object? sender, DragEventArgs e)
     {
-        var files = e.DataTransfer.TryGetFiles();
-        var paths = files?
-            .Select(f => f.TryGetLocalPath())
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .Cast<string>()
-            .ToArray() ?? [];
+        var items = e.DataTransfer.TryGetFiles()?.ToArray() ?? [];
+        if (items.Length == 0 || ViewModel is null) return;
 
-        if (paths.Length == 0 || ViewModel is null) return;
+        var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { ".mp4",".mkv",".avi",".mov",".webm",".mp3",".flac",".ogg",".opus",".aac",".wav",".m4a",".m4b",".wma" };
+
+        var paths = new List<string>();
+        foreach (var item in items)
+        {
+            var local = item.TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(local)) continue;
+            if (Directory.Exists(local))
+                paths.AddRange(Directory.EnumerateFiles(local)
+                    .Where(f => mediaExts.Contains(Path.GetExtension(f)))
+                    .OrderBy(f => Path.GetFileName(f), StringComparer.OrdinalIgnoreCase));
+            else
+                paths.Add(local);
+        }
 
         var subtitlePath = paths.FirstOrDefault(IsSubtitleFile);
-        var mediaPath = paths.FirstOrDefault(path => !IsSubtitleFile(path));
+        var mediaPaths = paths.Where(p => !IsSubtitleFile(p)).ToList();
 
-        if (!string.IsNullOrWhiteSpace(mediaPath))
-            await ViewModel.OpenFileAsync(mediaPath);
+        if (mediaPaths.Count == 1)
+            await ViewModel.OpenFileAsync(mediaPaths[0]);
+        else if (mediaPaths.Count > 1)
+            await ViewModel.LoadFilesAsync(mediaPaths);
 
         if (!string.IsNullOrWhiteSpace(subtitlePath) && ViewModel.HasMedia)
             await ViewModel.LoadSubtitleFileAsync(subtitlePath);

@@ -143,9 +143,11 @@ copy_dylib_closure() {
 }
 
 fix_install_names() {
-  local copied
   local file dep dep_base
-  mapfile -t copied < <(find "${MACOS_DIR}" -maxdepth 1 -type f \( -name '*.dylib' -o -name '*.so' \) -print)
+  local copied=()
+  while IFS= read -r line; do
+    copied+=("${line}")
+  done < <(find "${MACOS_DIR}" -maxdepth 1 -type f \( -name '*.dylib' -o -name '*.so' \) -print)
 
   for file in "${copied[@]}"; do
     install_name_tool -id "@loader_path/$(basename "${file}")" "${file}" || true

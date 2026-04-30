@@ -159,7 +159,7 @@ dotnet publish "${APP_PROJECT}" -c "${CONFIGURATION}" -r "${RID}" --self-contain
 MPV_LIB="$(find_libmpv)"
 
 rm -rf "${PACKAGE_ROOT}" "${DEB_DIR}"
-mkdir -p "${PACKAGE_ROOT}/DEBIAN" "${PACKAGE_ROOT}/opt/lumyn" "${PACKAGE_ROOT}/usr/bin" "${PACKAGE_ROOT}/usr/share/applications" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps" "${DEB_DIR}"
+mkdir -p "${PACKAGE_ROOT}/DEBIAN" "${PACKAGE_ROOT}/opt/lumyn" "${PACKAGE_ROOT}/usr/bin" "${PACKAGE_ROOT}/usr/share/applications" "${PACKAGE_ROOT}/usr/share/icons/hicolor/scalable/apps" "${PACKAGE_ROOT}/usr/share/mime/packages" "${DEB_DIR}"
 cp -R "${PUBLISH_DIR}/." "${PACKAGE_ROOT}/opt/lumyn/"
 bundle_library_closure "${MPV_LIB}" "${PACKAGE_ROOT}/opt/lumyn/lib"
 bundle_published_native_dependencies "${PACKAGE_ROOT}/opt/lumyn" "${PACKAGE_ROOT}/opt/lumyn/lib"
@@ -192,15 +192,63 @@ cat > "${PACKAGE_ROOT}/usr/share/applications/lumyn.desktop" <<DESKTOP
 [Desktop Entry]
 Name=Lumyn
 Comment=Play local media files
-Exec=/opt/lumyn/lumyn
+Exec=/opt/lumyn/lumyn %U
 Icon=lumyn
 Terminal=false
 Type=Application
 StartupWMClass=Lumyn
 Categories=AudioVideo;Player;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/mpeg;video/x-flv;video/3gpp;video/x-ms-wmv;video/ogg;video/mp2t;video/divx;video/x-ogm+ogg;audio/mpeg;audio/flac;audio/ogg;audio/x-wav;audio/mp4;audio/x-m4a;audio/aac;audio/x-ms-wma;audio/opus;audio/x-matroska;
 DESKTOP
 
+cat > "${PACKAGE_ROOT}/usr/share/mime/packages/lumyn.xml" <<'MIMEXML'
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="video/x-matroska">
+    <comment>Matroska video</comment>
+    <glob pattern="*.mkv"/>
+    <glob pattern="*.mk3d"/>
+  </mime-type>
+  <mime-type type="video/divx">
+    <comment>DivX video</comment>
+    <glob pattern="*.divx"/>
+  </mime-type>
+  <mime-type type="video/x-ogm+ogg">
+    <comment>OGM video</comment>
+    <glob pattern="*.ogm"/>
+  </mime-type>
+  <mime-type type="audio/x-matroska">
+    <comment>Matroska audio</comment>
+    <glob pattern="*.mka"/>
+  </mime-type>
+</mime-info>
+MIMEXML
+
+cat > "${PACKAGE_ROOT}/DEBIAN/postinst" <<'POSTINST'
+#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications || true
+fi
+if command -v update-mime-database >/dev/null 2>&1; then
+  update-mime-database /usr/share/mime || true
+fi
+POSTINST
+
+cat > "${PACKAGE_ROOT}/DEBIAN/postrm" <<'POSTRM'
+#!/bin/sh
+set -e
+if command -v update-desktop-database >/dev/null 2>&1; then
+  update-desktop-database /usr/share/applications || true
+fi
+if command -v update-mime-database >/dev/null 2>&1; then
+  update-mime-database /usr/share/mime || true
+fi
+POSTRM
+
 chmod 755 "${PACKAGE_ROOT}/DEBIAN"
+chmod +x "${PACKAGE_ROOT}/DEBIAN/postinst"
+chmod +x "${PACKAGE_ROOT}/DEBIAN/postrm"
 chmod +x "${PACKAGE_ROOT}/opt/lumyn/Lumyn"
 chmod +x "${PACKAGE_ROOT}/opt/lumyn/lumyn"
 rm -f "${TMP_DEB_FILE}" "${DEB_FILE}"

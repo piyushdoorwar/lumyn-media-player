@@ -153,6 +153,146 @@ function Copy-MpvRuntime {
     }
 }
 
+function Write-FileAssociationScript {
+    param(
+        [string]$DestinationDir
+    )
+
+    $extensions = @(
+        # Video
+        ".mp4", ".m4v",
+        ".mkv", ".mk3d",
+        ".webm",
+        ".avi",
+        ".mov",
+        ".mpg", ".mpeg",
+        ".flv",
+        ".3gp",
+        ".wmv",
+        ".ogv", ".ogm",
+        ".ts",
+        ".divx",
+        # Audio
+        ".mp3",
+        ".flac",
+        ".ogg", ".oga",
+        ".wav",
+        ".m4a",
+        ".aac",
+        ".wma",
+        ".opus",
+        ".mka"
+    )
+
+    $scriptContent = @'
+<#
+.SYNOPSIS
+    Registers Lumyn as a handler for common media file types in Windows.
+    Writes to HKCU (current user only) — no administrator rights required.
+.DESCRIPTION
+    Run this script once after extracting Lumyn to your preferred location.
+    To unregister, run with -Unregister.
+.PARAMETER Unregister
+    Removes Lumyn file associations from the current user account.
+#>
+param(
+    [switch]$Unregister
+)
+
+$ErrorActionPreference = "Stop"
+
+$exePath = Join-Path $PSScriptRoot "Lumyn.exe"
+if (-not (Test-Path $exePath)) {
+    throw "Lumyn.exe not found at: $exePath. Run this script from the Lumyn installation folder."
+}
+
+$progId   = "Lumyn.MediaFile"
+$classKey = "HKCU:\Software\Classes"
+
+if ($Unregister) {
+    Write-Host "Removing Lumyn file associations..."
+
+    $extensions = @(
+'@
+    foreach ($ext in $extensions) {
+        $scriptContent += "        `"$ext`",`n"
+    }
+    # Remove trailing comma+newline, close array
+    $scriptContent = $scriptContent.TrimEnd(",`n") + "`n"
+    $scriptContent += @'
+    )
+
+    foreach ($ext in $extensions) {
+        $key = Join-Path $classKey $ext
+        if (Test-Path $key) {
+            $val = (Get-ItemProperty -Path $key -Name "(default)" -ErrorAction SilentlyContinue)."(default)"
+            if ($val -eq $progId) {
+                Remove-Item -Path $key -Recurse -Force -ErrorAction SilentlyContinue
+                Write-Host "  Removed $ext"
+            }
+        }
+    }
+
+    $progKey = Join-Path $classKey $progId
+    if (Test-Path $progKey) {
+        Remove-Item -Path $progKey -Recurse -Force
+        Write-Host "  Removed ProgId: $progId"
+    }
+
+    # Notify the shell
+    $sig = '[DllImport("shell32.dll")] public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);'
+    $type = Add-Type -MemberDefinition $sig -Name "WinAPI" -Namespace "Shell32" -PassThru
+    $type::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
+
+    Write-Host "Done. You may need to sign out and back in for all changes to take effect."
+    exit 0
+}
+
+Write-Host "Registering Lumyn file associations..."
+
+# Create the ProgId entry
+$progKey = Join-Path $classKey $progId
+New-Item -Path $progKey -Force | Out-Null
+Set-ItemProperty -Path $progKey -Name "(default)" -Value "Media file"
+
+$iconKey = Join-Path $progKey "DefaultIcon"
+New-Item -Path $iconKey -Force | Out-Null
+Set-ItemProperty -Path $iconKey -Name "(default)" -Value "`"$exePath`",0"
+
+$openKey = Join-Path $progKey "shell\open\command"
+New-Item -Path $openKey -Force | Out-Null
+Set-ItemProperty -Path $openKey -Name "(default)" -Value "`"$exePath`" `"%1`""
+
+$extensions = @(
+'@
+    foreach ($ext in $extensions) {
+        $scriptContent += "    `"$ext`",`n"
+    }
+    $scriptContent = $scriptContent.TrimEnd(",`n") + "`n"
+    $scriptContent += @'
+)
+
+foreach ($ext in $extensions) {
+    $key = Join-Path $classKey $ext
+    New-Item -Path $key -Force | Out-Null
+    Set-ItemProperty -Path $key -Name "(default)" -Value $progId
+    Write-Host "  Registered $ext"
+}
+
+# Notify the shell of association changes
+$sig = '[DllImport("shell32.dll")] public static extern void SHChangeNotify(int wEventId, int uFlags, IntPtr dwItem1, IntPtr dwItem2);'
+$type = Add-Type -MemberDefinition $sig -Name "WinAPI" -Namespace "Shell32" -PassThru
+$type::SHChangeNotify(0x08000000, 0x0000, [IntPtr]::Zero, [IntPtr]::Zero)
+
+Write-Host "Done. Lumyn is now set as the default player for the above file types."
+Write-Host "To unregister: .\Register-FileAssociations.ps1 -Unregister"
+'@
+
+    $scriptPath = Join-Path $DestinationDir "Register-FileAssociations.ps1"
+    [System.IO.File]::WriteAllText($scriptPath, $scriptContent, [System.Text.UTF8Encoding]::new($false))
+    Write-Host "Written: $scriptPath"
+}
+
 function Copy-Notices {
     param(
         [string]$MpvSourceDir,
@@ -187,6 +327,7 @@ New-Item -ItemType Directory -Force -Path $packageRoot, $packageOutDir | Out-Nul
 Copy-Item (Join-Path $publishDir "*") $packageRoot -Recurse -Force
 Copy-MpvRuntime -SourceDir $mpvDir -DestinationDir $packageRoot
 Copy-Notices -MpvSourceDir $mpvDir -DestinationDir $packageRoot
+Write-FileAssociationScript -DestinationDir $packageRoot
 
 Remove-Item -Force $zipFile -ErrorAction SilentlyContinue
 Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zipFile -CompressionLevel Optimal

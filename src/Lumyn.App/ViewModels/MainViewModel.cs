@@ -48,7 +48,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _subtitleFontSizeValue = 22;
     private FontFamily _subtitleFontFamily = FontFamily.Default;
     private IBrush _subtitleForeground = Brushes.White;
-
+    // ── Video adjustments ───────────────────────────────────────────────
+    private Lumyn.App.Models.VideoAdjustments _videoAdjustments = Lumyn.App.Models.VideoAdjustments.Default;
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
         _playback = playback;
@@ -158,6 +159,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         get => _subtitleForeground;
         private set => SetField(ref _subtitleForeground, value);
     }
+
+    // ── Video adjustments ───────────────────────────────────────────────
+
+    public Lumyn.App.Models.VideoAdjustments CurrentVideoAdjustments
+    {
+        get => _videoAdjustments;
+        private set
+        {
+            if (SetField(ref _videoAdjustments, value))
+                OnPropertyChanged(nameof(HasVideoAdjustments));
+        }
+    }
+
+    public bool HasVideoAdjustments => !_videoAdjustments.IsDefault;
 
     public double SeekValue
     {
@@ -451,6 +466,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public void JumpTo(TimeSpan position)
     {
         _playback.Seek(position);
+    }
+
+    public void ApplyVideoAdjustments(Lumyn.App.Models.VideoAdjustments adj)
+    {
+        _playback.SetBrightness(adj.Brightness);
+        _playback.SetContrast(adj.Contrast);
+        _playback.SetSaturation(adj.Saturation);
+        _playback.SetVideoRotation(adj.Rotation);
+        _playback.SetVideoZoom(adj.Zoom);
+        _playback.SetVideoAspect(Lumyn.App.Models.VideoAdjustments.AspectToMpv(adj.Aspect));
+        CurrentVideoAdjustments = adj;
+        ShowOsd(adj.IsDefault ? "Video adjustments reset" : "Video adjustments applied");
     }
 
     public void EndSeek()

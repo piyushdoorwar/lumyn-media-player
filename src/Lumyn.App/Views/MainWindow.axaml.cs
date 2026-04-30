@@ -313,8 +313,14 @@ public partial class MainWindow : Window
     private async void LoadSubtitle_Click(object? sender, RoutedEventArgs e)
         => await OpenSubtitleFileAsync();
 
+    private async void VideoAdjustments_Click(object? sender, RoutedEventArgs e)
+        => await OpenVideoAdjustmentsDialogAsync();
+
     private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
         => await OpenSubtitleSettingsDialogAsync();
+
+    private async void VideoAdjustmentsButton_OnClick(object? sender, RoutedEventArgs e)
+        => await OpenVideoAdjustmentsDialogAsync();
 
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
@@ -395,6 +401,19 @@ public partial class MainWindow : Window
             await ViewModel.ApplySubtitleSettingsAsync(result);
             Focus();
         }
+    }
+
+    private async Task OpenVideoAdjustmentsDialogAsync()
+    {
+        if (ViewModel is null) return;
+        var prev = ViewModel.CurrentVideoAdjustments;
+        var dialog = new VideoAdjustmentsDialog(
+            prev,
+            adj => ViewModel.ApplyVideoAdjustments(adj));
+        var result = await dialog.ShowDialog<Lumyn.App.Models.VideoAdjustments?>(this);
+        // Apply final result; revert to previous state on cancel.
+        ViewModel.ApplyVideoAdjustments(result ?? prev);
+        Focus();
     }
 
     private async Task OpenJumpToTimeDialogAsync()

@@ -238,6 +238,15 @@ public sealed class PlaybackService : IDisposable
         RaiseStateChanged();
     }
 
+    // ── Video adjustments ──────────────────────────────────────────────────
+
+    public void SetBrightness(int value)  => SetInt("brightness",  Math.Clamp(value, -100, 100));
+    public void SetContrast(int value)    => SetInt("contrast",    Math.Clamp(value, -100, 100));
+    public void SetSaturation(int value)  => SetInt("saturation",  Math.Clamp(value, -100, 100));
+    public void SetVideoRotation(int deg) => SetInt("video-rotate", ((deg % 360) + 360) % 360);
+    public void SetVideoZoom(double zoom) => SetDouble("video-zoom", Math.Clamp(zoom, -2.0, 2.0));
+    public void SetVideoAspect(string aspect) => SetPropertyString("video-aspect-override", aspect);
+
     public void ToggleLoop()
     {
         _loop = !_loop;
@@ -562,6 +571,15 @@ public sealed class PlaybackService : IDisposable
         unsafe
         {
             MpvNative.mpv_set_property(_mpv, name, MpvFormat.Double, (IntPtr)(&value));
+        }
+    }
+
+    private void SetInt(string name, long value)
+    {
+        if (_mpv == IntPtr.Zero) return;
+        unsafe
+        {
+            MpvNative.mpv_set_property(_mpv, name, MpvFormat.Int64, (IntPtr)(&value));
         }
     }
 

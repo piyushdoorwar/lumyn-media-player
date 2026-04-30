@@ -147,6 +147,18 @@ public sealed class PlaybackService : IDisposable
         SetFlag("pause", !_pause);
     }
 
+    public void Play()
+    {
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetFlag("pause", false);
+    }
+
+    public void Pause()
+    {
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetFlag("pause", true);
+    }
+
     public void Seek(TimeSpan position)
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;

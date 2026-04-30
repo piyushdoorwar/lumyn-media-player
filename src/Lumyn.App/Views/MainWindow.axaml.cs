@@ -13,6 +13,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _positionTimer;
     private readonly DispatcherTimer _hideControlsTimer;
     private long _lastControlsPulseMs;
+    private bool _isApplyingFullscreenState;
 
     public MainWindow()
     {
@@ -299,7 +300,7 @@ public partial class MainWindow : Window
 
     private async Task OpenFromPickerAsync()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await RunWithPlaybackPausedAsync(() => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Open media",
             AllowMultiple = false,
@@ -312,7 +313,7 @@ public partial class MainWindow : Window
                 },
                 FilePickerFileTypes.All
             ]
-        });
+        }));
 
         var path = files.FirstOrDefault()?.TryGetLocalPath();
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
@@ -325,7 +326,7 @@ public partial class MainWindow : Window
 
     private async Task OpenSubtitleFileAsync()
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await RunWithPlaybackPausedAsync(() => StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Load subtitle",
             AllowMultiple = false,
@@ -337,7 +338,7 @@ public partial class MainWindow : Window
                 },
                 FilePickerFileTypes.All
             ]
-        });
+        }));
 
         var path = files.FirstOrDefault()?.TryGetLocalPath();
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
@@ -351,7 +352,8 @@ public partial class MainWindow : Window
     {
         if (ViewModel is null) return;
         var dialog = new SubtitleSettingsDialog(ViewModel.CurrentSubtitleSettings, ViewModel.CurrentFilePath);
-        var result = await dialog.ShowDialog<Lumyn.App.Models.SubtitleSettings?>(this);
+        var result = await RunWithPlaybackPausedAsync(() =>
+            dialog.ShowDialog<Lumyn.App.Models.SubtitleSettings?>(this));
         if (result is not null)
         {
             await ViewModel.ApplySubtitleSettingsAsync(result);
@@ -363,7 +365,7 @@ public partial class MainWindow : Window
     {
         if (ViewModel is null || !ViewModel.HasMedia) return;
         var dialog = new JumpToTimeDialog();
-        var result = await dialog.ShowDialog<TimeSpan?>(this);
+        var result = await RunWithPlaybackPausedAsync(() => dialog.ShowDialog<TimeSpan?>(this));
         if (result.HasValue)
         {
             ViewModel.JumpTo(result.Value);
@@ -406,6 +408,9 @@ public partial class MainWindow : Window
 
     private void ToggleFullscreen()
     {
+        if (_isApplyingFullscreenState) return;
+        _isApplyingFullscreenState = true;
+
         WindowState = WindowState == WindowState.FullScreen
             ? WindowState.Normal
             : WindowState.FullScreen;
@@ -420,6 +425,31 @@ public partial class MainWindow : Window
             if (iconCtrl is not null) iconCtrl.Data = sg;
         }
         ShowControls();
+
+        Dispatcher.UIThread.Post(() => _isApplyingFullscreenState = false, DispatcherPriority.Background);
+    }
+
+    private async Task<T> RunWithPlaybackPausedAsync<T>(Func<Task<T>> action)
+    {
+        if (ViewModel is null)
+            return await action();
+
+        var resume = ViewModel.IsPlaying;
+        if (resume)
+            ViewModel.PausePlayback();
+
+        try
+        {
+            return await action();
+        }
+        finally
+        {
+            if (resume && ViewModel.HasMedia)
+                ViewModel.ResumePlayback();
+
+            Focus();
+            ShowControls();
+        }
     }
 }
 

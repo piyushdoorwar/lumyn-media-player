@@ -250,6 +250,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Public methods ───────────────────────────────────────────────────────
 
+    public void PausePlayback() => _playback.Pause();
+
+    public void ResumePlayback() => _playback.Play();
+
     public async Task OpenFileAsync(string filePath)
     {
         SaveResumePosition();

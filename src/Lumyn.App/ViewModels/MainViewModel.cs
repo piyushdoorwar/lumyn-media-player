@@ -168,7 +168,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         get => _volume;
         set
         {
-            var next = Math.Clamp(value, 0, 100);
+            var next = Math.Clamp(value, 0, 150);
             if (SetField(ref _volume, next))
                 _playback.SetVolume(next);
         }

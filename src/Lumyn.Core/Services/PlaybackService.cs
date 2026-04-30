@@ -184,7 +184,7 @@ public sealed class PlaybackService : IDisposable
 
     public void SetVolume(int volume)
     {
-        var clamped = Math.Clamp(volume, 0, 100);
+        var clamped = Math.Clamp(volume, 0, 150);
         lock (_stateLock)
             _state.Volume = clamped;
         if (_mpv != IntPtr.Zero)
@@ -443,7 +443,7 @@ public sealed class PlaybackService : IDisposable
                     _state.IsMuted = Marshal.PtrToStructure<int>(property.data) != 0;
                     break;
                 case "volume" when property.format == MpvFormat.Double:
-                    _state.Volume = (int)Math.Round(Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0, 100));
+                    _state.Volume = (int)Math.Round(Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0, 150));
                     break;
                 case "speed" when property.format == MpvFormat.Double:
                     _state.Speed = (float)Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0.25, 4.0);

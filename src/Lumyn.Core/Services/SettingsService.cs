@@ -6,8 +6,11 @@ namespace Lumyn.Core.Services;
 
 public sealed class SettingsService
 {
+    private const int MaxRecentFiles = 12;
+
     private readonly string _settingsPath;
     private readonly Dictionary<string, double> _resumePositions;
+    private readonly List<string> _recentFiles;
 
     public SettingsService()
     {
@@ -17,8 +20,26 @@ public sealed class SettingsService
         Directory.CreateDirectory(configDir);
 
         _settingsPath = Path.Combine(configDir, "settings.json");
-        _resumePositions = LoadResumePositions();
+
+        var settings = LoadSettings();
+        _resumePositions = settings.ResumePositions;
+        _recentFiles = settings.RecentFiles;
     }
+
+    public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
+
+    // ── Recent files ────────────────────────────────────────────────────────
+
+    public void AddRecentFile(string filePath)
+    {
+        _recentFiles.Remove(filePath);
+        _recentFiles.Insert(0, filePath);
+        if (_recentFiles.Count > MaxRecentFiles)
+            _recentFiles.RemoveRange(MaxRecentFiles, _recentFiles.Count - MaxRecentFiles);
+        Save();
+    }
+
+    // ── Resume positions ────────────────────────────────────────────────────
 
     public TimeSpan GetResumePosition(string filePath)
     {
@@ -29,57 +50,47 @@ public sealed class SettingsService
 
     public void SaveResumePosition(string? filePath, TimeSpan position, TimeSpan duration)
     {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(filePath)) return;
 
         var key = KeyForFile(filePath);
         if (position.TotalSeconds < 5 || (duration > TimeSpan.Zero && duration - position < TimeSpan.FromSeconds(5)))
-        {
             _resumePositions.Remove(key);
-        }
         else
-        {
             _resumePositions[key] = position.TotalSeconds;
-        }
 
         Save();
     }
 
     public void ClearResumePosition(string? filePath)
     {
-        if (string.IsNullOrWhiteSpace(filePath))
-        {
-            return;
-        }
-
+        if (string.IsNullOrWhiteSpace(filePath)) return;
         _resumePositions.Remove(KeyForFile(filePath));
         Save();
     }
 
-    private Dictionary<string, double> LoadResumePositions()
-    {
-        if (!File.Exists(_settingsPath))
-        {
-            return [];
-        }
+    // ── Persistence ─────────────────────────────────────────────────────────
 
+    private SettingsFile LoadSettings()
+    {
+        if (!File.Exists(_settingsPath)) return new SettingsFile();
         try
         {
             var json = File.ReadAllText(_settingsPath);
-            var settings = JsonSerializer.Deserialize<SettingsFile>(json);
-            return settings?.ResumePositions ?? [];
+            return JsonSerializer.Deserialize<SettingsFile>(json) ?? new SettingsFile();
         }
         catch
         {
-            return [];
+            return new SettingsFile();
         }
     }
 
     private void Save()
     {
-        var settings = new SettingsFile { ResumePositions = _resumePositions };
+        var settings = new SettingsFile
+        {
+            ResumePositions = _resumePositions,
+            RecentFiles = _recentFiles
+        };
         var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
     }
@@ -94,5 +105,6 @@ public sealed class SettingsService
     private sealed class SettingsFile
     {
         public Dictionary<string, double> ResumePositions { get; set; } = [];
+        public List<string> RecentFiles { get; set; } = [];
     }
 }

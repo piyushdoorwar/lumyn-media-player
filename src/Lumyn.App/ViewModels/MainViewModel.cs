@@ -1,15 +1,26 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Windows.Input;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
+using Avalonia.Threading;
 using LibVLCSharp.Shared;
+using Lumyn.Core.Models;
 using Lumyn.Core.Services;
 
 namespace Lumyn.App.ViewModels;
 
+public sealed record TrackInfo(int Id, string Name);
+
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
+    private static readonly float[] SpeedSteps = [0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f];
+
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
+    private readonly DispatcherTimer _osdTimer;
+
     private string _title = "Lumyn";
     private string _timeText = "00:00 / 00:00";
     private string? _errorMessage;
@@ -19,29 +30,71 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isMuted;
     private bool _controlsVisible = true;
     private bool _isSeeking;
+    private float _speed = 1.0f;
+    private bool _isLooping;
+    private bool _isAlwaysOnTop;
+    private string? _osdMessage;
+    private TrackInfo[] _audioTracks = [];
+    private TrackInfo[] _subtitleTracks = [];
+    private WriteableBitmap? _videoBitmap;
 
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
         _playback = playback;
         _settings = settings;
-        _playback.StateChanged += (_, _) => RefreshState();
-        _playback.EndReached += (_, _) => _settings.ClearResumePosition(CurrentFilePath);
-        _playback.ErrorOccurred += (_, message) => ErrorMessage = message;
+
+        _osdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _osdTimer.Tick += (_, _) =>
+        {
+            _osdTimer.Stop();
+            OsdMessage = null;
+        };
+
+        _playback.StateChanged += (_, _) => Dispatcher.UIThread.InvokeAsync(RefreshState);
+        _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _settings.ClearResumePosition(CurrentFilePath);
+            RefreshState();
+        });
+        _playback.ErrorOccurred += (_, message) =>
+            Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
+
+        _playback.VideoFrameReady += OnVideoFrameReady;
 
         TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
-        ToggleMuteCommand = new RelayCommand(_ => _playback.ToggleMute());
-        SeekBackwardCommand = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(-5)));
-        SeekForwardCommand = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(5)));
-        VolumeUpCommand = new RelayCommand(_ => Volume += 5);
-        VolumeDownCommand = new RelayCommand(_ => Volume -= 5);
+        StopCommand            = new RelayCommand(_ => Stop());
+        ToggleMuteCommand      = new RelayCommand(_ => ToggleMute());
+        SeekBackwardCommand    = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(-5)));
+        SeekForwardCommand     = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(5)));
+        SeekBackward30Command  = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(-30)));
+        SeekForward30Command   = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(30)));
+        VolumeUpCommand        = new RelayCommand(_ => { Volume += 5; ShowOsd($"Volume: {Volume}%"); });
+        VolumeDownCommand      = new RelayCommand(_ => { Volume -= 5; ShowOsd($"Volume: {Volume}%"); });
+        SpeedUpCommand         = new RelayCommand(_ => AdjustSpeed(+1));
+        SpeedDownCommand       = new RelayCommand(_ => AdjustSpeed(-1));
+        ResetSpeedCommand      = new RelayCommand(_ => SetSpeed(1.0f));
+        ToggleLoopCommand      = new RelayCommand(_ => ToggleLoop());
+        StepFrameCommand       = new RelayCommand(_ => _playback.StepFrame());
+        TakeScreenshotCommand  = new RelayCommand(_ => TakeScreenshot());
+        ToggleAlwaysOnTopCommand = new RelayCommand(_ => IsAlwaysOnTop = !IsAlwaysOnTop);
+        SetAudioTrackCommand   = new RelayCommand(p => SetAudioTrack(p));
+        SetSubtitleTrackCommand = new RelayCommand(p => SetSubtitleTrack(p));
+        CycleAudioTrackCommand = new RelayCommand(_ => CycleAudioTrack());
+        CycleSubtitleTrackCommand = new RelayCommand(_ => CycleSubtitleTrack());
+        SetSpeedCommand        = new RelayCommand(p => ParseAndSetSpeed(p));
+
         ErrorMessage = _playback.InitializationError;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public MediaPlayer? Player => _playback.MediaPlayer;
+    // ── Read-only state ──────────────────────────────────────────────────────
 
+    public MediaPlayer? Player => _playback.MediaPlayer;
     public string? CurrentFilePath => _playback.CurrentFilePath;
+    public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
+
+    // ── Bindable properties ──────────────────────────────────────────────────
 
     public string Title
     {
@@ -61,15 +114,19 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         private set
         {
             if (SetField(ref _errorMessage, value))
-            {
                 OnPropertyChanged(nameof(HasError));
-            }
         }
     }
 
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public bool HasMedia => !string.IsNullOrWhiteSpace(CurrentFilePath);
+
+    public WriteableBitmap? VideoBitmap
+    {
+        get => _videoBitmap;
+        private set => SetField(ref _videoBitmap, value);
+    }
 
     public double SeekValue
     {
@@ -80,9 +137,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             {
                 var duration = _playback.Duration;
                 if (duration > TimeSpan.Zero)
-                {
                     _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
-                }
             }
         }
     }
@@ -94,9 +149,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             var next = Math.Clamp(value, 0, 100);
             if (SetField(ref _volume, next))
-            {
                 _playback.SetVolume(next);
-            }
         }
     }
 
@@ -109,31 +162,99 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsMuted
     {
         get => _isMuted;
-        private set
-        {
-            if (SetField(ref _isMuted, value))
-            {
-                OnPropertyChanged(nameof(MuteButtonText));
-            }
-        }
+        private set => SetField(ref _isMuted, value);
     }
 
     public bool ControlsVisible
     {
         get => _controlsVisible;
-        set => SetField(ref _controlsVisible, value);
+        set
+        {
+            if (SetField(ref _controlsVisible, value))
+                OnPropertyChanged(nameof(ControlsOpacity));
+        }
     }
 
-    public string PlayPauseText => IsPlaying ? "Pause" : "Play";
+    public double ControlsOpacity => _controlsVisible ? 1.0 : 0.0;
 
-    public string MuteButtonText => IsMuted ? "Unmute" : "Mute";
+    public float Speed
+    {
+        get => _speed;
+        private set
+        {
+            if (SetField(ref _speed, value))
+            {
+                OnPropertyChanged(nameof(SpeedLabel));
+                OnPropertyChanged(nameof(IsNormalSpeed));
+            }
+        }
+    }
+
+    public string SpeedLabel => Math.Abs(_speed - 1.0f) < 0.001f ? "1×" : $"{_speed:0.##}×";
+
+    public bool IsNormalSpeed => Math.Abs(_speed - 1.0f) < 0.001f;
+
+    public bool IsLooping
+    {
+        get => _isLooping;
+        private set => SetField(ref _isLooping, value);
+    }
+
+    public bool IsAlwaysOnTop
+    {
+        get => _isAlwaysOnTop;
+        set => SetField(ref _isAlwaysOnTop, value);
+    }
+
+    public string? OsdMessage
+    {
+        get => _osdMessage;
+        private set
+        {
+            if (SetField(ref _osdMessage, value))
+                OnPropertyChanged(nameof(HasOsd));
+        }
+    }
+
+    public bool HasOsd => !string.IsNullOrEmpty(_osdMessage);
+
+    public TrackInfo[] AudioTracks
+    {
+        get => _audioTracks;
+        private set => SetField(ref _audioTracks, value);
+    }
+
+    public TrackInfo[] SubtitleTracks
+    {
+        get => _subtitleTracks;
+        private set => SetField(ref _subtitleTracks, value);
+    }
+
+    // ── Commands ─────────────────────────────────────────────────────────────
 
     public ICommand TogglePlayPauseCommand { get; }
+    public ICommand StopCommand { get; }
     public ICommand ToggleMuteCommand { get; }
     public ICommand SeekBackwardCommand { get; }
     public ICommand SeekForwardCommand { get; }
+    public ICommand SeekBackward30Command { get; }
+    public ICommand SeekForward30Command { get; }
     public ICommand VolumeUpCommand { get; }
     public ICommand VolumeDownCommand { get; }
+    public ICommand SpeedUpCommand { get; }
+    public ICommand SpeedDownCommand { get; }
+    public ICommand ResetSpeedCommand { get; }
+    public ICommand ToggleLoopCommand { get; }
+    public ICommand StepFrameCommand { get; }
+    public ICommand TakeScreenshotCommand { get; }
+    public ICommand ToggleAlwaysOnTopCommand { get; }
+    public ICommand SetAudioTrackCommand { get; }
+    public ICommand SetSubtitleTrackCommand { get; }
+    public ICommand CycleAudioTrackCommand { get; }
+    public ICommand CycleSubtitleTrackCommand { get; }
+    public ICommand SetSpeedCommand { get; }
+
+    // ── Public methods ───────────────────────────────────────────────────────
 
     public async Task OpenFileAsync(string filePath)
     {
@@ -142,25 +263,33 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         var resume = _settings.GetResumePosition(filePath);
         await _playback.OpenAsync(filePath, resume);
+        _settings.AddRecentFile(filePath);
 
         var fileName = Path.GetFileName(filePath);
         Title = string.IsNullOrWhiteSpace(fileName) ? "Lumyn" : $"{fileName} - Lumyn";
+        ShowOsd(Path.GetFileName(filePath) ?? "");
         RefreshState();
     }
 
-    public void BeginSeek()
+    public void LoadSubtitleFile(string path)
     {
-        _isSeeking = true;
+        _playback.LoadSubtitleFile(path);
+        ShowOsd($"Subtitle: {Path.GetFileName(path)}");
     }
+
+    public void JumpTo(TimeSpan position)
+    {
+        _playback.Seek(position);
+    }
+
+    public void BeginSeek() => _isSeeking = true;
 
     public void EndSeek()
     {
         _isSeeking = false;
         var duration = _playback.Duration;
         if (duration > TimeSpan.Zero)
-        {
             _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
-        }
     }
 
     public void RefreshState()
@@ -168,6 +297,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var state = _playback.Snapshot();
         IsPlaying = state.IsPlaying;
         IsMuted = state.IsMuted;
+        Speed = state.Speed;
+        IsLooping = state.IsLooping;
 
         if (_volume != state.Volume)
         {
@@ -177,14 +308,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (!_isSeeking && state.Duration > TimeSpan.Zero)
         {
-            _seekValue = Math.Clamp(state.Position.TotalMilliseconds / state.Duration.TotalMilliseconds * 1000.0, 0, 1000);
+            _seekValue = Math.Clamp(
+                state.Position.TotalMilliseconds / state.Duration.TotalMilliseconds * 1000.0,
+                0, 1000);
             OnPropertyChanged(nameof(SeekValue));
         }
 
         TimeText = $"{FormatTime(state.Position)} / {FormatTime(state.Duration)}";
-        OnPropertyChanged(nameof(PlayPauseText));
         OnPropertyChanged(nameof(CurrentFilePath));
         OnPropertyChanged(nameof(HasMedia));
+        OnPropertyChanged(nameof(RecentFiles));
+        RefreshTracks();
     }
 
     public void SaveResumePosition()
@@ -192,19 +326,177 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _settings.SaveResumePosition(CurrentFilePath, _playback.Position, _playback.Duration);
     }
 
+    public void ShowOsd(string message)
+    {
+        OsdMessage = message;
+        _osdTimer.Stop();
+        _osdTimer.Start();
+    }
+
     public void Dispose()
     {
         SaveResumePosition();
+        _osdTimer.Stop();
         _playback.Dispose();
+        _videoBitmap?.Dispose();
+    }
+
+    // ── Video frame rendering ────────────────────────────────────────────────
+
+    private void OnVideoFrameReady(object? sender, VideoFrameData frame)
+    {
+        // Recreate bitmap if dimensions changed
+        if (_videoBitmap is null ||
+            _videoBitmap.PixelSize.Width  != (int)frame.Width ||
+            _videoBitmap.PixelSize.Height != (int)frame.Height)
+        {
+            var newBitmap = new WriteableBitmap(
+                new Avalonia.PixelSize((int)frame.Width, (int)frame.Height),
+                new Avalonia.Vector(96, 96),
+                PixelFormat.Bgra8888,
+                AlphaFormat.Premul);
+
+            // Copy pixels into new bitmap immediately
+            using var fb = newBitmap.Lock();
+            unsafe
+            {
+                Buffer.MemoryCopy(
+                    (void*)frame.Buffer,
+                    (void*)fb.Address,
+                    (long)(frame.Pitch * frame.Height),
+                    (long)(frame.Pitch * frame.Height));
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                _videoBitmap?.Dispose();
+                VideoBitmap = newBitmap;
+            }, DispatcherPriority.Render);
+        }
+        else
+        {
+            // Copy pixels into existing bitmap (no allocation)
+            using var fb = _videoBitmap.Lock();
+            unsafe
+            {
+                Buffer.MemoryCopy(
+                    (void*)frame.Buffer,
+                    (void*)fb.Address,
+                    (long)(frame.Pitch * frame.Height),
+                    (long)(frame.Pitch * frame.Height));
+            }
+
+            Dispatcher.UIThread.Post(
+                () => OnPropertyChanged(nameof(VideoBitmap)),
+                DispatcherPriority.Render);
+        }
+    }
+
+    // ── Private helpers ──────────────────────────────────────────────────────
+
+    private void Stop()
+    {
+        SaveResumePosition();
+        _playback.Stop();
+        Title = "Lumyn";
+        RefreshState();
+    }
+
+    private void ToggleMute()
+    {
+        _playback.ToggleMute();
+        ShowOsd(_playback.IsMuted ? "Muted" : $"Volume: {_playback.Volume}%");
+    }
+
+    private void SetSpeed(float rate)
+    {
+        _playback.SetSpeed(rate);
+        Speed = rate;
+        ShowOsd($"Speed: {new MainViewModel.SpeedDisplay(rate)}");
+    }
+
+    private void AdjustSpeed(int direction)
+    {
+        var idx = Array.FindIndex(SpeedSteps, s => Math.Abs(s - _speed) < 0.001f);
+        if (idx < 0) idx = Array.IndexOf(SpeedSteps, 1.0f);
+        var next = SpeedSteps[Math.Clamp(idx + direction, 0, SpeedSteps.Length - 1)];
+        SetSpeed(next);
+    }
+
+    private void ParseAndSetSpeed(object? parameter)
+    {
+        if (parameter is float f) { SetSpeed(f); return; }
+        if (parameter is string s &&
+            float.TryParse(s, System.Globalization.NumberStyles.Any,
+                System.Globalization.CultureInfo.InvariantCulture, out var v))
+            SetSpeed(v);
+    }
+
+    private void ToggleLoop()
+    {
+        _playback.ToggleLoop();
+        ShowOsd(_playback.IsLooping ? "Loop: On" : "Loop: Off");
+    }
+
+    private void TakeScreenshot()
+    {
+        if (!HasMedia) return;
+        var dir = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
+        Directory.CreateDirectory(dir);
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        var path = Path.Combine(dir, $"Lumyn_{timestamp}.png");
+        if (_playback.TakeSnapshot(path))
+            ShowOsd($"Screenshot saved");
+        else
+            ShowOsd("Screenshot failed");
+    }
+
+    private void SetAudioTrack(object? parameter)
+    {
+        if (parameter is not int id) return;
+        _playback.SetAudioTrack(id);
+        var name = _audioTracks.FirstOrDefault(t => t.Id == id)?.Name ?? id.ToString();
+        ShowOsd($"Audio: {name}");
+    }
+
+    private void SetSubtitleTrack(object? parameter)
+    {
+        if (parameter is not int id) return;
+        _playback.SetSubtitleTrack(id);
+        var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
+        ShowOsd($"Subtitle: {name}");
+    }
+
+    private void CycleAudioTrack()
+    {
+        _playback.CycleAudioTrack();
+        RefreshTracks();
+        var id = _playback.CurrentAudioTrack;
+        var name = _audioTracks.FirstOrDefault(t => t.Id == id)?.Name ?? id.ToString();
+        ShowOsd($"Audio: {name}");
+    }
+
+    private void CycleSubtitleTrack()
+    {
+        _playback.CycleSubtitleTrack();
+        RefreshTracks();
+        var id = _playback.CurrentSubtitleTrack;
+        var name = _subtitleTracks.FirstOrDefault(t => t.Id == id)?.Name ?? (id < 0 ? "Off" : id.ToString());
+        ShowOsd($"Subtitle: {name}");
+    }
+
+    private void RefreshTracks()
+    {
+        AudioTracks = [.. _playback.GetAudioTracks()
+            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? $"Track {t.Id}" : t.Name))];
+
+        SubtitleTracks = [.. _playback.GetSubtitleTracks()
+            .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name))];
     }
 
     private static string FormatTime(TimeSpan value)
     {
-        if (value < TimeSpan.Zero)
-        {
-            value = TimeSpan.Zero;
-        }
-
+        if (value < TimeSpan.Zero) value = TimeSpan.Zero;
         return value.TotalHours >= 1
             ? value.ToString(@"h\:mm\:ss")
             : value.ToString(@"mm\:ss");
@@ -212,26 +504,27 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
-        if (EqualityComparer<T>.Default.Equals(field, value))
-        {
-            return false;
-        }
-
+        if (EqualityComparer<T>.Default.Equals(field, value)) return false;
         field = value;
         OnPropertyChanged(propertyName);
         return true;
     }
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+    // Helper to format speed label in OSD without exposing a property
+    private readonly struct SpeedDisplay(float speed)
     {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        public override string ToString() => Math.Abs(speed - 1.0f) < 0.001f ? "1×" : $"{speed:0.##}×";
     }
 
     private sealed class RelayCommand(Action<object?> execute) : ICommand
     {
+#pragma warning disable CS0067
         public event EventHandler? CanExecuteChanged;
+#pragma warning restore CS0067
         public bool CanExecute(object? parameter) => true;
         public void Execute(object? parameter) => execute(parameter);
-        public void RaiseCanExecuteChanged() => CanExecuteChanged?.Invoke(this, EventArgs.Empty);
     }
 }

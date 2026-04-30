@@ -20,11 +20,21 @@ public sealed partial class App : Application
         {
             var playback = new PlaybackService();
             var settings = new SettingsService();
+            var vm = new MainViewModel(playback, settings);
 
-            desktop.MainWindow = new MainWindow
+            desktop.MainWindow = new MainWindow { DataContext = vm };
+
+            // Handle command-line file argument: lumyn path/to/file.mp4
+            var args = desktop.Args;
+            if (args?.Length > 0)
             {
-                DataContext = new MainViewModel(playback, settings)
-            };
+                var filePath = args[0];
+                if (File.Exists(filePath))
+                {
+                    desktop.MainWindow.Opened += async (_, _) =>
+                        await vm.OpenFileAsync(filePath);
+                }
+            }
         }
 
         base.OnFrameworkInitializationCompleted();

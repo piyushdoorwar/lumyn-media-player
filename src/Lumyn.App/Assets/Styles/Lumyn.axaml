@@ -49,10 +49,41 @@
 
   <Style Selector="Slider">
     <Setter Property="Foreground" Value="#E95420" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+
+  <!-- Transparent icon buttons for the control bar overlay -->
+  <Style Selector="Button.ctrl">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="#F7F5F3" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="36" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+
+  <Style Selector="Button.ctrl:pointerover">
+    <Setter Property="Background" Value="#33FFFFFF" />
+  </Style>
+
+  <Style Selector="Button.ctrl:pressed">
+    <Setter Property="Background" Value="#1AFFFFFF" />
   </Style>
 
   <Style Selector="PathIcon">
     <Setter Property="Foreground" Value="#F7F5F3" />
+  </Style>
+
+  <!-- Dim state for toggle buttons (loop, always-on-top) when inactive -->
+  <Style Selector="Button.dim">
+    <Setter Property="Opacity" Value="0.35" />
   </Style>
 
   <Style Selector="TextBlock">

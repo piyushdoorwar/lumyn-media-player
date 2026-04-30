@@ -2,119 +2,264 @@
     x:Class="Lumyn.App.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:controls="clr-namespace:Lumyn.App.Controls"
     Title="{Binding Title}"
     Width="980"
     Height="620"
-    MinWidth="760"
-    MinHeight="430"
-    Background="#2C001E"
+    MinWidth="640"
+    MinHeight="380"
+    Background="#111111"
+    Topmost="{Binding IsAlwaysOnTop}"
     ExtendClientAreaToDecorationsHint="False">
 
-  <Grid Name="Root" RowDefinitions="Auto,*,Auto" Background="#2C001E">
-    <Border
-        Grid.Row="0"
-        Name="TopRevealZone"
-        Height="8"
-        Background="#01000000"
-        IsVisible="{Binding !ControlsVisible}"
-        PointerEntered="RevealZone_OnPointerEntered"
-        PointerWheelChanged="RevealZone_OnPointerWheelChanged" />
+  <!--
+    All layers stacked in a Panel. Video renders into a WriteableBitmap (Image)
+    which is the bottom-most child. All controls are standard Avalonia overlays
+    and work correctly on Wayland, X11, and all other platforms.
+  -->
+  <Panel Name="Root" Background="#111111" DragDrop.AllowDrop="True">
 
-    <Border Grid.Row="1" Background="#111111">
-      <controls:VideoViewControl MediaPlayer="{Binding Player}" />
-    </Border>
+    <!-- ── Video frame (software-rendered WriteableBitmap) ───────────────── -->
+    <Image Source="{Binding VideoBitmap}" Stretch="Uniform"
+           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+           IsHitTestVisible="False" />
 
+    <!-- ── Transparent click / double-click surface ───────────────────────── -->
+    <Border Name="VideoClickLayer" Background="Transparent"
+            PointerPressed="VideoClickLayer_OnPointerPressed" />
+
+    <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
     <StackPanel
-        Grid.Row="1"
         HorizontalAlignment="Center"
         VerticalAlignment="Center"
-        Spacing="14"
-        IsVisible="{Binding !HasMedia}">
-      <Viewbox Width="132" Height="132" Opacity="0.92">
-        <Canvas Width="256" Height="256">
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 71.5L135 19" />
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 103.5L234 5" />
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 135.5L234 37" />
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 167.5L234 69" />
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M155 118L229 83.5" />
-          <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" StrokeJoin="Round" Data="M96 118V181H62L67 207H189L194 181H159V130" />
-          <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M71 217L184 197" />
-          <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M75 239L176 221" />
-          <Path Fill="#F7F5F3" Data="M119 150C119 147.7 121.5 146.3 123.5 147.5L149.5 163.2C152.5 165 152.5 170 149.5 171.8L123.5 187.5C121.5 188.7 119 187.3 119 185V150Z" />
-        </Canvas>
-      </Viewbox>
-      <TextBlock Text="Lumyn" FontSize="30" FontWeight="SemiBold" Foreground="#F7F5F3" HorizontalAlignment="Center" />
+        Spacing="12"
+        IsVisible="{Binding !HasMedia}"
+        IsHitTestVisible="False">
+      <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
+      <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
+                 Foreground="#F7F5F3" HorizontalAlignment="Center" />
+      <TextBlock Text="Drop a file here, press O to open, or right-click"
+                 FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
     </StackPanel>
 
-    <TextBlock
-        Grid.Row="1"
-        Text="{Binding ErrorMessage}"
-        HorizontalAlignment="Center"
+    <!-- ── Error banner ──────────────────────────────────────────────────── -->
+    <Border
         VerticalAlignment="Top"
+        Margin="0,48,0,0"
         IsVisible="{Binding HasError}"
-        Margin="16"
-        Padding="12,7"
+        Padding="16,8"
         Background="#CC77216F"
-        Foreground="#FFFFFF"
-        TextWrapping="Wrap" />
+        IsHitTestVisible="False">
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFFFFF"
+                 TextWrapping="Wrap" HorizontalAlignment="Center" />
+    </Border>
 
+    <!-- ── OSD overlay ───────────────────────────────────────────────────── -->
     <Border
-        Grid.Row="0"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Margin="0,-80,0,0"
+        Padding="22,10"
+        CornerRadius="8"
+        Background="#CC000000"
+        IsVisible="{Binding HasOsd}"
+        IsHitTestVisible="False">
+      <TextBlock Text="{Binding OsdMessage}" FontSize="17" FontWeight="SemiBold"
+                 Foreground="#F7F5F3" />
+    </Border>
+
+    <!-- ── Top bar overlay ───────────────────────────────────────────────── -->
+    <Border
         Name="TopBar"
-        Padding="10,7"
-        Background="#D80C0C0E"
-        BorderBrush="#553D3846"
-        BorderThickness="0,0,0,1"
-        IsVisible="{Binding ControlsVisible}">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-        <Viewbox Grid.Column="0" Width="28" Height="28" Margin="2,0,6,0" ToolTip.Tip="Lumyn">
-          <Canvas Width="256" Height="256">
-            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 71.5L135 19" />
-            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 103.5L234 5" />
-            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 135.5L234 37" />
-            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 167.5L234 69" />
-            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" StrokeJoin="Round" Data="M96 118V181H62L67 207H189L194 181H159V130" />
-            <Path Fill="#F7F5F3" Data="M119 150C119 147.7 121.5 146.3 123.5 147.5L149.5 163.2C152.5 165 152.5 170 149.5 171.8L123.5 187.5C121.5 188.7 119 187.3 119 185V150Z" />
-          </Canvas>
-        </Viewbox>
-
-        <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" FontSize="13" Foreground="#DEDAD5" TextTrimming="CharacterEllipsis" />
-
-        <Button Grid.Column="2" Classes="icon" Name="OpenButton" Click="OpenButton_OnClick" ToolTip.Tip="Open">
-          <PathIcon Width="18" Height="18" Data="M3 6.5C3 5.67 3.67 5 4.5 5H9L11 7H19.5C20.33 7 21 7.67 21 8.5V17.5C21 18.33 20.33 19 19.5 19H4.5C3.67 19 3 18.33 3 17.5V6.5ZM5 9V17H19V9H10.17L8.17 7H5V9Z" />
+        VerticalAlignment="Top"
+        Padding="10,6,10,20"
+        Opacity="{Binding ControlsOpacity}"
+        IsHitTestVisible="{Binding ControlsVisible}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#BB000000" Offset="0" />
+          <GradientStop Color="#00000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
+        </Transitions>
+      </Border.Transitions>
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="4">
+        <Image Grid.Column="0" Width="22" Height="22" Margin="2,0,8,0"
+               Source="{StaticResource Icon.LumynMark}" />
+        <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
+                   FontSize="13" Foreground="#DEDAD5" TextTrimming="CharacterEllipsis" />
+        <Button Grid.Column="2" Classes="icon" Name="OpenButton"
+                Click="OpenButton_OnClick" ToolTip.Tip="Open (O)">
+          <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Open}" />
         </Button>
-
-        <Button Grid.Column="3" Classes="icon" Name="FullscreenButton" Click="FullscreenButton_OnClick" ToolTip.Tip="Fullscreen">
-          <PathIcon Width="18" Height="18" Data="M5 5H10V7H7V10H5V5ZM14 5H19V10H17V7H14V5ZM5 14H7V17H10V19H5V14ZM17 14H19V19H14V17H17V14Z" />
+        <Button Grid.Column="3" Classes="icon ctrl" Name="AlwaysOnTopButton"
+                Classes.dim="{Binding !IsAlwaysOnTop}"
+                Command="{Binding ToggleAlwaysOnTopCommand}"
+                ToolTip.Tip="Always on Top (T)">
+          <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AlwaysOnTop}" />
+        </Button>
+        <Button Grid.Column="4" Classes="icon" Name="FullscreenButton"
+                Click="FullscreenButton_OnClick" ToolTip.Tip="Fullscreen (F)">
+          <PathIcon Name="FullscreenIcon" Width="17" Height="17"
+                    Data="{StaticResource Icon.Fullscreen}" />
         </Button>
       </Grid>
     </Border>
 
+    <!-- ── Bottom control bar overlay ────────────────────────────────────── -->
     <Border
-        Grid.Row="2"
-        Name="BottomRevealZone"
-        Height="8"
-        Background="#01000000"
-        IsVisible="{Binding !ControlsVisible}"
-        PointerEntered="RevealZone_OnPointerEntered"
-        PointerWheelChanged="RevealZone_OnPointerWheelChanged" />
-
-    <Border
-        Grid.Row="2"
         Name="ControlBar"
-        Padding="14,9"
-        Background="#F02C001E"
-        BorderBrush="#5E2750"
-        BorderThickness="0,1,0,0"
-        IsVisible="{Binding ControlsVisible}">
-      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
-        <Button Grid.Column="0" Content="{Binding PlayPauseText}" Command="{Binding TogglePlayPauseCommand}" MinWidth="70" />
-        <TextBlock Grid.Column="1" Text="{Binding TimeText}" VerticalAlignment="Center" MinWidth="112" Foreground="#DEDAD5" />
-        <Slider Grid.Column="2" Name="SeekSlider" Minimum="0" Maximum="1000" Value="{Binding SeekValue}" VerticalAlignment="Center" PointerPressed="SeekSlider_OnPointerPressed" PointerReleased="SeekSlider_OnPointerReleased" />
-        <Button Grid.Column="3" Content="{Binding MuteButtonText}" Command="{Binding ToggleMuteCommand}" MinWidth="74" />
-        <Slider Grid.Column="4" Width="120" Minimum="0" Maximum="100" Value="{Binding Volume}" VerticalAlignment="Center" />
-      </Grid>
+        VerticalAlignment="Bottom"
+        Padding="12,0,12,10"
+        Opacity="{Binding ControlsOpacity}"
+        IsHitTestVisible="{Binding ControlsVisible}">
+      <Border.Background>
+        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+          <GradientStop Color="#00000000" Offset="0" />
+          <GradientStop Color="#D5000000" Offset="1" />
+        </LinearGradientBrush>
+      </Border.Background>
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
+        </Transitions>
+      </Border.Transitions>
+      <StackPanel Spacing="0">
+
+        <!-- Seek slider -->
+        <Slider
+            Name="SeekSlider"
+            Minimum="0"
+            Maximum="1000"
+            Value="{Binding SeekValue}"
+            Margin="0,0,0,2"
+            PointerPressed="SeekSlider_OnPointerPressed"
+            PointerReleased="SeekSlider_OnPointerReleased" />
+
+        <!-- Transport row -->
+        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
+              ColumnSpacing="2" Margin="2,0">
+
+          <!-- Play / Pause -->
+          <Button Grid.Column="0" Classes="ctrl"
+                  Command="{Binding TogglePlayPauseCommand}"
+                  ToolTip.Tip="Play / Pause (Space)">
+            <Panel>
+              <PathIcon Width="18" Height="18" Data="{StaticResource Icon.Play}"
+                        IsVisible="{Binding !IsPlaying}" />
+              <PathIcon Width="18" Height="18" Data="{StaticResource Icon.Pause}"
+                        IsVisible="{Binding IsPlaying}" />
+            </Panel>
+          </Button>
+
+          <!-- Stop -->
+          <Button Grid.Column="1" Classes="ctrl"
+                  Command="{Binding StopCommand}"
+                  ToolTip.Tip="Stop">
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
+          </Button>
+
+          <!-- Time display -->
+          <TextBlock Grid.Column="2" Text="{Binding TimeText}"
+                     VerticalAlignment="Center" FontSize="12"
+                     Foreground="#C8C3C2" Margin="6,0" />
+
+          <!-- Spacer -->
+          <Border Grid.Column="3" />
+
+          <!-- Speed badge -->
+          <Button Grid.Column="4" Classes="ctrl"
+                  Command="{Binding ResetSpeedCommand}"
+                  ToolTip.Tip="Speed: [ = slower  ] = faster  click = reset">
+            <TextBlock Text="{Binding SpeedLabel}" FontSize="11" Foreground="#C8C3C2"
+                       VerticalAlignment="Center" />
+          </Button>
+
+          <!-- Loop -->
+          <Button Grid.Column="5" Classes="ctrl"
+                  Classes.dim="{Binding !IsLooping}"
+                  Command="{Binding ToggleLoopCommand}"
+                  ToolTip.Tip="Loop (L)">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
+          </Button>
+
+          <!-- Mute / Unmute -->
+          <Button Grid.Column="6" Classes="ctrl"
+                  Command="{Binding ToggleMuteCommand}"
+                  ToolTip.Tip="Mute / Unmute (M)">
+            <Panel>
+              <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
+                        IsVisible="{Binding !IsMuted}" />
+              <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeMuted}"
+                        IsVisible="{Binding IsMuted}" />
+            </Panel>
+          </Button>
+
+          <!-- Volume slider -->
+          <Slider Grid.Column="7" Width="80" Minimum="0" Maximum="100"
+                  Value="{Binding Volume}"
+                  VerticalAlignment="Center"
+                  Margin="2,0,6,0" />
+
+          <!-- Screenshot -->
+          <Button Grid.Column="8" Classes="ctrl"
+                  Command="{Binding TakeScreenshotCommand}"
+                  ToolTip.Tip="Screenshot (Alt+I)">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
+          </Button>
+
+          <!-- Fullscreen -->
+          <Button Grid.Column="9" Classes="ctrl"
+                  Click="FullscreenButton_OnClick"
+                  ToolTip.Tip="Fullscreen (F)">
+            <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
+                      Data="{StaticResource Icon.Fullscreen}" />
+          </Button>
+
+        </Grid>
+      </StackPanel>
     </Border>
-  </Grid>
+
+    <!-- ── Right-click context menu ──────────────────────────────────────── -->
+    <Panel.ContextMenu>
+      <ContextMenu Opening="RootContextMenu_Opening">
+
+        <!-- Recent files (populated in code-behind) -->
+        <MenuItem Name="RecentFilesMenuItem" Header="Open Recent" />
+        <Separator />
+
+        <MenuItem Header="Jump to Time..." Click="JumpToTime_Click" InputGesture="Ctrl+G" />
+        <MenuItem Header="Load Subtitle..." Click="LoadSubtitle_Click" InputGesture="S" />
+        <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
+        <Separator />
+
+        <!-- Speed sub-menu -->
+        <MenuItem Header="Playback Speed">
+          <MenuItem Header="0.25×" Click="Speed_Click" Tag="0.25" />
+          <MenuItem Header="0.50×" Click="Speed_Click" Tag="0.5" />
+          <MenuItem Header="0.75×" Click="Speed_Click" Tag="0.75" />
+          <MenuItem Header="Normal (1×)" Click="Speed_Click" Tag="1.0" />
+          <MenuItem Header="1.25×" Click="Speed_Click" Tag="1.25" />
+          <MenuItem Header="1.50×" Click="Speed_Click" Tag="1.5" />
+          <MenuItem Header="2×"    Click="Speed_Click" Tag="2.0" />
+          <MenuItem Header="4×"    Click="Speed_Click" Tag="4.0" />
+        </MenuItem>
+
+        <!-- Audio tracks (populated in code-behind) -->
+        <MenuItem Name="AudioTrackMenuItem" Header="Audio Track" />
+
+        <!-- Subtitle tracks (populated in code-behind) -->
+        <MenuItem Name="SubtitleTrackMenuItem" Header="Subtitle Track" />
+        <Separator />
+
+        <!-- Always on top (header updated in code-behind) -->
+        <MenuItem Name="AlwaysOnTopMenuItem" Header="Always on Top" Click="AlwaysOnTop_Click" />
+
+      </ContextMenu>
+    </Panel.ContextMenu>
+
+    </Panel>
 </Window>
+

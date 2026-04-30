@@ -6,4 +6,12 @@
     <FluentTheme />
     <StyleInclude Source="avares://Lumyn/Assets/Styles/Lumyn.axaml" />
   </Application.Styles>
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Lumyn/Assets/Icons/LumynLogo.axaml" />
+        <ResourceInclude Source="avares://Lumyn/Assets/Icons/MediaIcons.axaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
 </Application>

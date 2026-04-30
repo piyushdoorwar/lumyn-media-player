@@ -11,13 +11,22 @@
     Background="#2C001E"
     ExtendClientAreaToDecorationsHint="False">
 
-  <Grid Name="Root" RowDefinitions="*,Auto" Background="#2C001E">
-    <Border Grid.Row="0" Background="#111111">
+  <Grid Name="Root" RowDefinitions="Auto,*,Auto" Background="#2C001E">
+    <Border
+        Grid.Row="0"
+        Name="TopRevealZone"
+        Height="8"
+        Background="#01000000"
+        IsVisible="{Binding !ControlsVisible}"
+        PointerEntered="RevealZone_OnPointerEntered"
+        PointerWheelChanged="RevealZone_OnPointerWheelChanged" />
+
+    <Border Grid.Row="1" Background="#111111">
       <controls:VideoViewControl MediaPlayer="{Binding Player}" />
     </Border>
 
     <StackPanel
-        Grid.Row="0"
+        Grid.Row="1"
         HorizontalAlignment="Center"
         VerticalAlignment="Center"
         Spacing="14"
@@ -32,14 +41,14 @@
           <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" StrokeJoin="Round" Data="M96 118V181H62L67 207H189L194 181H159V130" />
           <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M71 217L184 197" />
           <Path Stroke="#E95420" StrokeThickness="12" StrokeLineCap="Round" Data="M75 239L176 221" />
-          <Path Fill="#F7F5F3" Data="M118 148L151 167.5L118 187V148Z" />
+          <Path Fill="#F7F5F3" Data="M119 150C119 147.7 121.5 146.3 123.5 147.5L149.5 163.2C152.5 165 152.5 170 149.5 171.8L123.5 187.5C121.5 188.7 119 187.3 119 185V150Z" />
         </Canvas>
       </Viewbox>
       <TextBlock Text="Lumyn" FontSize="30" FontWeight="SemiBold" Foreground="#F7F5F3" HorizontalAlignment="Center" />
     </StackPanel>
 
     <TextBlock
-        Grid.Row="0"
+        Grid.Row="1"
         Text="{Binding ErrorMessage}"
         HorizontalAlignment="Center"
         VerticalAlignment="Top"
@@ -51,21 +60,60 @@
         TextWrapping="Wrap" />
 
     <Border
-        Grid.Row="1"
+        Grid.Row="0"
+        Name="TopBar"
+        Padding="10,7"
+        Background="#D80C0C0E"
+        BorderBrush="#553D3846"
+        BorderThickness="0,0,0,1"
+        IsVisible="{Binding ControlsVisible}">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+        <Viewbox Grid.Column="0" Width="28" Height="28" Margin="2,0,6,0" ToolTip.Tip="Lumyn">
+          <Canvas Width="256" Height="256">
+            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 71.5L135 19" />
+            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 103.5L234 5" />
+            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 135.5L234 37" />
+            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" Data="M22 167.5L234 69" />
+            <Path Stroke="#E95420" StrokeThickness="18" StrokeLineCap="Round" StrokeJoin="Round" Data="M96 118V181H62L67 207H189L194 181H159V130" />
+            <Path Fill="#F7F5F3" Data="M119 150C119 147.7 121.5 146.3 123.5 147.5L149.5 163.2C152.5 165 152.5 170 149.5 171.8L123.5 187.5C121.5 188.7 119 187.3 119 185V150Z" />
+          </Canvas>
+        </Viewbox>
+
+        <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" FontSize="13" Foreground="#DEDAD5" TextTrimming="CharacterEllipsis" />
+
+        <Button Grid.Column="2" Classes="icon" Name="OpenButton" Click="OpenButton_OnClick" ToolTip.Tip="Open">
+          <PathIcon Width="18" Height="18" Data="M3 6.5C3 5.67 3.67 5 4.5 5H9L11 7H19.5C20.33 7 21 7.67 21 8.5V17.5C21 18.33 20.33 19 19.5 19H4.5C3.67 19 3 18.33 3 17.5V6.5ZM5 9V17H19V9H10.17L8.17 7H5V9Z" />
+        </Button>
+
+        <Button Grid.Column="3" Classes="icon" Name="FullscreenButton" Click="FullscreenButton_OnClick" ToolTip.Tip="Fullscreen">
+          <PathIcon Width="18" Height="18" Data="M5 5H10V7H7V10H5V5ZM14 5H19V10H17V7H14V5ZM5 14H7V17H10V19H5V14ZM17 14H19V19H14V17H17V14Z" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <Border
+        Grid.Row="2"
+        Name="BottomRevealZone"
+        Height="8"
+        Background="#01000000"
+        IsVisible="{Binding !ControlsVisible}"
+        PointerEntered="RevealZone_OnPointerEntered"
+        PointerWheelChanged="RevealZone_OnPointerWheelChanged" />
+
+    <Border
+        Grid.Row="2"
         Name="ControlBar"
         Padding="14,9"
         Background="#F02C001E"
         BorderBrush="#5E2750"
         BorderThickness="0,1,0,0"
         IsVisible="{Binding ControlsVisible}">
-      <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto" ColumnSpacing="10">
-        <Button Grid.Column="0" Classes="accent" Content="Open" Name="OpenButton" Click="OpenButton_OnClick" MinWidth="64" />
-        <Button Grid.Column="1" Content="{Binding PlayPauseText}" Command="{Binding TogglePlayPauseCommand}" MinWidth="70" />
-        <TextBlock Grid.Column="2" Text="{Binding TimeText}" VerticalAlignment="Center" MinWidth="112" Foreground="#DEDAD5" />
-        <Slider Grid.Column="3" Name="SeekSlider" Minimum="0" Maximum="1000" Value="{Binding SeekValue}" VerticalAlignment="Center" PointerPressed="SeekSlider_OnPointerPressed" PointerReleased="SeekSlider_OnPointerReleased" />
-        <Button Grid.Column="4" Content="{Binding MuteButtonText}" Command="{Binding ToggleMuteCommand}" MinWidth="74" />
-        <Slider Grid.Column="5" Width="120" Minimum="0" Maximum="100" Value="{Binding Volume}" VerticalAlignment="Center" />
-        <Button Grid.Column="6" Content="Full" Name="FullscreenButton" Click="FullscreenButton_OnClick" MinWidth="62" />
+      <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
+        <Button Grid.Column="0" Content="{Binding PlayPauseText}" Command="{Binding TogglePlayPauseCommand}" MinWidth="70" />
+        <TextBlock Grid.Column="1" Text="{Binding TimeText}" VerticalAlignment="Center" MinWidth="112" Foreground="#DEDAD5" />
+        <Slider Grid.Column="2" Name="SeekSlider" Minimum="0" Maximum="1000" Value="{Binding SeekValue}" VerticalAlignment="Center" PointerPressed="SeekSlider_OnPointerPressed" PointerReleased="SeekSlider_OnPointerReleased" />
+        <Button Grid.Column="3" Content="{Binding MuteButtonText}" Command="{Binding ToggleMuteCommand}" MinWidth="74" />
+        <Slider Grid.Column="4" Width="120" Minimum="0" Maximum="100" Value="{Binding Volume}" VerticalAlignment="Center" />
       </Grid>
     </Border>
   </Grid>

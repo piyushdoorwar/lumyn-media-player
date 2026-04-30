@@ -29,14 +29,15 @@ public partial class MainWindow : Window
                 if (!string.IsNullOrWhiteSpace(ViewModel?.CurrentFilePath))
                 {
                     ViewModel!.ControlsVisible = false;
-                    Cursor = new Cursor(StandardCursorType.None);
                 }
             }
         };
 
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
-        PointerMoved += (_, _) => ShowControlsTemporarily();
+        AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, true);
+        PointerMoved += (_, _) => RestartHideControlsTimerIfVisible();
+        Opened += (_, _) => Focus();
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
     }
@@ -63,10 +64,8 @@ public partial class MainWindow : Window
         ViewModel?.EndSeek();
     }
 
-    protected override async void OnKeyDown(KeyEventArgs e)
+    private async void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
-        base.OnKeyDown(e);
-
         if (ViewModel is null)
         {
             return;
@@ -76,22 +75,27 @@ public partial class MainWindow : Window
         {
             case Key.Space:
                 ViewModel.TogglePlayPauseCommand.Execute(null);
+                ShowControlsTemporarily();
                 e.Handled = true;
                 break;
             case Key.Left:
                 ViewModel.SeekBackwardCommand.Execute(null);
+                ShowControlsTemporarily();
                 e.Handled = true;
                 break;
             case Key.Right:
                 ViewModel.SeekForwardCommand.Execute(null);
+                ShowControlsTemporarily();
                 e.Handled = true;
                 break;
             case Key.Up:
                 ViewModel.VolumeUpCommand.Execute(null);
+                ShowControlsTemporarily();
                 e.Handled = true;
                 break;
             case Key.Down:
                 ViewModel.VolumeDownCommand.Execute(null);
+                ShowControlsTemporarily();
                 e.Handled = true;
                 break;
             case Key.F:
@@ -134,6 +138,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
         {
             await ViewModel.OpenFileAsync(path);
+            Focus();
             ShowControlsTemporarily();
         }
     }
@@ -152,6 +157,7 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
         {
             await ViewModel.OpenFileAsync(path);
+            Focus();
             ShowControlsTemporarily();
         }
     }
@@ -164,6 +170,19 @@ public partial class MainWindow : Window
         ShowControlsTemporarily();
     }
 
+    private void RevealZone_OnPointerEntered(object? sender, PointerEventArgs e)
+    {
+        ShowControlsTemporarily();
+    }
+
+    private void RevealZone_OnPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (e.Delta.Y < 0)
+        {
+            ShowControlsTemporarily();
+        }
+    }
+
     private void ShowControlsTemporarily()
     {
         if (ViewModel is null)
@@ -172,7 +191,19 @@ public partial class MainWindow : Window
         }
 
         ViewModel.ControlsVisible = true;
-        Cursor = new Cursor(StandardCursorType.Arrow);
+        RestartHideControlsTimer();
+    }
+
+    private void RestartHideControlsTimerIfVisible()
+    {
+        if (ViewModel?.ControlsVisible == true)
+        {
+            RestartHideControlsTimer();
+        }
+    }
+
+    private void RestartHideControlsTimer()
+    {
         _hideControlsTimer.Stop();
         _hideControlsTimer.Start();
     }

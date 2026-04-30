@@ -364,11 +364,16 @@ h3 {
   gap: 10px;
 }
 
-.platform-download img {
+.platform-download img,
+.email-link img {
   width: 22px;
   height: 22px;
   flex: 0 0 auto;
   filter: brightness(0) invert(1);
+}
+
+.email-link {
+  gap: 10px;
 }
 
 code {

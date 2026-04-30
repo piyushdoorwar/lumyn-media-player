@@ -279,6 +279,9 @@ public partial class MainWindow : Window
     private async void LoadSubtitle_Click(object? sender, RoutedEventArgs e)
         => await OpenSubtitleFileAsync();
 
+    private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
+        => await OpenSubtitleFileAsync();
+
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi &&

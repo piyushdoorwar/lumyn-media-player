@@ -86,7 +86,7 @@
           <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
         </Transitions>
       </Border.Transitions>
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="4">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="4">
         <Image Grid.Column="0" Width="22" Height="22" Margin="2,0,8,0"
                Source="{StaticResource Icon.LumynMark}" />
         <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
@@ -95,13 +95,17 @@
                 Click="OpenButton_OnClick" ToolTip.Tip="Open (O)">
           <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Open}" />
         </Button>
-        <Button Grid.Column="3" Classes="icon ctrl" Name="AlwaysOnTopButton"
+        <Button Grid.Column="3" Classes="icon" Name="LoadSubtitleButton"
+                Click="LoadSubtitleButton_OnClick" ToolTip.Tip="Load subtitle file (S)">
+          <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Subtitle}" />
+        </Button>
+        <Button Grid.Column="4" Classes="icon ctrl" Name="AlwaysOnTopButton"
                 Classes.dim="{Binding !IsAlwaysOnTop}"
                 Command="{Binding ToggleAlwaysOnTopCommand}"
                 ToolTip.Tip="Always on Top (T)">
           <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AlwaysOnTop}" />
         </Button>
-        <Button Grid.Column="4" Classes="icon" Name="FullscreenButton"
+        <Button Grid.Column="5" Classes="icon" Name="FullscreenButton"
                 Click="FullscreenButton_OnClick" ToolTip.Tip="Fullscreen (F)">
           <PathIcon Name="FullscreenIcon" Width="17" Height="17"
                     Data="{StaticResource Icon.Fullscreen}" />

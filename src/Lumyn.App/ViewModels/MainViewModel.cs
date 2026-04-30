@@ -13,6 +13,8 @@ public sealed record TrackInfo(int Id, string Name, bool IsSelected = false);
 
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
+    private static readonly string[] SubtitleExtensions = [".srt", ".ass", ".ssa", ".vtt", ".sub"];
+
     private static readonly float[] SpeedSteps = [0.25f, 0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 3.0f, 4.0f];
 
     private readonly PlaybackService _playback;
@@ -310,6 +312,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             // Reset to defaults so dialog opens clean for a new file
             CurrentSubtitleSettings = new SubtitleSettings(
                 null, SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0);
+
+            var matchingSubtitle = FindMatchingSubtitleFile(filePath);
+            if (!string.IsNullOrWhiteSpace(matchingSubtitle))
+            {
+                await Task.Delay(400);
+                await LoadSubtitleFileAsync(matchingSubtitle);
+            }
         }
     }
 
@@ -578,6 +587,35 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             float.TryParse(s, System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out var v))
             SetSpeed(v);
+    }
+
+    private static string? FindMatchingSubtitleFile(string mediaPath)
+    {
+        var directory = Path.GetDirectoryName(mediaPath);
+        var name = Path.GetFileNameWithoutExtension(mediaPath);
+        if (string.IsNullOrWhiteSpace(directory) || string.IsNullOrWhiteSpace(name))
+            return null;
+
+        foreach (var extension in SubtitleExtensions)
+        {
+            var exact = Path.Combine(directory, name + extension);
+            if (File.Exists(exact))
+                return exact;
+        }
+
+        try
+        {
+            return Directory.EnumerateFiles(directory)
+                .Where(path =>
+                    SubtitleExtensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase) &&
+                    Path.GetFileNameWithoutExtension(path).StartsWith(name + ".", StringComparison.OrdinalIgnoreCase))
+                .OrderBy(path => path.Length)
+                .FirstOrDefault();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private void ToggleLoop()

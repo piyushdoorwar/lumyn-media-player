@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using Lumyn.Core.Models;
@@ -7,6 +8,33 @@ namespace Lumyn.Core.Services;
 
 public sealed class PlaybackService : IDisposable
 {
+    private static readonly Dictionary<string, string> LanguageNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["ara"] = "Arabic",
+        ["chi"] = "Chinese",
+        ["zho"] = "Chinese",
+        ["dan"] = "Danish",
+        ["dut"] = "Dutch",
+        ["nld"] = "Dutch",
+        ["eng"] = "English",
+        ["fin"] = "Finnish",
+        ["fre"] = "French",
+        ["fra"] = "French",
+        ["ger"] = "German",
+        ["deu"] = "German",
+        ["hin"] = "Hindi",
+        ["ita"] = "Italian",
+        ["jpn"] = "Japanese",
+        ["kor"] = "Korean",
+        ["nor"] = "Norwegian",
+        ["pol"] = "Polish",
+        ["por"] = "Portuguese",
+        ["rus"] = "Russian",
+        ["spa"] = "Spanish",
+        ["swe"] = "Swedish",
+        ["tur"] = "Turkish"
+    };
+
     private readonly MediaState _state = new();
     private readonly Thread? _eventThread;
     private readonly object _stateLock = new();
@@ -622,13 +650,31 @@ public sealed class PlaybackService : IDisposable
         var details = new List<string>();
 
         if (!string.IsNullOrWhiteSpace(lang))
-            details.Add(lang!);
+            details.Add(FormatLanguageName(lang!));
         if (!string.IsNullOrWhiteSpace(codec))
             details.Add(codec!);
         if (external)
             details.Add("external");
 
         return details.Count == 0 ? main : $"{main} ({string.Join(", ", details)})";
+    }
+
+    private static string FormatLanguageName(string language)
+    {
+        var code = language.Trim();
+        if (LanguageNames.TryGetValue(code, out var name))
+            return name;
+
+        try
+        {
+            if (code.Length == 2)
+                return CultureInfo.GetCultureInfo(code).EnglishName;
+        }
+        catch (CultureNotFoundException)
+        {
+        }
+
+        return code;
     }
 
     private static IntPtr StringToUtf8(string value)

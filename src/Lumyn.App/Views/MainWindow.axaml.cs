@@ -421,17 +421,25 @@ public partial class MainWindow : Window
     private async void OnDrop(object? sender, DragEventArgs e)
     {
         var files = e.DataTransfer.TryGetFiles();
-        var path = files?.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
-        {
-            // Detect subtitle by extension; load instead of open
-            if (IsSubtitleFile(path) && ViewModel.HasMedia)
-                await ViewModel.LoadSubtitleFileAsync(path);
-            else
-                await ViewModel.OpenFileAsync(path);
-            Focus();
-            ShowControls();
-        }
+        var paths = files?
+            .Select(f => f.TryGetLocalPath())
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Cast<string>()
+            .ToArray() ?? [];
+
+        if (paths.Length == 0 || ViewModel is null) return;
+
+        var subtitlePath = paths.FirstOrDefault(IsSubtitleFile);
+        var mediaPath = paths.FirstOrDefault(path => !IsSubtitleFile(path));
+
+        if (!string.IsNullOrWhiteSpace(mediaPath))
+            await ViewModel.OpenFileAsync(mediaPath);
+
+        if (!string.IsNullOrWhiteSpace(subtitlePath) && ViewModel.HasMedia)
+            await ViewModel.LoadSubtitleFileAsync(subtitlePath);
+
+        Focus();
+        ShowControls();
     }
 
     private static bool IsSubtitleFile(string path)

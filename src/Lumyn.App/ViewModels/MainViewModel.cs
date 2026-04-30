@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Windows.Input;
 using Avalonia.Threading;
-using LibVLCSharp.Shared;
 using Lumyn.App.Models;
 using Lumyn.Core.Models;
 using Lumyn.Core.Services;
@@ -40,26 +38,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Subtitle overlay (Avalonia-rendered, replaces VLC's --no-spu path) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
 
-    // Video frame triple-buffer:
-    //   VLC decode thread writes into _stagingBuffer under _stagingLock.
-    //   UI thread swaps _stagingBuffer → _flushBuffer (pointer swap, no data copy)
-    //   then writes _flushBuffer straight into the WriteableBitmap.
-    // This eliminates the old snapshot allocation on every frame.
-    private byte[]? _stagingBuffer;
-    private byte[]? _flushBuffer;          // owned by UI thread exclusively after the swap
-    private int _stagingWidth, _stagingHeight, _stagingPitch;
-    private int _flushWidth,   _flushHeight,   _flushPitch;
-    private int _frameReady;               // 0 = idle, 1 = pending (Interlocked)
-    private long _lastFlushMs;             // Interlocked — 30 fps cap on UI posts
-    private const long FlushCapMs = 33;    // ~30 fps max UI-thread frame rate
-    private readonly object _stagingLock = new();
-
-    /// <summary>
-    /// Set by the View to route decoded frames to <c>VideoSurface.PushFrame</c>.
-    /// Called on the UI thread after staging copy is complete.
-    /// </summary>
-    public Action<byte[], int, int, int>? PushVideoFrame { get; set; }
-
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
         _playback = playback;
@@ -80,8 +58,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         });
         _playback.ErrorOccurred += (_, message) =>
             Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
-
-        _playback.VideoFrameReady += OnVideoFrameReady;
 
         TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
         StopCommand            = new RelayCommand(_ => Stop());
@@ -112,7 +88,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Read-only state ──────────────────────────────────────────────────────
 
-    public MediaPlayer? Player => _playback.MediaPlayer;
+    public PlaybackService Playback => _playback;
     public string? CurrentFilePath => _playback.CurrentFilePath;
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
 
@@ -447,62 +423,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         _osdTimer.Stop();
         _playback.Dispose();
-    }
-
-    // ── Video frame rendering ────────────────────────────────────────────────
-
-    // Called on VLC decode thread — copy pixels to staging buffer, never touch bitmap here
-    private void OnVideoFrameReady(object? sender, VideoFrameData frame)
-    {
-        var needed = (int)(frame.Pitch * frame.Height);
-        lock (_stagingLock)
-        {
-            if (_stagingBuffer is null || _stagingBuffer.Length < needed ||
-                _stagingWidth != (int)frame.Width || _stagingHeight != (int)frame.Height)
-            {
-                _stagingBuffer = new byte[needed];
-                // Keep _flushBuffer the same size so the swap always has a valid target.
-                _flushBuffer   = new byte[needed];
-                _stagingWidth  = (int)frame.Width;
-                _stagingHeight = (int)frame.Height;
-                _stagingPitch  = (int)frame.Pitch;
-            }
-            System.Runtime.InteropServices.Marshal.Copy(frame.Buffer, _stagingBuffer, 0, needed);
-        }
-
-        // Rate-cap: don't post more than ~30 fps worth of frame flushes to the UI thread.
-        // This keeps the Dispatcher queue clear so Input events (hover, click) aren't starved.
-        var now = Environment.TickCount64;
-        if (now - Interlocked.Read(ref _lastFlushMs) < FlushCapMs) return;
-
-        // DispatcherPriority.Background (4) < Input (5) < Render (7).
-        // Posting below Input priority ensures hover/click events are always
-        // processed before the next frame paint — eliminating the hover freeze.
-        if (Interlocked.Exchange(ref _frameReady, 1) == 0)
-            Dispatcher.UIThread.Post(FlushVideoFrame, DispatcherPriority.Background);
-    }
-
-    // Called on UI thread — swaps staging → flush buffer (no data copy!) then paints.
-    private void FlushVideoFrame()
-    {
-        Interlocked.Exchange(ref _frameReady, 0);
-        Interlocked.Exchange(ref _lastFlushMs, Environment.TickCount64);
-
-        // Swap buffers under lock: hand _stagingBuffer to the UI thread and give
-        // _flushBuffer back to the VLC thread as the next staging target.
-        // This is a pointer swap — no pixel data is copied here.
-        lock (_stagingLock)
-        {
-            if (_stagingBuffer is null) return;
-            // Swap
-            (_stagingBuffer, _flushBuffer) = (_flushBuffer, _stagingBuffer);
-            _flushWidth  = _stagingWidth;
-            _flushHeight = _stagingHeight;
-            _flushPitch  = _stagingPitch;
-        }
-
-        if (_flushBuffer is null) return;
-        PushVideoFrame?.Invoke(_flushBuffer, _flushWidth, _flushHeight, _flushPitch);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

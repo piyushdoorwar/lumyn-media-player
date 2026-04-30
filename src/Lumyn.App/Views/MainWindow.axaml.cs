@@ -4,7 +4,6 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
-using Lumyn.App.Controls;
 using Lumyn.App.ViewModels;
 
 namespace Lumyn.App.Views;
@@ -30,19 +29,9 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
 
         PointerMoved += (_, _) => ShowControls();
-        Opened += OnOpened;
+        Opened += (_, _) => Focus();
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
-    }
-
-    private void OnOpened(object? sender, EventArgs e)
-    {
-        Focus();
-        // Wire the ViewModel's frame callback to VideoSurface after the window
-        // is fully initialised (controls are guaranteed to exist at this point).
-        var surface = this.FindControl<VideoSurface>("VideoSurface");
-        if (ViewModel is not null && surface is not null)
-            ViewModel.PushVideoFrame = (data, w, h, pitch) => surface.PushFrame(data, w, h, pitch);
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;

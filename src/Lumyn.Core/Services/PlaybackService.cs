@@ -1,132 +1,94 @@
 using System.Runtime.InteropServices;
-using LibVLCSharp.Shared;
-using LibVLCSharp.Shared.Structures;
+using System.Text;
 using Lumyn.Core.Models;
 
 namespace Lumyn.Core.Services;
 
 public sealed class PlaybackService : IDisposable
 {
-    // ── P/Invoke for subtitle delay (SpuDelay property is getter-only in LibVLCSharp) ──
-    [DllImport("libvlc", EntryPoint = "libvlc_video_set_spu_delay")]
-    private static extern int NativeSetSpuDelay(IntPtr mp, long delay);
-
-    private readonly LibVLC? _libVlc;
     private readonly MediaState _state = new();
+    private readonly Thread? _eventThread;
+    private readonly object _stateLock = new();
+    private readonly IntPtr _mpv;
     private bool _disposed;
     private bool _loop;
-
-    // ── Software video rendering ─────────────────────────────────────────────
-    private IntPtr _videoBuffer = IntPtr.Zero;
-    private uint _videoWidth;
-    private uint _videoHeight;
-    private uint _videoPitch;
-
-    // Keep delegate references alive so GC doesn't collect them
-    private readonly MediaPlayer.LibVLCVideoLockCb    _lockCb;
-    private readonly MediaPlayer.LibVLCVideoUnlockCb  _unlockCb;
-    private readonly MediaPlayer.LibVLCVideoDisplayCb _displayCb;
-    private readonly MediaPlayer.LibVLCVideoFormatCb  _formatCb;
-    private readonly MediaPlayer.LibVLCVideoCleanupCb _cleanupCb;
+    private bool _pause = true;
+    private bool _rendererReady;
+    private IntPtr _renderContext;
+    private MpvNative.MpvRenderUpdateCallback? _renderUpdateCallback;
+    private MpvNative.MpvOpenGlGetProcAddress? _getProcAddressCallback;
+    private Func<string, IntPtr>? _getProcAddress;
+    private Action? _requestRender;
 
     public PlaybackService()
     {
-        // Wire up delegates and keep references to prevent GC collection
-        _formatCb  = OnVideoFormat;
-        _cleanupCb = OnVideoCleanup;
-        _lockCb    = OnVideoLock;
-        _unlockCb  = OnVideoUnlock;
-        _displayCb = OnVideoDisplay;
-
         try
         {
-            // Linux resolves libvlc from system packages such as vlc/libvlc-dev.
-            LibVLCSharp.Shared.Core.Initialize();
+            _mpv = MpvNative.mpv_create();
+            if (_mpv == IntPtr.Zero)
+            {
+                InitializationError = "mpv could not be initialized.";
+                return;
+            }
 
-            // On X11 (including XWayland) VLC embeds directly into the VideoView
-            // X11 sub-window — no extra flags needed beyond title suppression.
-            _libVlc = new LibVLC("--no-video-title-show", "--no-spu");
-            // --no-spu disables VLC's built-in subtitle blending into the video buffer.
-            // Without this, VLC's SPU heap overflows ('subpicture heap full') when using
-            // software rendering because the frame display rate can't keep up with the
-            // subtitle generation rate.  We render subtitles ourselves as an Avalonia overlay.
-            MediaPlayer = new MediaPlayer(_libVlc)
-            {
-                Volume = _state.Volume,
-                Mute = false
-            };
+            SetOption("terminal", "no");
+            SetOption("idle", "yes");
+            SetOption("vo", "libmpv");
+            SetOption("hwdec", "no");
+            SetOption("osd-level", "0");
 
-            // Software rendering callbacks — work on Wayland, X11, and all platforms
-            MediaPlayer.SetVideoFormatCallbacks(_formatCb, _cleanupCb);
-            MediaPlayer.SetVideoCallbacks(_lockCb, _unlockCb, _displayCb);
+            var init = MpvNative.mpv_initialize(_mpv);
+            if (init < 0)
+            {
+                InitializationError = $"mpv initialization failed: {init}.";
+                return;
+            }
 
-            MediaPlayer.Playing += (_, _) =>
+            Observe("time-pos", MpvFormat.Double);
+            Observe("duration", MpvFormat.Double);
+            Observe("pause", MpvFormat.Flag);
+            Observe("mute", MpvFormat.Flag);
+            Observe("volume", MpvFormat.Double);
+            Observe("speed", MpvFormat.Double);
+
+            SetVolume(_state.Volume);
+
+            _eventThread = new Thread(EventLoop)
             {
-                // Re-apply volume/mute on each play in case VLC reset them.
-                MediaPlayer.Volume = _state.Volume;
-                MediaPlayer.Mute = false;
-                _state.IsPlaying = true;
-                StateChanged?.Invoke(this, _state);
+                IsBackground = true,
+                Name = "Lumyn mpv events"
             };
-            MediaPlayer.Paused += (_, _) =>
-            {
-                _state.IsPlaying = false;
-                StateChanged?.Invoke(this, _state);
-            };
-            MediaPlayer.Stopped += (_, _) =>
-            {
-                _state.IsPlaying = false;
-                StateChanged?.Invoke(this, _state);
-            };
-            MediaPlayer.EndReached += (_, _) =>
-            {
-                if (_loop && _state.FilePath is not null)
-                {
-                    _ = Task.Run(async () =>
-                    {
-                        await Task.Delay(50).ConfigureAwait(false);
-                        MediaPlayer?.Play();
-                    });
-                }
-                else
-                {
-                    EndReached?.Invoke(this, EventArgs.Empty);
-                }
-            };
-            MediaPlayer.EncounteredError += (_, _) =>
-                ErrorOccurred?.Invoke(this, "VLC failed to play this file.");
+            _eventThread.Start();
+        }
+        catch (DllNotFoundException)
+        {
+            InitializationError = "libmpv is not installed. Install mpv/libmpv and restart Lumyn.";
         }
         catch (Exception ex)
         {
-            InitializationError = $"VLC/libvlc could not be initialized: {ex.Message}";
+            InitializationError = $"mpv could not be initialized: {ex.Message}";
         }
     }
 
-    public MediaPlayer? MediaPlayer { get; }
     public string? InitializationError { get; }
     public string? CurrentFilePath => _state.FilePath;
-    public TimeSpan Position => TimeSpan.FromMilliseconds(Math.Max(0, MediaPlayer?.Time ?? 0));
-    public TimeSpan Duration => TimeSpan.FromMilliseconds(Math.Max(0, MediaPlayer?.Length ?? 0));
-    public bool IsPlaying => MediaPlayer?.IsPlaying ?? false;
-    public bool IsMuted => MediaPlayer?.Mute ?? false;
-    public int Volume => MediaPlayer?.Volume ?? _state.Volume;
-    public float Speed => MediaPlayer?.Rate ?? 1.0f;
+    public TimeSpan Position => Snapshot().Position;
+    public TimeSpan Duration => Snapshot().Duration;
+    public bool IsPlaying => Snapshot().IsPlaying;
+    public bool IsMuted => Snapshot().IsMuted;
+    public int Volume => Snapshot().Volume;
+    public float Speed => Snapshot().Speed;
     public bool IsLooping => _loop;
 
     public event EventHandler<MediaState>? StateChanged;
     public event EventHandler? EndReached;
     public event EventHandler<string>? ErrorOccurred;
 
-    // Fired on every decoded frame — subscribe to copy pixels to a WriteableBitmap
-    public event EventHandler<VideoFrameData>? VideoFrameReady;
-
-    // ── Open ────────────────────────────────────────────────────────────────
-
     public Task OpenAsync(string filePath, TimeSpan resumePosition)
     {
-        if (MediaPlayer is null || _libVlc is null)
+        if (_mpv == IntPtr.Zero)
         {
-            ErrorOccurred?.Invoke(this, InitializationError ?? "VLC/libvlc is not available.");
+            ErrorOccurred?.Invoke(this, InitializationError ?? "mpv is not available.");
             return Task.CompletedTask;
         }
 
@@ -136,13 +98,16 @@ public sealed class PlaybackService : IDisposable
             return Task.CompletedTask;
         }
 
-        _state.FilePath = filePath;
-        using var media = new Media(_libVlc, new Uri(filePath));
-        if (!MediaPlayer.Play(media))
+        lock (_stateLock)
         {
-            ErrorOccurred?.Invoke(this, "VLC could not start playback.");
-            return Task.CompletedTask;
+            _state.FilePath = filePath;
+            _state.Position = TimeSpan.Zero;
+            _state.Duration = TimeSpan.Zero;
+            _state.IsPlaying = true;
+            _pause = false;
         }
+
+        Command("loadfile", filePath, "replace");
 
         if (resumePosition > TimeSpan.Zero)
         {
@@ -153,228 +118,528 @@ public sealed class PlaybackService : IDisposable
             });
         }
 
-        StateChanged?.Invoke(this, Snapshot());
+        RaiseStateChanged();
         return Task.CompletedTask;
     }
 
-    // ── Transport ───────────────────────────────────────────────────────────
-
     public void Stop()
     {
-        if (MediaPlayer?.Media is null) return;
-        MediaPlayer.Stop();
-        _state.FilePath = null;
-        StateChanged?.Invoke(this, Snapshot());
+        if (_mpv == IntPtr.Zero) return;
+        Command("stop");
+        lock (_stateLock)
+        {
+            _state.FilePath = null;
+            _state.Position = TimeSpan.Zero;
+            _state.Duration = TimeSpan.Zero;
+            _state.IsPlaying = false;
+            _pause = true;
+        }
+        RaiseStateChanged();
     }
 
     public void TogglePlayPause()
     {
-        if (MediaPlayer?.Media is null) return;
-        if (MediaPlayer.IsPlaying)
-            MediaPlayer.Pause();
-        else
-            MediaPlayer.Play();
-        StateChanged?.Invoke(this, Snapshot());
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetFlag("pause", !_pause);
     }
 
     public void Seek(TimeSpan position)
     {
-        if (MediaPlayer?.Media is null) return;
-        MediaPlayer.Time = (long)Math.Max(0, position.TotalMilliseconds);
-        StateChanged?.Invoke(this, Snapshot());
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetDouble("time-pos", Math.Max(0, position.TotalSeconds));
+        lock (_stateLock)
+            _state.Position = position < TimeSpan.Zero ? TimeSpan.Zero : position;
+        RaiseStateChanged();
     }
 
-    public void SeekRelative(TimeSpan offset) => Seek(Position + offset);
+    public void SeekRelative(TimeSpan offset)
+    {
+        var seconds = offset.TotalSeconds.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        Command("seek", seconds, "relative", "exact");
+    }
 
     public void StepFrame()
     {
-        if (MediaPlayer?.Media is null) return;
-        if (MediaPlayer.IsPlaying) MediaPlayer.Pause();
-        MediaPlayer.NextFrame();
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetFlag("pause", true);
+        Command("frame-step");
     }
-
-    // ── Volume ──────────────────────────────────────────────────────────────
 
     public void SetVolume(int volume)
     {
         var clamped = Math.Clamp(volume, 0, 100);
-        if (MediaPlayer is null)
+        lock (_stateLock)
             _state.Volume = clamped;
-        else
-            MediaPlayer.Volume = clamped;
-        _state.Volume = clamped;
-        StateChanged?.Invoke(this, Snapshot());
+        if (_mpv != IntPtr.Zero)
+            SetDouble("volume", clamped);
+        RaiseStateChanged();
     }
 
     public void ChangeVolume(int delta) => SetVolume(Volume + delta);
 
     public void ToggleMute()
     {
-        if (MediaPlayer is null) return;
-        MediaPlayer.Mute = !MediaPlayer.Mute;
-        StateChanged?.Invoke(this, Snapshot());
+        if (_mpv == IntPtr.Zero) return;
+        SetFlag("mute", !IsMuted);
     }
-
-    // ── Speed ───────────────────────────────────────────────────────────────
 
     public void SetSpeed(float rate)
     {
-        if (MediaPlayer is null) return;
-        MediaPlayer.SetRate(rate);
-        StateChanged?.Invoke(this, Snapshot());
+        var clamped = Math.Clamp(rate, 0.25f, 4.0f);
+        lock (_stateLock)
+            _state.Speed = clamped;
+        if (_mpv != IntPtr.Zero)
+            SetDouble("speed", clamped);
+        RaiseStateChanged();
     }
-
-    // ── Loop ────────────────────────────────────────────────────────────────
 
     public void ToggleLoop()
     {
         _loop = !_loop;
-        _state.IsLooping = _loop;
-        StateChanged?.Invoke(this, Snapshot());
+        SetOption("loop-file", _loop ? "inf" : "no");
+        lock (_stateLock)
+            _state.IsLooping = _loop;
+        RaiseStateChanged();
     }
 
-    // ── Screenshot ──────────────────────────────────────────────────────────
-
-    public bool TakeSnapshot(string outputPath) =>
-        MediaPlayer?.TakeSnapshot(0, outputPath, 0, 0) ?? false;
-
-    // ── Subtitle / Audio tracks ─────────────────────────────────────────────
+    public bool TakeSnapshot(string outputPath)
+    {
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return false;
+        return Command("screenshot-to-file", outputPath, "video") >= 0;
+    }
 
     public void LoadSubtitleFile(string path)
     {
-        if (MediaPlayer?.Media is null) return;
-        var uri = new Uri(Path.GetFullPath(path)).AbsoluteUri;
-        MediaPlayer.AddSlave(MediaSlaveType.Subtitle, uri, true);
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        Command("sub-add", path, "select");
     }
 
-    public TrackDescription[] GetAudioTracks() =>
-        MediaPlayer?.AudioTrackDescription ?? [];
-
-    public TrackDescription[] GetSubtitleTracks() =>
-        MediaPlayer?.SpuDescription ?? [];
-
-    public int CurrentAudioTrack => MediaPlayer?.AudioTrack ?? -1;
-    public int CurrentSubtitleTrack => MediaPlayer?.Spu ?? -1;
-
-    public void SetAudioTrack(int id)
-    {
-        if (MediaPlayer is not null) MediaPlayer.SetAudioTrack(id);
-    }
-
+    public MediaTrack[] GetAudioTracks() => [];
+    public MediaTrack[] GetSubtitleTracks() => [new(-1, "Off")];
+    public int CurrentAudioTrack => -1;
+    public int CurrentSubtitleTrack => -1;
+    public void SetAudioTrack(int id) { }
     public void SetSubtitleTrack(int id)
     {
-        if (MediaPlayer is not null) MediaPlayer.SetSpu(id);
+        if (id < 0)
+            SetFlag("sub-visibility", false);
     }
 
-    /// <summary>
-    /// Subtitle / audio sync delay in milliseconds.
-    /// Positive = subtitles appear later; negative = earlier.
-    /// VLC's native API uses microseconds.
-    /// </summary>
     public long SubtitleDelayMs
     {
-        get => (MediaPlayer?.SpuDelay ?? 0L) / 1000L;
-        set
+        get => (long)(GetDouble("sub-delay") * 1000);
+        set => SetDouble("sub-delay", value / 1000.0);
+    }
+
+    public void CycleAudioTrack() { }
+    public void CycleSubtitleTrack() { }
+
+    public void InitializeRenderer(Func<string, IntPtr> getProcAddress, Action requestRender)
+    {
+        if (_mpv == IntPtr.Zero || _renderContext != IntPtr.Zero) return;
+
+        _getProcAddress = getProcAddress;
+        _requestRender = requestRender;
+        _getProcAddressCallback = (_, name) =>
         {
-            if (MediaPlayer is not null)
-                NativeSetSpuDelay(MediaPlayer.NativeReference, value * 1000L);
+            var proc = Marshal.PtrToStringAnsi(name);
+            return string.IsNullOrEmpty(proc) ? IntPtr.Zero : _getProcAddress?.Invoke(proc) ?? IntPtr.Zero;
+        };
+
+        unsafe
+        {
+            var apiType = Marshal.StringToHGlobalAnsi("opengl");
+            var initParams = new MpvNative.MpvOpenGlInitParams
+            {
+                get_proc_address = Marshal.GetFunctionPointerForDelegate(_getProcAddressCallback),
+                get_proc_address_ctx = IntPtr.Zero
+            };
+            var initPtr = Marshal.AllocHGlobal(Marshal.SizeOf<MpvNative.MpvOpenGlInitParams>());
+            Marshal.StructureToPtr(initParams, initPtr, false);
+
+            try
+            {
+                var parameters = stackalloc MpvNative.MpvRenderParam[3];
+                parameters[0] = new MpvNative.MpvRenderParam(MpvRenderParamType.ApiType, apiType);
+                parameters[1] = new MpvNative.MpvRenderParam(MpvRenderParamType.OpenGlInitParams, initPtr);
+                parameters[2] = new MpvNative.MpvRenderParam(MpvRenderParamType.Invalid, IntPtr.Zero);
+
+                var result = MpvNative.mpv_render_context_create(out _renderContext, _mpv, parameters);
+                if (result < 0 || _renderContext == IntPtr.Zero)
+                {
+                    ErrorOccurred?.Invoke(this, $"mpv OpenGL renderer failed to initialize: {result}.");
+                    return;
+                }
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(apiType);
+                Marshal.FreeHGlobal(initPtr);
+            }
+        }
+
+        _renderUpdateCallback = _ => _requestRender?.Invoke();
+        MpvNative.mpv_render_context_set_update_callback(_renderContext, _renderUpdateCallback, IntPtr.Zero);
+        _rendererReady = true;
+    }
+
+    public void RenderVideo(int framebuffer, int width, int height)
+    {
+        if (!_rendererReady || _renderContext == IntPtr.Zero || width <= 0 || height <= 0) return;
+
+        unsafe
+        {
+            var fbo = new MpvNative.MpvOpenGlFbo(framebuffer, width, height, 0);
+            var flip = 1;
+            var block = 0;
+            var parameters = stackalloc MpvNative.MpvRenderParam[4];
+            parameters[0] = new MpvNative.MpvRenderParam(MpvRenderParamType.OpenGlFbo, (IntPtr)(&fbo));
+            parameters[1] = new MpvNative.MpvRenderParam(MpvRenderParamType.FlipY, (IntPtr)(&flip));
+            parameters[2] = new MpvNative.MpvRenderParam(MpvRenderParamType.BlockForTargetTime, (IntPtr)(&block));
+            parameters[3] = new MpvNative.MpvRenderParam(MpvRenderParamType.Invalid, IntPtr.Zero);
+            MpvNative.mpv_render_context_render(_renderContext, parameters);
         }
     }
-
-    public void CycleAudioTrack()
-    {
-        if (MediaPlayer is null) return;
-        var tracks = MediaPlayer.AudioTrackDescription;
-        if (tracks.Length <= 1) return;
-        var current = MediaPlayer.AudioTrack;
-        var idx = Array.FindIndex(tracks, t => t.Id == current);
-        MediaPlayer.SetAudioTrack(tracks[(idx + 1) % tracks.Length].Id);
-    }
-
-    public void CycleSubtitleTrack()
-    {
-        if (MediaPlayer is null) return;
-        var tracks = MediaPlayer.SpuDescription;
-        if (tracks.Length == 0) return;
-        var current = MediaPlayer.Spu;
-        var idx = Array.FindIndex(tracks, t => t.Id == current);
-        MediaPlayer.SetSpu(tracks[(idx + 1) % tracks.Length].Id);
-    }
-
-    // ── Software video callbacks ─────────────────────────────────────────────
-
-    private uint OnVideoFormat(ref IntPtr opaque, IntPtr chroma,
-        ref uint width, ref uint height, ref uint pitches, ref uint lines)
-    {
-        // Request BGRA (RV32) so we can copy directly into Avalonia's Bgra8888 bitmap
-        Marshal.WriteByte(chroma, 0, (byte)'R');
-        Marshal.WriteByte(chroma, 1, (byte)'V');
-        Marshal.WriteByte(chroma, 2, (byte)'3');
-        Marshal.WriteByte(chroma, 3, (byte)'2');
-
-        _videoWidth  = width;
-        _videoHeight = height;
-        _videoPitch  = width * 4; // 4 bytes per pixel (BGRA)
-
-        pitches = _videoPitch;
-        lines   = height;
-
-        if (_videoBuffer != IntPtr.Zero)
-        {
-            Marshal.FreeHGlobal(_videoBuffer);
-            _videoBuffer = IntPtr.Zero;
-        }
-        _videoBuffer = Marshal.AllocHGlobal((int)(_videoPitch * height));
-        return 1; // one picture buffer
-    }
-
-    private void OnVideoCleanup(ref IntPtr opaque)
-    {
-        if (_videoBuffer == IntPtr.Zero) return;
-        Marshal.FreeHGlobal(_videoBuffer);
-        _videoBuffer = IntPtr.Zero;
-    }
-
-    private IntPtr OnVideoLock(IntPtr opaque, IntPtr planes)
-    {
-        // Write our buffer address into planes[0]
-        Marshal.WriteIntPtr(planes, _videoBuffer);
-        return IntPtr.Zero;
-    }
-
-    private void OnVideoUnlock(IntPtr opaque, IntPtr picture, IntPtr planes) { }
-
-    private void OnVideoDisplay(IntPtr opaque, IntPtr picture)
-    {
-        if (_videoBuffer == IntPtr.Zero) return;
-        VideoFrameReady?.Invoke(this,
-            new VideoFrameData(_videoBuffer, _videoWidth, _videoHeight, _videoPitch));
-    }
-
-    // ── Snapshot ────────────────────────────────────────────────────────────
 
     public MediaState Snapshot()
     {
-        _state.Position = Position;
-        _state.Duration = Duration;
-        _state.IsPlaying = MediaPlayer?.IsPlaying ?? false;
-        _state.IsMuted = MediaPlayer?.Mute ?? false;
-        _state.Volume = MediaPlayer?.Volume ?? _state.Volume;
-        _state.Speed = MediaPlayer?.Rate ?? 1.0f;
-        _state.IsLooping = _loop;
-        return _state;
+        if (_mpv != IntPtr.Zero)
+        {
+            var position = GetDouble("time-pos");
+            var duration = GetDouble("duration");
+            if (!double.IsNaN(position))
+                _state.Position = TimeSpan.FromSeconds(Math.Max(0, position));
+            if (!double.IsNaN(duration))
+                _state.Duration = TimeSpan.FromSeconds(Math.Max(0, duration));
+            _state.IsMuted = GetFlag("mute");
+            _state.Volume = (int)Math.Round(Math.Clamp(GetDouble("volume"), 0, 100));
+            _state.Speed = (float)Math.Clamp(GetDouble("speed"), 0.25, 4.0);
+        }
+
+        lock (_stateLock)
+        {
+            _state.IsPlaying = !_pause && !string.IsNullOrWhiteSpace(_state.FilePath);
+            _state.IsLooping = _loop;
+            return new MediaState
+            {
+                FilePath = _state.FilePath,
+                Position = _state.Position,
+                Duration = _state.Duration,
+                IsPlaying = _state.IsPlaying,
+                IsMuted = _state.IsMuted,
+                Volume = _state.Volume,
+                Speed = _state.Speed,
+                IsLooping = _state.IsLooping
+            };
+        }
+    }
+
+    private void EventLoop()
+    {
+        while (!_disposed && _mpv != IntPtr.Zero)
+        {
+            var evt = Marshal.PtrToStructure<MpvNative.MpvEvent>(MpvNative.mpv_wait_event(_mpv, 0.25));
+            if (evt.event_id == MpvEventId.None) continue;
+
+            switch (evt.event_id)
+            {
+                case MpvEventId.Shutdown:
+                    return;
+                case MpvEventId.FileLoaded:
+                    lock (_stateLock) _pause = GetFlag("pause");
+                    RaiseStateChanged();
+                    break;
+                case MpvEventId.EndFile:
+                    if (!_loop)
+                        EndReached?.Invoke(this, EventArgs.Empty);
+                    RaiseStateChanged();
+                    break;
+                case MpvEventId.Pause:
+                    lock (_stateLock) _pause = true;
+                    RaiseStateChanged();
+                    break;
+                case MpvEventId.Unpause:
+                    lock (_stateLock) _pause = false;
+                    RaiseStateChanged();
+                    break;
+                case MpvEventId.PropertyChange:
+                    ApplyPropertyChange(evt.data);
+                    RaiseStateChanged();
+                    break;
+            }
+        }
+    }
+
+    private void ApplyPropertyChange(IntPtr data)
+    {
+        if (data == IntPtr.Zero) return;
+        var property = Marshal.PtrToStructure<MpvNative.MpvEventProperty>(data);
+        var name = Marshal.PtrToStringAnsi(property.name);
+        if (string.IsNullOrWhiteSpace(name) || property.data == IntPtr.Zero) return;
+
+        lock (_stateLock)
+        {
+            switch (name)
+            {
+                case "time-pos" when property.format == MpvFormat.Double:
+                    _state.Position = TimeSpan.FromSeconds(Math.Max(0, Marshal.PtrToStructure<double>(property.data)));
+                    break;
+                case "duration" when property.format == MpvFormat.Double:
+                    _state.Duration = TimeSpan.FromSeconds(Math.Max(0, Marshal.PtrToStructure<double>(property.data)));
+                    break;
+                case "pause" when property.format == MpvFormat.Flag:
+                    _pause = Marshal.PtrToStructure<int>(property.data) != 0;
+                    break;
+                case "mute" when property.format == MpvFormat.Flag:
+                    _state.IsMuted = Marshal.PtrToStructure<int>(property.data) != 0;
+                    break;
+                case "volume" when property.format == MpvFormat.Double:
+                    _state.Volume = (int)Math.Round(Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0, 100));
+                    break;
+                case "speed" when property.format == MpvFormat.Double:
+                    _state.Speed = (float)Math.Clamp(Marshal.PtrToStructure<double>(property.data), 0.25, 4.0);
+                    break;
+            }
+        }
+    }
+
+    private void RaiseStateChanged() => StateChanged?.Invoke(this, Snapshot());
+
+    private int Command(params string[] args)
+    {
+        if (_mpv == IntPtr.Zero) return -1;
+
+        var ptrs = new IntPtr[args.Length + 1];
+        try
+        {
+            for (var i = 0; i < args.Length; i++)
+                ptrs[i] = StringToUtf8(args[i]);
+            ptrs[^1] = IntPtr.Zero;
+
+            unsafe
+            {
+                fixed (IntPtr* p = ptrs)
+                    return MpvNative.mpv_command(_mpv, (IntPtr)p);
+            }
+        }
+        finally
+        {
+            foreach (var ptr in ptrs)
+                if (ptr != IntPtr.Zero)
+                    Marshal.FreeHGlobal(ptr);
+        }
+    }
+
+    private void SetOption(string name, string value)
+    {
+        if (_mpv != IntPtr.Zero)
+            MpvNative.mpv_set_option_string(_mpv, name, value);
+    }
+
+    private void Observe(string name, MpvFormat format)
+    {
+        if (_mpv != IntPtr.Zero)
+            MpvNative.mpv_observe_property(_mpv, 0, name, format);
+    }
+
+    private void SetFlag(string name, bool value)
+    {
+        if (_mpv == IntPtr.Zero) return;
+        var raw = value ? 1 : 0;
+        unsafe
+        {
+            MpvNative.mpv_set_property(_mpv, name, MpvFormat.Flag, (IntPtr)(&raw));
+        }
+    }
+
+    private bool GetFlag(string name)
+    {
+        if (_mpv == IntPtr.Zero) return false;
+        var raw = 0;
+        unsafe
+        {
+            return MpvNative.mpv_get_property(_mpv, name, MpvFormat.Flag, (IntPtr)(&raw)) >= 0 && raw != 0;
+        }
+    }
+
+    private void SetDouble(string name, double value)
+    {
+        if (_mpv == IntPtr.Zero) return;
+        unsafe
+        {
+            MpvNative.mpv_set_property(_mpv, name, MpvFormat.Double, (IntPtr)(&value));
+        }
+    }
+
+    private double GetDouble(string name)
+    {
+        if (_mpv == IntPtr.Zero) return double.NaN;
+        double value = double.NaN;
+        unsafe
+        {
+            MpvNative.mpv_get_property(_mpv, name, MpvFormat.Double, (IntPtr)(&value));
+        }
+        return value;
+    }
+
+    private static IntPtr StringToUtf8(string value)
+    {
+        var bytes = Encoding.UTF8.GetBytes(value);
+        var ptr = Marshal.AllocHGlobal(bytes.Length + 1);
+        Marshal.Copy(bytes, 0, ptr, bytes.Length);
+        Marshal.WriteByte(ptr, bytes.Length, 0);
+        return ptr;
     }
 
     public void Dispose()
     {
         if (_disposed) return;
-        MediaPlayer?.Dispose();
-        _libVlc?.Dispose();
-        if (_videoBuffer != IntPtr.Zero)
-        {
-            Marshal.FreeHGlobal(_videoBuffer);
-            _videoBuffer = IntPtr.Zero;
-        }
         _disposed = true;
+
+        if (_renderContext != IntPtr.Zero)
+        {
+            MpvNative.mpv_render_context_free(_renderContext);
+            _renderContext = IntPtr.Zero;
+        }
+
+        if (_mpv != IntPtr.Zero)
+            MpvNative.mpv_terminate_destroy(_mpv);
+
+        if (_eventThread is { IsAlive: true })
+            _eventThread.Join(TimeSpan.FromMilliseconds(500));
     }
+}
+
+public sealed record MediaTrack(int Id, string Name);
+
+internal enum MpvFormat
+{
+    None = 0,
+    String = 1,
+    OsdString = 2,
+    Flag = 3,
+    Int64 = 4,
+    Double = 5
+}
+
+internal enum MpvEventId
+{
+    None = 0,
+    Shutdown = 1,
+    StartFile = 6,
+    EndFile = 7,
+    FileLoaded = 8,
+    TracksChanged = 9,
+    TrackSwitched = 10,
+    Idle = 11,
+    Pause = 12,
+    Unpause = 13,
+    VideoReconfig = 17,
+    AudioReconfig = 18,
+    Seek = 20,
+    PlaybackRestart = 21,
+    PropertyChange = 22
+}
+
+internal enum MpvRenderParamType
+{
+    Invalid = 0,
+    ApiType = 1,
+    OpenGlInitParams = 2,
+    OpenGlFbo = 3,
+    FlipY = 4,
+    BlockForTargetTime = 12
+}
+
+internal static partial class MpvNative
+{
+    private const string Library = "libmpv.so.2";
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate IntPtr MpvOpenGlGetProcAddress(IntPtr ctx, IntPtr name);
+
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    public delegate void MpvRenderUpdateCallback(IntPtr ctx);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvEvent
+    {
+        public readonly MpvEventId event_id;
+        public readonly int error;
+        public readonly ulong reply_userdata;
+        public readonly IntPtr data;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvEventProperty
+    {
+        public readonly IntPtr name;
+        public readonly MpvFormat format;
+        public readonly IntPtr data;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MpvOpenGlInitParams
+    {
+        public IntPtr get_proc_address;
+        public IntPtr get_proc_address_ctx;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvOpenGlFbo(int fbo, int w, int h, int internalFormat)
+    {
+        public readonly int fbo = fbo;
+        public readonly int w = w;
+        public readonly int h = h;
+        public readonly int internal_format = internalFormat;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvRenderParam(MpvRenderParamType type, IntPtr data)
+    {
+        public readonly MpvRenderParamType type = type;
+        public readonly IntPtr data = data;
+    }
+
+    [LibraryImport(Library)]
+    public static partial IntPtr mpv_create();
+
+    [LibraryImport(Library)]
+    public static partial void mpv_terminate_destroy(IntPtr ctx);
+
+    [LibraryImport(Library)]
+    public static partial int mpv_initialize(IntPtr ctx);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_set_option_string(IntPtr ctx, string name, string value);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_observe_property(IntPtr ctx, ulong replyUserData, string name, MpvFormat format);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_set_property(IntPtr ctx, string name, MpvFormat format, IntPtr data);
+
+    [LibraryImport(Library, StringMarshalling = StringMarshalling.Utf8)]
+    public static partial int mpv_get_property(IntPtr ctx, string name, MpvFormat format, IntPtr data);
+
+    [LibraryImport(Library)]
+    public static partial int mpv_command(IntPtr ctx, IntPtr args);
+
+    [LibraryImport(Library)]
+    public static partial IntPtr mpv_wait_event(IntPtr ctx, double timeout);
+
+    [LibraryImport(Library)]
+    public static unsafe partial int mpv_render_context_create(out IntPtr res, IntPtr mpv, MpvRenderParam* parameters);
+
+    [LibraryImport(Library)]
+    public static unsafe partial void mpv_render_context_set_update_callback(
+        IntPtr ctx,
+        MpvRenderUpdateCallback callback,
+        IntPtr callbackContext);
+
+    [LibraryImport(Library)]
+    public static unsafe partial int mpv_render_context_render(IntPtr ctx, MpvRenderParam* parameters);
+
+    [LibraryImport(Library)]
+    public static partial void mpv_render_context_free(IntPtr ctx);
 }

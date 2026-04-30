@@ -13,14 +13,14 @@
     ExtendClientAreaToDecorationsHint="False">
 
   <!--
-    All layers stacked in a Panel. Video renders into a WriteableBitmap (Image)
-    which is the bottom-most child. All controls are standard Avalonia overlays
-    and work correctly on Wayland, X11, and all other platforms.
+    All layers stacked in a Panel. mpv renders video into an OpenGL surface
+    at the bottom; Avalonia controls remain normal overlays above it.
   -->
   <Panel Name="Root" Background="#111111" DragDrop.AllowDrop="True">
 
-    <!-- ── Video frame (software-rendered via VideoSurface) ─────────────── -->
-    <controls:VideoSurface Name="VideoSurface"
+    <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
+    <controls:MpvVideoSurface Name="VideoSurface"
+           Playback="{Binding Playback}"
            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
            IsHitTestVisible="False" />
 
@@ -287,4 +287,3 @@
 
     </Panel>
 </Window>
-

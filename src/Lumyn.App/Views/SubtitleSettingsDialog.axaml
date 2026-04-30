@@ -90,7 +90,7 @@
                    DoubleTapped="ResultsList_DoubleTapped">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:SubtitleSearchResult">
-                <Grid ColumnDefinitions="*,10,Auto" Margin="4,6">
+                <Grid ColumnDefinitions="*,10,Auto,8,Auto" Margin="4,6">
                   <StackPanel Grid.Column="0" Spacing="3">
                     <TextBlock Text="{Binding Title}"
                                FontWeight="SemiBold" Foreground="#F7F5F3"
@@ -117,6 +117,27 @@
                     <TextBlock Text="downloads" FontSize="9" Foreground="#50504D"
                                HorizontalAlignment="Right" />
                   </StackPanel>
+                  <Button Grid.Column="4"
+                          Classes="downloadIcon"
+                          VerticalAlignment="Center"
+                          CommandParameter="{Binding}"
+                          Click="DownloadResultButton_Click"
+                          ToolTip.Tip="Download subtitle file">
+                    <Viewbox Width="22" Height="22">
+                      <Canvas Width="24" Height="24">
+                        <Path Data="{StaticResource Icon.DownloadTray}"
+                              Stroke="#DEDAD5"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Round"
+                              StrokeJoin="Round" />
+                        <Path Data="{StaticResource Icon.DownloadArrow}"
+                              Stroke="#DEDAD5"
+                              StrokeThickness="1.5"
+                              StrokeLineCap="Round"
+                              StrokeJoin="Round" />
+                      </Canvas>
+                    </Viewbox>
+                  </Button>
                 </Grid>
               </DataTemplate>
             </ListBox.ItemTemplate>

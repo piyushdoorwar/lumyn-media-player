@@ -29,8 +29,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isMuted;
     private bool _controlsVisible = true;
     private bool _isSeeking;
-    private long _lastSeekTickMs;          // Interlocked, throttles live-drag seeks
-    private const long SeekThrottleMs = 150;
     private float _speed = 1.0f;
     private bool _isLooping;
     private bool _isAlwaysOnTop;
@@ -156,23 +154,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public double SeekValue
     {
         get => _seekValue;
-        set
-        {
-            if (SetField(ref _seekValue, Math.Clamp(value, 0, 1000)) && _isSeeking)
-            {
-                // Throttle live-drag seeks so we don't flood VLC with hundreds of
-                // consecutive Seek() calls. EndSeek() always does the final accurate seek.
-                var nowMs = Environment.TickCount64;
-                var lastMs = Interlocked.Read(ref _lastSeekTickMs);
-                if (nowMs - lastMs >= SeekThrottleMs)
-                {
-                    Interlocked.Exchange(ref _lastSeekTickMs, nowMs);
-                    var duration = _playback.Duration;
-                    if (duration > TimeSpan.Zero)
-                        _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
-                }
-            }
-        }
+        set => SetField(ref _seekValue, Math.Clamp(value, 0, 1000));
     }
 
     public int Volume

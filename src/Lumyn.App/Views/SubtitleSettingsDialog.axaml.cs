@@ -102,6 +102,45 @@ public partial class SubtitleSettingsDialog : Window
 
     private void UseButton_Click(object? sender, RoutedEventArgs e) => DownloadSelected();
 
+    private async void DownloadResultButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { CommandParameter: SubtitleSearchResult result }) return;
+
+        e.Handled = true;
+
+        var target = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Download subtitle",
+            SuggestedFileName = result.FileName
+        });
+        if (target is null) return;
+
+        var targetPath = target.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(targetPath)) return;
+
+        SetSearchStatus($"Downloading {result.FileName}…", loading: true);
+        SetSearchInputEnabled(false);
+
+        try
+        {
+            var tempPath = await _service.DownloadAsync(result);
+            await using var source = File.OpenRead(tempPath);
+            await using var destination = await target.OpenWriteAsync();
+            destination.SetLength(0);
+            await source.CopyToAsync(destination);
+
+            SetSearchStatus($"Downloaded: {Path.GetFileName(targetPath)}", loading: false);
+        }
+        catch (Exception ex)
+        {
+            SetSearchStatus($"Download failed: {ex.Message}", loading: false);
+        }
+        finally
+        {
+            SetSearchInputEnabled(true);
+        }
+    }
+
     private async void StartSearch()
     {
         var query = this.FindControl<TextBox>("SearchBox")?.Text?.Trim() ?? "";
@@ -301,4 +340,3 @@ public partial class SubtitleSettingsDialog : Window
         if (lang is not null) lang.IsEnabled = enabled;
     }
 }
-

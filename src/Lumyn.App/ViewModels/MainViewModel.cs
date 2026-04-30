@@ -52,7 +52,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback = playback;
         _settings = settings;
 
-        _osdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        _osdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _osdTimer.Tick += (_, _) =>
         {
             _osdTimer.Stop();

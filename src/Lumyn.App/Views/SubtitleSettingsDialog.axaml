@@ -206,7 +206,8 @@
             <TextBlock Grid.Column="0" Text="Sync delay"
                        VerticalAlignment="Center" Foreground="#DEDAD5" />
             <Button Grid.Column="1" Name="DelayMinusBtn" Content="&#8722;"
-                    Width="36" Height="36" Click="DelayMinus_Click" FontSize="18" Padding="0" />
+                    Width="36" Height="36" Click="DelayMinus_Click" FontSize="18"
+                    Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
             <Border Grid.Column="3" Width="110"
                     Background="#2D2D2D" CornerRadius="5"
                     BorderBrush="#4D4658" BorderThickness="1"
@@ -216,7 +217,8 @@
                          Foreground="#F7F5F3" FontSize="14" FontWeight="SemiBold" />
             </Border>
             <Button Grid.Column="5" Name="DelayPlusBtn" Content="+"
-                    Width="36" Height="36" Click="DelayPlus_Click" FontSize="18" Padding="0" />
+                    Width="36" Height="36" Click="DelayPlus_Click" FontSize="18"
+                    Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
           </Grid>
           <TextBlock Text="Positive = later  ·  Negative = earlier"
                      FontSize="11" Foreground="#807C79" Margin="130,0,0,0" />

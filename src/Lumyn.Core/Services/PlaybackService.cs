@@ -7,6 +7,10 @@ namespace Lumyn.Core.Services;
 
 public sealed class PlaybackService : IDisposable
 {
+    // ── P/Invoke for subtitle delay (SpuDelay property is getter-only in LibVLCSharp) ──
+    [DllImport("libvlc", EntryPoint = "libvlc_video_set_spu_delay")]
+    private static extern int NativeSetSpuDelay(IntPtr mp, long delay);
+
     private readonly LibVLC? _libVlc;
     private readonly MediaState _state = new();
     private bool _disposed;
@@ -256,6 +260,21 @@ public sealed class PlaybackService : IDisposable
     public void SetSubtitleTrack(int id)
     {
         if (MediaPlayer is not null) MediaPlayer.SetSpu(id);
+    }
+
+    /// <summary>
+    /// Subtitle / audio sync delay in milliseconds.
+    /// Positive = subtitles appear later; negative = earlier.
+    /// VLC's native API uses microseconds.
+    /// </summary>
+    public long SubtitleDelayMs
+    {
+        get => (MediaPlayer?.SpuDelay ?? 0L) / 1000L;
+        set
+        {
+            if (MediaPlayer is not null)
+                NativeSetSpuDelay(MediaPlayer.NativeReference, value * 1000L);
+        }
     }
 
     public void CycleAudioTrack()

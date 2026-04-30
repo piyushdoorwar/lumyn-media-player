@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Input;
 using Avalonia.Threading;
 using LibVLCSharp.Shared;
+using Lumyn.App.Models;
 using Lumyn.Core.Models;
 using Lumyn.Core.Services;
 
@@ -273,6 +274,23 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         Title = string.IsNullOrWhiteSpace(fileName) ? "Lumyn" : $"{fileName} - Lumyn";
         ShowOsd(Path.GetFileName(filePath) ?? "");
         RefreshState();
+
+        // Restore cached subtitle settings for this file (if any)
+        var cached = _settings.GetSubtitleSettings(filePath);
+        if (cached is not null)
+        {
+            var restored = SubtitleSettingsFromEntry(cached);
+            CurrentSubtitleSettings = restored;
+            // Small delay so VLC has time to initialise the media before we add the slave
+            await Task.Delay(400);
+            ApplySubtitleSettings(restored, saveToCache: false);
+        }
+        else
+        {
+            // Reset to defaults so dialog opens clean for a new file
+            CurrentSubtitleSettings = new SubtitleSettings(
+                null, SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0);
+        }
     }
 
     public void LoadSubtitleFile(string path)
@@ -280,6 +298,64 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback.LoadSubtitleFile(path);
         ShowOsd($"Subtitle: {Path.GetFileName(path)}");
     }
+
+    /// <summary>
+    /// Persists the last subtitle settings so the dialog re-opens with the previous values.
+    /// </summary>
+    public SubtitleSettings CurrentSubtitleSettings { get; private set; } =
+        new(null, SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0);
+
+    /// <summary>
+    /// Applies subtitle settings from the dialog: loads a file if selected and
+    /// adjusts the sync delay immediately via VLC's native API.
+    /// </summary>
+    public void ApplySubtitleSettings(SubtitleSettings s) => ApplySubtitleSettings(s, saveToCache: true);
+
+    private void ApplySubtitleSettings(SubtitleSettings s, bool saveToCache)
+    {
+        CurrentSubtitleSettings = s;
+
+        if (s.FilePath is null)
+        {
+            // Disable subtitles: turn off SPU track and reset delay
+            _playback.SetSubtitleTrack(-1);
+            _playback.SubtitleDelayMs = 0;
+            ShowOsd("Subtitles disabled");
+        }
+        else
+        {
+            LoadSubtitleFile(s.FilePath);
+            _playback.SubtitleDelayMs = s.DelayMs;
+            if (s.DelayMs != 0)
+                ShowOsd($"Subtitle delay: {s.DelayMs:+0;-0} ms");
+        }
+
+        if (saveToCache && !string.IsNullOrWhiteSpace(_playback.CurrentFilePath))
+        {
+            if (s.FilePath is null)
+                _settings.ClearSubtitleSettings(_playback.CurrentFilePath);
+            else
+                _settings.SaveSubtitleSettings(_playback.CurrentFilePath, SubtitleEntryFromSettings(s));
+        }
+    }
+
+    // ── Subtitle settings ↔ SettingsEntry conversion ──────────────────────
+
+    private static SubtitleSettings SubtitleSettingsFromEntry(SubtitleEntry e) => new(
+        e.FilePath,
+        Enum.TryParse<SubtitleFontSize>(e.FontSize, out var sz) ? sz : SubtitleFontSize.Medium,
+        Enum.TryParse<SubtitleFont>(e.Font,     out var fn) ? fn : SubtitleFont.SansSerif,
+        Enum.TryParse<SubtitleColor>(e.Color,   out var cl) ? cl : SubtitleColor.White,
+        e.DelayMs);
+
+    private static SubtitleEntry SubtitleEntryFromSettings(SubtitleSettings s) => new()
+    {
+        FilePath = s.FilePath,
+        FontSize = s.FontSize.ToString(),
+        Font     = s.Font.ToString(),
+        Color    = s.Color.ToString(),
+        DelayMs  = s.DelayMs
+    };
 
     public void JumpTo(TimeSpan position)
     {

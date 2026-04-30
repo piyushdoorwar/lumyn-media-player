@@ -280,7 +280,7 @@ public partial class MainWindow : Window
         => await OpenSubtitleFileAsync();
 
     private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
-        => await OpenSubtitleFileAsync();
+        => await OpenSubtitleSettingsDialogAsync();
 
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
@@ -342,6 +342,18 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(path) && ViewModel is not null)
         {
             ViewModel.LoadSubtitleFile(path);
+            Focus();
+        }
+    }
+
+    private async Task OpenSubtitleSettingsDialogAsync()
+    {
+        if (ViewModel is null) return;
+        var dialog = new SubtitleSettingsDialog(ViewModel.CurrentSubtitleSettings);
+        var result = await dialog.ShowDialog<Lumyn.App.Models.SubtitleSettings?>(this);
+        if (result is not null)
+        {
+            ViewModel.ApplySubtitleSettings(result);
             Focus();
         }
     }

@@ -1,0 +1,151 @@
+<Window
+    x:Class="Lumyn.App.Views.SubtitleSettingsDialog"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Subtitle Settings"
+    Width="400"
+    CanResize="False"
+    WindowStartupLocation="CenterOwner"
+    SizeToContent="Height"
+    Background="#1E1E1E">
+
+  <StackPanel Margin="20,16,20,16" Spacing="20">
+
+    <!-- ── Load subtitle file ──────────────────────────────────────────────── -->
+    <StackPanel Spacing="6">
+      <TextBlock Text="SUBTITLE FILE"
+                 FontSize="10" FontWeight="SemiBold" LetterSpacing="1.5"
+                 Foreground="#807C79" />
+      <Grid ColumnDefinitions="*,8,Auto">
+        <TextBox Grid.Column="0"
+                 Name="FilePathBox"
+                 IsReadOnly="True"
+                 Watermark="No file loaded"
+                 Background="#2D2D2D" Foreground="#F7F5F3"
+                 BorderBrush="#4D4658" />
+        <Button Grid.Column="2"
+                Name="BrowseButton"
+                Content="Browse…"
+                Click="BrowseButton_Click" />
+      </Grid>
+    </StackPanel>
+
+    <!-- ── Font size ───────────────────────────────────────────────────────── -->
+    <StackPanel Spacing="8">
+      <TextBlock Text="FONT SIZE"
+                 FontSize="10" FontWeight="SemiBold" LetterSpacing="1.5"
+                 Foreground="#807C79" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Name="SizeSmallBtn"    Content="Small"  MinWidth="80" Click="SizeButton_Click" Tag="Small" />
+        <Button Name="SizeMediumBtn"   Content="Medium" MinWidth="80" Click="SizeButton_Click" Tag="Medium" />
+        <Button Name="SizeLargeBtn"    Content="Large"  MinWidth="80" Click="SizeButton_Click" Tag="Large" />
+      </StackPanel>
+    </StackPanel>
+
+    <!-- ── Font family ─────────────────────────────────────────────────────── -->
+    <StackPanel Spacing="8">
+      <TextBlock Text="FONT"
+                 FontSize="10" FontWeight="SemiBold" LetterSpacing="1.5"
+                 Foreground="#807C79" />
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Button Name="FontSansBtn"      Content="Sans-serif"  Click="FontButton_Click" Tag="SansSerif" />
+        <Button Name="FontSerifBtn"     Content="Serif"       Click="FontButton_Click" Tag="Serif" />
+        <Button Name="FontMonoBtn"      Content="Monospace"   Click="FontButton_Click" Tag="Monospace" />
+        <Button Name="FontArialBtn"     Content="Arial"       Click="FontButton_Click" Tag="Arial" />
+      </StackPanel>
+    </StackPanel>
+
+    <!-- ── Colour ──────────────────────────────────────────────────────────── -->
+    <StackPanel Spacing="8">
+      <TextBlock Text="COLOUR"
+                 FontSize="10" FontWeight="SemiBold" LetterSpacing="1.5"
+                 Foreground="#807C79" />
+      <WrapPanel Orientation="Horizontal">
+
+        <!-- White -->
+        <Button Name="ColorWhiteBtn" Click="ColorButton_Click" Tag="White"
+                Margin="0,0,8,8" Padding="0"
+                Width="44" Height="44" CornerRadius="6"
+                Background="#FFFFFF" BorderBrush="#666666"
+                ToolTip.Tip="White">
+          <TextBlock Text="Aa" FontWeight="Bold" Foreground="#000000" FontSize="14"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Button>
+
+        <!-- White with border -->
+        <Button Name="ColorWhiteBorderBtn" Click="ColorButton_Click" Tag="WhiteWithBorder"
+                Margin="0,0,8,8" Padding="0"
+                Width="44" Height="44" CornerRadius="6"
+                Background="#FFFFFF" BorderBrush="#E95420" BorderThickness="2"
+                ToolTip.Tip="White with border">
+          <TextBlock Text="Aa" FontWeight="Bold" Foreground="#000000" FontSize="14"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Button>
+
+        <!-- Yellow -->
+        <Button Name="ColorYellowBtn" Click="ColorButton_Click" Tag="Yellow"
+                Margin="0,0,8,8" Padding="0"
+                Width="44" Height="44" CornerRadius="6"
+                Background="#FFE033" BorderBrush="#666666"
+                ToolTip.Tip="Yellow">
+          <TextBlock Text="Aa" FontWeight="Bold" Foreground="#000000" FontSize="14"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Button>
+
+        <!-- Grey -->
+        <Button Name="ColorGreyBtn" Click="ColorButton_Click" Tag="Grey"
+                Margin="0,0,8,8" Padding="0"
+                Width="44" Height="44" CornerRadius="6"
+                Background="#BBBBBB" BorderBrush="#666666"
+                ToolTip.Tip="Grey">
+          <TextBlock Text="Aa" FontWeight="Bold" Foreground="#000000" FontSize="14"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Button>
+
+        <!-- Black -->
+        <Button Name="ColorBlackBtn" Click="ColorButton_Click" Tag="Black"
+                Margin="0,0,8,8" Padding="0"
+                Width="44" Height="44" CornerRadius="6"
+                Background="#222222" BorderBrush="#666666"
+                ToolTip.Tip="Black">
+          <TextBlock Text="Aa" FontWeight="Bold" Foreground="#FFFFFF" FontSize="14"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Button>
+
+      </WrapPanel>
+    </StackPanel>
+
+    <!-- ── Sync delay ──────────────────────────────────────────────────────── -->
+    <StackPanel Spacing="8">
+      <TextBlock Text="SYNC DELAY"
+                 FontSize="10" FontWeight="SemiBold" LetterSpacing="1.5"
+                 Foreground="#807C79" />
+      <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+        <Button Grid.Column="0" Name="DelayMinusBtn" Content="−"
+                Width="36" Click="DelayMinus_Click" FontSize="18" Padding="0" />
+        <Border Grid.Column="1" Margin="8,0"
+                Background="#2D2D2D" CornerRadius="5"
+                BorderBrush="#4D4658" BorderThickness="1"
+                Padding="8,6">
+          <TextBlock Name="DelayLabel"
+                     Text="0 ms"
+                     HorizontalAlignment="Center"
+                     Foreground="#F7F5F3"
+                     FontSize="14" FontWeight="SemiBold" />
+        </Border>
+        <Button Grid.Column="2" Name="DelayPlusBtn" Content="+"
+                Width="36" Click="DelayPlus_Click" FontSize="18" Padding="0" />
+      </Grid>
+      <TextBlock Text="Positive = subtitles appear later  ·  Negative = earlier"
+                 FontSize="11" Foreground="#807C79" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <!-- ── Action buttons ──────────────────────────────────────────────────── -->
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+      <Button Name="DisableButton" Content="Disable subtitles" Foreground="#FF7777" Click="DisableButton_Click" />
+      <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" />
+      <Button Name="ApplyButton"  Content="Apply"  Classes="accent" Click="ApplyButton_Click" />
+    </StackPanel>
+
+  </StackPanel>
+</Window>

@@ -11,6 +11,7 @@ public sealed class SettingsService
     private readonly string _settingsPath;
     private readonly Dictionary<string, double> _resumePositions;
     private readonly List<string> _recentFiles;
+    private readonly Dictionary<string, SubtitleEntry> _subtitleSettings;
 
     public SettingsService()
     {
@@ -22,8 +23,9 @@ public sealed class SettingsService
         _settingsPath = Path.Combine(configDir, "settings.json");
 
         var settings = LoadSettings();
-        _resumePositions = settings.ResumePositions;
-        _recentFiles = settings.RecentFiles;
+        _resumePositions    = settings.ResumePositions;
+        _recentFiles        = settings.RecentFiles;
+        _subtitleSettings   = settings.SubtitleSettings;
     }
 
     public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
@@ -88,8 +90,9 @@ public sealed class SettingsService
     {
         var settings = new SettingsFile
         {
-            ResumePositions = _resumePositions,
-            RecentFiles = _recentFiles
+            ResumePositions  = _resumePositions,
+            RecentFiles      = _recentFiles,
+            SubtitleSettings = _subtitleSettings
         };
         var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
@@ -102,9 +105,40 @@ public sealed class SettingsService
         return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 
+    // ── Subtitle settings per file ───────────────────────────────────────────
+
+    public SubtitleEntry? GetSubtitleSettings(string filePath)
+    {
+        _subtitleSettings.TryGetValue(KeyForFile(filePath), out var entry);
+        return entry;
+    }
+
+    public void SaveSubtitleSettings(string filePath, SubtitleEntry entry)
+    {
+        _subtitleSettings[KeyForFile(filePath)] = entry;
+        Save();
+    }
+
+    public void ClearSubtitleSettings(string filePath)
+    {
+        if (_subtitleSettings.Remove(KeyForFile(filePath)))
+            Save();
+    }
+
     private sealed class SettingsFile
     {
         public Dictionary<string, double> ResumePositions { get; set; } = [];
         public List<string> RecentFiles { get; set; } = [];
+        public Dictionary<string, SubtitleEntry> SubtitleSettings { get; set; } = [];
     }
+}
+
+/// <summary>Subtitle configuration cached per media file.</summary>
+public sealed class SubtitleEntry
+{
+    public string? FilePath  { get; set; }
+    public string  FontSize  { get; set; } = "Medium";
+    public string  Font      { get; set; } = "SansSerif";
+    public string  Color     { get; set; } = "White";
+    public long    DelayMs   { get; set; }
 }

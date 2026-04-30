@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         Opened += (_, _) => Focus();
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
+        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) UpdateMaximizeIcon(); };
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
@@ -113,6 +114,37 @@ public partial class MainWindow : Window
 
     private void FullscreenButton_OnClick(object? sender, RoutedEventArgs e)
         => ToggleFullscreen();
+
+    // ── Custom title bar drag + window chrome ────────────────────────────────
+
+    private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginMoveDrag(e);
+    }
+
+    private void MinimizeButton_Click(object? sender, RoutedEventArgs e)
+        => WindowState = WindowState.Minimized;
+
+    private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        UpdateMaximizeIcon();
+    }
+
+    private void CloseButton_Click(object? sender, RoutedEventArgs e)
+        => Close();
+
+    private void UpdateMaximizeIcon()
+    {
+        var icon = this.FindControl<PathIcon>("MaximizeIcon");
+        if (icon is null) return;
+        var data = this.FindResource(WindowState == WindowState.Maximized
+            ? "Icon.WindowRestore"
+            : "Icon.WindowMaximize");
+        if (data is Avalonia.Media.StreamGeometry sg)
+            icon.Data = sg;
+    }
 
     // ── Keyboard shortcuts ───────────────────────────────────────────────────
 

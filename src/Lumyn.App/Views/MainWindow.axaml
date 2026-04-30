@@ -10,12 +10,14 @@
     MinHeight="380"
     Background="#111111"
     Topmost="{Binding IsAlwaysOnTop}"
+    SystemDecorations="BorderOnly"
     ExtendClientAreaToDecorationsHint="False">
 
   <!--
     All layers stacked in a Panel. mpv renders video into an OpenGL surface
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
+  <Border CornerRadius="6" ClipToBounds="True" Background="#111111">
   <Panel Name="Root" Background="#111111" DragDrop.AllowDrop="True">
 
     <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
@@ -79,7 +81,7 @@
     <Border
         HorizontalAlignment="Left"
         VerticalAlignment="Top"
-        Margin="16,56,0,0"
+        Margin="16,46,0,0"
         Padding="14,8"
         CornerRadius="6"
         Background="#DD1A1A1A"
@@ -91,42 +93,67 @@
                  Foreground="#F7F5F3" />
     </Border>
 
-    <!-- ── Top bar overlay ───────────────────────────────────────────────── -->
+    <!-- ── Top bar (custom chrome + media actions, always visible) ──────── -->
     <Border
         Name="TopBar"
         VerticalAlignment="Top"
-        Padding="10,6,10,20"
-        Opacity="{Binding ControlsOpacity}"
-        IsHitTestVisible="{Binding ControlsVisible}">
-      <Border.Background>
-        <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-          <GradientStop Color="#BB000000" Offset="0" />
-          <GradientStop Color="#00000000" Offset="1" />
-        </LinearGradientBrush>
-      </Border.Background>
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="4">
-        <Image Grid.Column="0" Width="22" Height="22" Margin="2,0,8,0"
-               Source="{StaticResource Icon.LumynMark}" />
-        <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
-                   FontSize="13" Foreground="#DEDAD5" TextTrimming="CharacterEllipsis" />
-        <Button Grid.Column="2" Classes="icon" Name="OpenButton"
-                Click="OpenButton_OnClick">
-          <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Open}" />
-        </Button>
-        <Button Grid.Column="3" Classes="icon" Name="LoadSubtitleButton"
-                Click="LoadSubtitleButton_OnClick">
-          <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Subtitle}" />
-        </Button>
-        <Button Grid.Column="4" Classes="icon ctrl" Name="AlwaysOnTopButton"
-                Classes.dim="{Binding !IsAlwaysOnTop}"
-                Command="{Binding ToggleAlwaysOnTopCommand}">
-          <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AlwaysOnTop}" />
-        </Button>
-        <Button Grid.Column="5" Classes="icon" Name="FullscreenButton"
-                Click="FullscreenButton_OnClick">
-          <PathIcon Name="FullscreenIcon" Width="17" Height="17"
-                    Data="{StaticResource Icon.Fullscreen}" />
-        </Button>
+        Height="38"
+        Background="#141414"
+        IsHitTestVisible="True">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+
+        <!-- Left: logo + open + subtitles -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="0">
+          <Image Width="18" Height="18" Margin="10,0,6,0"
+                 Source="{StaticResource Icon.LumynMark}"
+                 IsHitTestVisible="False" />
+          <Button Classes="icon ctrl" Name="OpenButton"
+                  Click="OpenButton_OnClick" ToolTip.Tip="Open file">
+            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Open}" />
+          </Button>
+          <Button Classes="icon ctrl" Name="LoadSubtitleButton"
+                  Click="LoadSubtitleButton_OnClick" ToolTip.Tip="Subtitles">
+            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Subtitle}" />
+          </Button>
+        </StackPanel>
+
+        <!-- Centre: drag region + title -->
+        <Border Grid.Column="1"
+                Background="Transparent"
+                PointerPressed="TitleBar_PointerPressed">
+          <TextBlock Text="{Binding Title}"
+                     VerticalAlignment="Center"
+                     HorizontalAlignment="Center"
+                     FontSize="12" Foreground="#DEDAD5"
+                     TextTrimming="CharacterEllipsis"
+                     IsHitTestVisible="False" />
+        </Border>
+
+        <!-- Right: pin | window chrome -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="0">
+          <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
+                  Classes.dim="{Binding !IsAlwaysOnTop}"
+                  Command="{Binding ToggleAlwaysOnTopCommand}" ToolTip.Tip="Always on top">
+            <PathIcon Width="13" Height="13" Data="{StaticResource Icon.AlwaysOnTop}" />
+          </Button>
+          <!-- Divider -->
+          <Border Width="1" Margin="4,9" Background="#383838" />
+          <!-- Window chrome -->
+          <Button Classes="wchrome" Name="MinimizeButton"
+                  Click="MinimizeButton_Click" ToolTip.Tip="Minimise">
+            <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowMinimize}" />
+          </Button>
+          <Button Classes="wchrome" Name="MaximizeButton"
+                  Click="MaximizeButton_Click" ToolTip.Tip="Maximise">
+            <PathIcon Name="MaximizeIcon" Width="11" Height="11"
+                      Data="{StaticResource Icon.WindowMaximize}" />
+          </Button>
+          <Button Classes="wchrome close" Name="CloseButton"
+                  Click="CloseButton_Click" ToolTip.Tip="Close">
+            <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowClose}" />
+          </Button>
+        </StackPanel>
+
       </Grid>
     </Border>
 

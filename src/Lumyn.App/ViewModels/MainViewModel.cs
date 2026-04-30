@@ -364,14 +364,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback.Seek(position);
     }
 
-    public void BeginSeek() => _isSeeking = true;
-
     public void EndSeek()
     {
         _isSeeking = false;
         var duration = _playback.Duration;
         if (duration > TimeSpan.Zero)
             _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
+    }
+
+    public void PreviewSeek(double value)
+    {
+        _isSeeking = true;
+        SeekValue = value;
+    }
+
+    public void CommitSeek(double value)
+    {
+        PreviewSeek(value);
+        EndSeek();
     }
 
     public void RefreshState()

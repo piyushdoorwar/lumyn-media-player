@@ -1,0 +1,150 @@
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Interactivity;
+using Avalonia.Media;
+
+namespace Lumyn.App.Controls;
+
+public sealed class SeekBar : Control
+{
+    public static readonly StyledProperty<double> MinimumProperty =
+        AvaloniaProperty.Register<SeekBar, double>(nameof(Minimum), 0);
+
+    public static readonly StyledProperty<double> MaximumProperty =
+        AvaloniaProperty.Register<SeekBar, double>(nameof(Maximum), 1000);
+
+    public static readonly StyledProperty<double> ValueProperty =
+        AvaloniaProperty.Register<SeekBar, double>(
+            nameof(Value),
+            defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+
+    public static readonly RoutedEvent<RoutedEventArgs> SeekCommittedEvent =
+        RoutedEvent.Register<SeekBar, RoutedEventArgs>(
+            nameof(SeekCommitted),
+            RoutingStrategies.Bubble);
+
+    private bool _isDragging;
+
+    public double Minimum
+    {
+        get => GetValue(MinimumProperty);
+        set => SetValue(MinimumProperty, value);
+    }
+
+    public double Maximum
+    {
+        get => GetValue(MaximumProperty);
+        set => SetValue(MaximumProperty, value);
+    }
+
+    public double Value
+    {
+        get => GetValue(ValueProperty);
+        set => SetValue(ValueProperty, value);
+    }
+
+    public event EventHandler<RoutedEventArgs>? SeekCommitted
+    {
+        add => AddHandler(SeekCommittedEvent, value);
+        remove => RemoveHandler(SeekCommittedEvent, value);
+    }
+
+    static SeekBar()
+    {
+        AffectsRender<SeekBar>(ValueProperty, MinimumProperty, MaximumProperty);
+        FocusableProperty.OverrideDefaultValue<SeekBar>(false);
+    }
+
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        var width = double.IsInfinity(availableSize.Width) ? 240 : availableSize.Width;
+        return new Size(width, 16);
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        var width = Bounds.Width;
+        var height = Bounds.Height;
+        if (width <= 0 || height <= 0) return;
+
+        var trackHeight = 4.0;
+        var trackY = (height - trackHeight) / 2;
+        var track = new Rect(0, trackY, width, trackHeight);
+        var radius = trackHeight / 2;
+        var ratio = GetRatio();
+        var filled = new Rect(0, trackY, width * ratio, trackHeight);
+        var thumbX = width * ratio;
+
+        context.DrawRectangle(new SolidColorBrush(Color.Parse("#554A4A4A")), null, track, radius, radius);
+        context.DrawRectangle(new SolidColorBrush(Color.Parse("#E95420")), null, filled, radius, radius);
+        context.DrawEllipse(
+            new SolidColorBrush(Color.Parse("#F7F5F3")),
+            new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1),
+            new Point(thumbX, height / 2),
+            6,
+            6);
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+
+        _isDragging = true;
+        e.Pointer.Capture(this);
+        SetValueFromPointer(e);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        if (!_isDragging) return;
+
+        SetValueFromPointer(e);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        if (!_isDragging) return;
+
+        SetValueFromPointer(e);
+        Commit(e.Pointer);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
+    {
+        base.OnPointerCaptureLost(e);
+        if (!_isDragging) return;
+
+        _isDragging = false;
+        RaiseEvent(new RoutedEventArgs(SeekCommittedEvent));
+    }
+
+    private void Commit(IPointer pointer)
+    {
+        _isDragging = false;
+        pointer.Capture(null);
+        RaiseEvent(new RoutedEventArgs(SeekCommittedEvent));
+    }
+
+    private void SetValueFromPointer(PointerEventArgs e)
+    {
+        if (Bounds.Width <= 0) return;
+
+        var point = e.GetPosition(this);
+        var ratio = Math.Clamp(point.X / Bounds.Width, 0, 1);
+        Value = Minimum + ratio * (Maximum - Minimum);
+    }
+
+    private double GetRatio()
+    {
+        var range = Maximum - Minimum;
+        if (range <= 0) return 0;
+        return Math.Clamp((Value - Minimum) / range, 0, 1);
+    }
+}

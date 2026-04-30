@@ -2,8 +2,6 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Windows.Input;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Threading;
 using LibVLCSharp.Shared;
 using Lumyn.Core.Models;
@@ -36,7 +34,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _osdMessage;
     private TrackInfo[] _audioTracks = [];
     private TrackInfo[] _subtitleTracks = [];
-    private WriteableBitmap? _videoBitmap;
 
     // Video frame double-buffering: VLC decode thread writes into _stagingBuffer,
     // UI thread reads from it. _frameReady acts as a cheap lock-free "new frame" flag.
@@ -44,6 +41,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _stagingWidth, _stagingHeight, _stagingPitch;
     private int _frameReady; // 0 = idle, 1 = new frame available (Interlocked)
     private readonly object _stagingLock = new();
+
+    /// <summary>
+    /// Set by the View to route decoded frames to <c>VideoSurface.PushFrame</c>.
+    /// Called on the UI thread after staging copy is complete.
+    /// </summary>
+    public Action<byte[], int, int, int>? PushVideoFrame { get; set; }
 
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
@@ -128,12 +131,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
     public bool HasMedia => !string.IsNullOrWhiteSpace(CurrentFilePath);
-
-    public WriteableBitmap? VideoBitmap
-    {
-        get => _videoBitmap;
-        private set => SetField(ref _videoBitmap, value);
-    }
 
     public double SeekValue
     {
@@ -345,7 +342,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         _osdTimer.Stop();
         _playback.Dispose();
-        _videoBitmap?.Dispose();
     }
 
     // ── Video frame rendering ────────────────────────────────────────────────
@@ -372,40 +368,26 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             Dispatcher.UIThread.Post(FlushVideoFrame, DispatcherPriority.Render);
     }
 
-    // Called on UI thread — writes staged pixels into the WriteableBitmap
-    public void FlushVideoFrame()
+    // Called on UI thread — copies staged pixels and pushes to VideoSurface
+    private void FlushVideoFrame()
     {
         Interlocked.Exchange(ref _frameReady, 0);
 
-        byte[]? src;
+        byte[] snapshot;
         int w, h, pitch;
         lock (_stagingLock)
         {
             if (_stagingBuffer is null) return;
-            src   = _stagingBuffer;
+            // Copy staging data while holding the lock so the VLC thread
+            // cannot overwrite it mid-read.
             w     = _stagingWidth;
             h     = _stagingHeight;
             pitch = _stagingPitch;
+            snapshot = new byte[pitch * h];
+            System.Array.Copy(_stagingBuffer, snapshot, pitch * h);
         }
 
-        if (_videoBitmap is null || _videoBitmap.PixelSize.Width != w || _videoBitmap.PixelSize.Height != h)
-        {
-            _videoBitmap?.Dispose();
-            _videoBitmap = new WriteableBitmap(
-                new Avalonia.PixelSize(w, h),
-                new Avalonia.Vector(96, 96),
-                PixelFormat.Bgra8888,
-                AlphaFormat.Premul);
-        }
-
-        using var fb = _videoBitmap.Lock();
-        unsafe
-        {
-            fixed (byte* srcPtr = src)
-                Buffer.MemoryCopy(srcPtr, (void*)fb.Address, (long)(pitch * h), (long)(pitch * h));
-        }
-
-        OnPropertyChanged(nameof(VideoBitmap));
+        PushVideoFrame?.Invoke(snapshot, w, h, pitch);
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────

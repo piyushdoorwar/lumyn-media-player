@@ -2,6 +2,7 @@
     x:Class="Lumyn.App.Views.MainWindow"
     xmlns="https://github.com/avaloniaui"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Lumyn.App.Controls"
     Title="{Binding Title}"
     Width="980"
     Height="620"
@@ -18,8 +19,8 @@
   -->
   <Panel Name="Root" Background="#111111" DragDrop.AllowDrop="True">
 
-    <!-- ── Video frame (software-rendered WriteableBitmap) ───────────────── -->
-    <Image Source="{Binding VideoBitmap}" Stretch="Uniform"
+    <!-- ── Video frame (software-rendered via VideoSurface) ─────────────── -->
+    <controls:VideoSurface Name="VideoSurface"
            HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
            IsHitTestVisible="False" />
 

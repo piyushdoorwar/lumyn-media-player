@@ -44,7 +44,11 @@ public sealed class VideoSurface : Control
         unsafe
         {
             fixed (byte* src = data)
-                Buffer.MemoryCopy(src, (void*)fb.Address, (long)(pitch * h), (long)(pitch * h));
+            {
+                var len = (nuint)(pitch * h);
+                // Single unmanaged copy directly into the GPU-side bitmap buffer.
+                Buffer.MemoryCopy(src, (void*)fb.Address, len, len);
+            }
         }
 
         // Always triggers a repaint regardless of whether the bitmap reference changed.

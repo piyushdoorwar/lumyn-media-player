@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using Avalonia.Media;
 using Avalonia.Threading;
 using Lumyn.App.Models;
 using Lumyn.Core.Models;
@@ -40,6 +41,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Subtitle overlay (Avalonia-rendered, replaces VLC's --no-spu path) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
     private bool _useSubtitleOverlay;
+
+    // ── Subtitle appearance ───────────────────────────────────────────────────
+    private double _subtitleFontSizeValue = 22;
+    private FontFamily _subtitleFontFamily = FontFamily.Default;
+    private IBrush _subtitleForeground = Brushes.White;
 
     public MainViewModel(PlaybackService playback, SettingsService settings)
     {
@@ -128,6 +134,27 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _currentSubtitleText;
         private set => SetField(ref _currentSubtitleText, value);
+    }
+
+    /// <summary>Font size (in pts) for the subtitle overlay, derived from settings.</summary>
+    public double SubtitleFontSizeValue
+    {
+        get => _subtitleFontSizeValue;
+        private set => SetField(ref _subtitleFontSizeValue, value);
+    }
+
+    /// <summary>Font family for the subtitle overlay, derived from settings.</summary>
+    public FontFamily SubtitleFontFamily
+    {
+        get => _subtitleFontFamily;
+        private set => SetField(ref _subtitleFontFamily, value);
+    }
+
+    /// <summary>Foreground brush for the subtitle overlay, derived from settings.</summary>
+    public IBrush SubtitleForeground
+    {
+        get => _subtitleForeground;
+        private set => SetField(ref _subtitleForeground, value);
     }
 
     public double SeekValue
@@ -317,6 +344,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private async Task ApplySubtitleSettingsAsync(SubtitleSettings s, bool saveToCache)
     {
         CurrentSubtitleSettings = s;
+        ApplySubtitleAppearance(s);
 
         if (s.FilePath is null)
         {
@@ -346,6 +374,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     // ── Subtitle settings ↔ SettingsEntry conversion ──────────────────────
+
+    private void ApplySubtitleAppearance(SubtitleSettings s)
+    {
+        SubtitleFontSizeValue = s.FontSize switch
+        {
+            SubtitleFontSize.Small  => 17,
+            SubtitleFontSize.Large  => 30,
+            _                       => 22
+        };
+
+        SubtitleFontFamily = s.Font switch
+        {
+            SubtitleFont.Serif     => new FontFamily("Liberation Serif,DejaVu Serif,Times New Roman,serif"),
+            SubtitleFont.Monospace => new FontFamily("Courier New,Liberation Mono,DejaVu Sans Mono,monospace"),
+            SubtitleFont.Arial     => new FontFamily("Arial,Liberation Sans,sans-serif"),
+            _                      => FontFamily.Default
+        };
+
+        SubtitleForeground = s.Color switch
+        {
+            SubtitleColor.Yellow => new SolidColorBrush(Color.Parse("#FFE600")),
+            SubtitleColor.Grey   => new SolidColorBrush(Color.Parse("#BBBBBB")),
+            SubtitleColor.Black  => new SolidColorBrush(Color.Parse("#111111")),
+            _                    => Brushes.White
+        };
+    }
 
     private static SubtitleSettings SubtitleSettingsFromEntry(SubtitleEntry e) => new(
         e.FilePath,

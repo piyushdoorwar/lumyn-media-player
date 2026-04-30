@@ -37,9 +37,10 @@
       <TextBlock Text="{Binding CurrentSubtitleText}"
                  HorizontalAlignment="Center"
                  TextAlignment="Center"
-                 FontSize="22"
+                 FontSize="{Binding SubtitleFontSizeValue}"
+                 FontFamily="{Binding SubtitleFontFamily}"
                  FontWeight="SemiBold"
-                 Foreground="White"
+                 Foreground="{Binding SubtitleForeground}"
                  TextWrapping="Wrap"
                  MaxWidth="900">
         <TextBlock.Effect>

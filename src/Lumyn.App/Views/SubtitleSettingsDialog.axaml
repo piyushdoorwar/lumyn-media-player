@@ -53,6 +53,8 @@
             <ComboBox Grid.Column="2"
                       Name="LanguageBox"
                       MinWidth="130"
+                      MaxDropDownHeight="220"
+                      Focusable="True"
                       Background="#2D2D2D" Foreground="#F7F5F3"
                       BorderBrush="#4D4658" />
             <Button Grid.Column="4"
@@ -180,13 +182,10 @@
             <ComboBox Grid.Column="1" Name="FontCombo"
                       Background="#2D2D2D" Foreground="#F7F5F3"
                       BorderBrush="#4D4658"
-                      HorizontalAlignment="Left" MinWidth="220"
-                      SelectionChanged="FontCombo_SelectionChanged">
-              <ComboBoxItem Tag="SansSerif" Content="Sans-serif (default)" />
-              <ComboBoxItem Tag="Serif"     Content="Serif" />
-              <ComboBoxItem Tag="Monospace" Content="Monospace" />
-              <ComboBoxItem Tag="Arial"     Content="Arial" />
-            </ComboBox>
+                      MaxDropDownHeight="220"
+                      Focusable="True"
+                      HorizontalAlignment="Stretch"
+                      SelectionChanged="FontCombo_SelectionChanged" />
           </Grid>
 
           <!-- Colour -->
@@ -196,23 +195,19 @@
             <ComboBox Grid.Column="1" Name="ColorCombo"
                       Background="#2D2D2D" Foreground="#F7F5F3"
                       BorderBrush="#4D4658"
-                      HorizontalAlignment="Left" MinWidth="220"
-                      SelectionChanged="ColorCombo_SelectionChanged">
-              <ComboBoxItem Tag="White"           Content="White" />
-              <ComboBoxItem Tag="WhiteWithBorder" Content="White (outlined)" />
-              <ComboBoxItem Tag="Yellow"          Content="Yellow" />
-              <ComboBoxItem Tag="Grey"            Content="Grey" />
-              <ComboBoxItem Tag="Black"           Content="Black" />
-            </ComboBox>
+                      MaxDropDownHeight="220"
+                      Focusable="True"
+                      HorizontalAlignment="Stretch"
+                      SelectionChanged="ColorCombo_SelectionChanged" />
           </Grid>
 
           <!-- Sync delay -->
-          <Grid ColumnDefinitions="130,Auto,*,Auto">
+          <Grid ColumnDefinitions="130,Auto,8,Auto,8,Auto">
             <TextBlock Grid.Column="0" Text="Sync delay"
                        VerticalAlignment="Center" Foreground="#DEDAD5" />
             <Button Grid.Column="1" Name="DelayMinusBtn" Content="&#8722;"
-                    Width="36" Click="DelayMinus_Click" FontSize="18" Padding="0" />
-            <Border Grid.Column="2" Margin="8,0" MaxWidth="140"
+                    Width="36" Height="36" Click="DelayMinus_Click" FontSize="18" Padding="0" />
+            <Border Grid.Column="3" Width="110"
                     Background="#2D2D2D" CornerRadius="5"
                     BorderBrush="#4D4658" BorderThickness="1"
                     Padding="8,6">
@@ -220,8 +215,8 @@
                          HorizontalAlignment="Center"
                          Foreground="#F7F5F3" FontSize="14" FontWeight="SemiBold" />
             </Border>
-            <Button Grid.Column="3" Name="DelayPlusBtn" Content="+"
-                    Width="36" Click="DelayPlus_Click" FontSize="18" Padding="0" />
+            <Button Grid.Column="5" Name="DelayPlusBtn" Content="+"
+                    Width="36" Height="36" Click="DelayPlus_Click" FontSize="18" Padding="0" />
           </Grid>
           <TextBlock Text="Positive = later  ·  Negative = earlier"
                      FontSize="11" Foreground="#807C79" Margin="130,0,0,0" />

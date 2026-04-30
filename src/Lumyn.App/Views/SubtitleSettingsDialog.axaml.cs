@@ -13,6 +13,22 @@ namespace Lumyn.App.Views;
 public partial class SubtitleSettingsDialog : Window
 {
     private const long DelayStep = 500;
+    private static readonly Choice<SubtitleFont>[] FontChoices =
+    [
+        new("Sans-serif (default)", SubtitleFont.SansSerif),
+        new("Serif", SubtitleFont.Serif),
+        new("Monospace", SubtitleFont.Monospace),
+        new("Arial", SubtitleFont.Arial)
+    ];
+
+    private static readonly Choice<SubtitleColor>[] ColorChoices =
+    [
+        new("White", SubtitleColor.White),
+        new("White (outlined)", SubtitleColor.WhiteWithBorder),
+        new("Yellow", SubtitleColor.Yellow),
+        new("Grey", SubtitleColor.Grey),
+        new("Black", SubtitleColor.Black)
+    ];
 
     // ── Settings state ───────────────────────────────────────────────────────
     private string?          _filePath;
@@ -48,6 +64,12 @@ public partial class SubtitleSettingsDialog : Window
         var langBox = this.FindControl<ComboBox>("LanguageBox")!;
         langBox.ItemsSource   = SubtitleSearchService.Languages.Select(l => l.Display).ToList();
         langBox.SelectedIndex = 0;
+
+        var fontCombo = this.FindControl<ComboBox>("FontCombo")!;
+        fontCombo.ItemsSource = FontChoices;
+
+        var colorCombo = this.FindControl<ComboBox>("ColorCombo")!;
+        colorCombo.ItemsSource = ColorChoices;
 
         var searchBox = this.FindControl<TextBox>("SearchBox")!;
         searchBox.KeyDown += (_, e) => { if (e.Key == Key.Return) StartSearch(); };
@@ -209,18 +231,14 @@ public partial class SubtitleSettingsDialog : Window
 
     private void FontCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is ComboBox combo &&
-            combo.SelectedItem is ComboBoxItem item &&
-            Enum.TryParse<SubtitleFont>(item.Tag?.ToString(), out var font))
-            _font = font;
+        if (sender is ComboBox { SelectedItem: Choice<SubtitleFont> choice })
+            _font = choice.Value;
     }
 
     private void ColorCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (sender is ComboBox combo &&
-            combo.SelectedItem is ComboBoxItem item &&
-            Enum.TryParse<SubtitleColor>(item.Tag?.ToString(), out var color))
-            _color = color;
+        if (sender is ComboBox { SelectedItem: Choice<SubtitleColor> choice })
+            _color = choice.Value;
     }
 
     private void DelayMinus_Click(object? sender, RoutedEventArgs e)
@@ -278,29 +296,14 @@ public partial class SubtitleSettingsDialog : Window
     {
         var combo = this.FindControl<ComboBox>("FontCombo");
         if (combo is null) return;
-        combo.SelectedIndex = _font switch
-        {
-            SubtitleFont.SansSerif => 0,
-            SubtitleFont.Serif     => 1,
-            SubtitleFont.Monospace => 2,
-            SubtitleFont.Arial     => 3,
-            _                      => 0
-        };
+        combo.SelectedIndex = Math.Max(0, Array.FindIndex(FontChoices, c => c.Value == _font));
     }
 
     private void RefreshColorCombo()
     {
         var combo = this.FindControl<ComboBox>("ColorCombo");
         if (combo is null) return;
-        combo.SelectedIndex = _color switch
-        {
-            SubtitleColor.White           => 0,
-            SubtitleColor.WhiteWithBorder => 1,
-            SubtitleColor.Yellow          => 2,
-            SubtitleColor.Grey            => 3,
-            SubtitleColor.Black           => 4,
-            _                             => 0
-        };
+        combo.SelectedIndex = Math.Max(0, Array.FindIndex(ColorChoices, c => c.Value == _color));
     }
 
     private void RefreshDelayLabel()
@@ -338,5 +341,10 @@ public partial class SubtitleSettingsDialog : Window
         if (box  is not null) box.IsEnabled = enabled;
         var lang = this.FindControl<ComboBox>("LanguageBox");
         if (lang is not null) lang.IsEnabled = enabled;
+    }
+
+    private sealed record Choice<T>(string Label, T Value)
+    {
+        public override string ToString() => Label;
     }
 }

@@ -343,23 +343,6 @@ public sealed class PlaybackService : IDisposable
 
     public MediaState Snapshot()
     {
-        if (_mpv != IntPtr.Zero)
-        {
-            var position = GetDouble("time-pos");
-            var duration = GetDouble("duration");
-            var volume = GetDouble("volume");
-            var speed = GetDouble("speed");
-            if (!double.IsNaN(position))
-                _state.Position = TimeSpan.FromSeconds(Math.Max(0, position));
-            if (!double.IsNaN(duration))
-                _state.Duration = TimeSpan.FromSeconds(Math.Max(0, duration));
-            _state.IsMuted = GetFlag("mute");
-            if (!double.IsNaN(volume))
-                _state.Volume = (int)Math.Round(Math.Clamp(volume, 0, 100));
-            if (!double.IsNaN(speed))
-                _state.Speed = (float)Math.Clamp(speed, 0.25, 4.0);
-        }
-
         lock (_stateLock)
         {
             _state.IsPlaying = !_pause && !string.IsNullOrWhiteSpace(_state.FilePath);

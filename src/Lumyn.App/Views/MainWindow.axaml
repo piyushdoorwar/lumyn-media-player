@@ -101,32 +101,26 @@
           <GradientStop Color="#00000000" Offset="1" />
         </LinearGradientBrush>
       </Border.Background>
-      <Border.Transitions>
-        <Transitions>
-          <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
-        </Transitions>
-      </Border.Transitions>
       <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="4">
         <Image Grid.Column="0" Width="22" Height="22" Margin="2,0,8,0"
                Source="{StaticResource Icon.LumynMark}" />
         <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center"
                    FontSize="13" Foreground="#DEDAD5" TextTrimming="CharacterEllipsis" />
         <Button Grid.Column="2" Classes="icon" Name="OpenButton"
-                Click="OpenButton_OnClick" ToolTip.Tip="Open (O)">
+                Click="OpenButton_OnClick">
           <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Open}" />
         </Button>
         <Button Grid.Column="3" Classes="icon" Name="LoadSubtitleButton"
-                Click="LoadSubtitleButton_OnClick" ToolTip.Tip="Load subtitle file (S)">
+                Click="LoadSubtitleButton_OnClick">
           <PathIcon Width="17" Height="17" Data="{StaticResource Icon.Subtitle}" />
         </Button>
         <Button Grid.Column="4" Classes="icon ctrl" Name="AlwaysOnTopButton"
                 Classes.dim="{Binding !IsAlwaysOnTop}"
-                Command="{Binding ToggleAlwaysOnTopCommand}"
-                ToolTip.Tip="Always on Top (T)">
+                Command="{Binding ToggleAlwaysOnTopCommand}">
           <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AlwaysOnTop}" />
         </Button>
         <Button Grid.Column="5" Classes="icon" Name="FullscreenButton"
-                Click="FullscreenButton_OnClick" ToolTip.Tip="Fullscreen (F)">
+                Click="FullscreenButton_OnClick">
           <PathIcon Name="FullscreenIcon" Width="17" Height="17"
                     Data="{StaticResource Icon.Fullscreen}" />
         </Button>
@@ -146,11 +140,6 @@
           <GradientStop Color="#D5000000" Offset="1" />
         </LinearGradientBrush>
       </Border.Background>
-      <Border.Transitions>
-        <Transitions>
-          <DoubleTransition Property="Opacity" Duration="0:0:0.2" Easing="CubicEaseOut" />
-        </Transitions>
-      </Border.Transitions>
       <StackPanel Spacing="0">
 
         <!-- Seek slider -->
@@ -169,8 +158,7 @@
 
           <!-- Play / Pause -->
           <Button Grid.Column="0" Classes="ctrl"
-                  Command="{Binding TogglePlayPauseCommand}"
-                  ToolTip.Tip="Play / Pause (Space)">
+                  Command="{Binding TogglePlayPauseCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.Play}"
                         IsVisible="{Binding !IsPlaying}" />
@@ -181,8 +169,7 @@
 
           <!-- Stop -->
           <Button Grid.Column="1" Classes="ctrl"
-                  Command="{Binding StopCommand}"
-                  ToolTip.Tip="Stop">
+                  Command="{Binding StopCommand}">
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
           </Button>
 
@@ -196,8 +183,7 @@
 
           <!-- Speed badge -->
           <Button Grid.Column="4" Classes="ctrl"
-                  Command="{Binding ResetSpeedCommand}"
-                  ToolTip.Tip="Speed: [ = slower  ] = faster  click = reset">
+                  Command="{Binding ResetSpeedCommand}">
             <TextBlock Text="{Binding SpeedLabel}" FontSize="11" Foreground="#C8C3C2"
                        VerticalAlignment="Center" />
           </Button>
@@ -205,15 +191,13 @@
           <!-- Loop -->
           <Button Grid.Column="5" Classes="ctrl"
                   Classes.dim="{Binding !IsLooping}"
-                  Command="{Binding ToggleLoopCommand}"
-                  ToolTip.Tip="Loop (L)">
+                  Command="{Binding ToggleLoopCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
           </Button>
 
           <!-- Mute / Unmute -->
           <Button Grid.Column="6" Classes="ctrl"
-                  Command="{Binding ToggleMuteCommand}"
-                  ToolTip.Tip="Mute / Unmute (M)">
+                  Command="{Binding ToggleMuteCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
                         IsVisible="{Binding !IsMuted}" />
@@ -230,15 +214,13 @@
 
           <!-- Screenshot -->
           <Button Grid.Column="8" Classes="ctrl"
-                  Command="{Binding TakeScreenshotCommand}"
-                  ToolTip.Tip="Screenshot (Alt+I)">
+                  Command="{Binding TakeScreenshotCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
           </Button>
 
           <!-- Fullscreen -->
           <Button Grid.Column="9" Classes="ctrl"
-                  Click="FullscreenButton_OnClick"
-                  ToolTip.Tip="Fullscreen (F)">
+                  Click="FullscreenButton_OnClick">
             <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                       Data="{StaticResource Icon.Fullscreen}" />
           </Button>

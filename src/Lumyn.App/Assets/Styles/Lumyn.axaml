@@ -47,6 +47,10 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
 
+  <Style Selector="Button.icon:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+
   <Style Selector="Button.downloadIcon">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
@@ -90,7 +94,7 @@
   </Style>
 
   <Style Selector="Button.ctrl:pointerover">
-    <Setter Property="Background" Value="#33FFFFFF" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <Style Selector="Button.ctrl:pressed">

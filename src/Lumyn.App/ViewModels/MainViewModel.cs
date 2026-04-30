@@ -17,6 +17,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
     private readonly DispatcherTimer _osdTimer;
+    private int _stateRefreshQueued;
+    private long _lastTrackRevision = -1;
 
     private string _title = "Lumyn";
     private string _timeText = "00:00 / 00:00";
@@ -51,7 +53,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             OsdMessage = null;
         };
 
-        _playback.StateChanged += (_, _) => Dispatcher.UIThread.InvokeAsync(RefreshState);
+        _playback.StateChanged += (_, _) => QueueRefreshState();
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
             _settings.ClearResumePosition(CurrentFilePath);
@@ -374,6 +376,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void RefreshState()
     {
+        Interlocked.Exchange(ref _stateRefreshQueued, 0);
+
         var state = _playback.Snapshot();
         IsPlaying = state.IsPlaying;
         IsMuted = state.IsMuted;
@@ -398,7 +402,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(CurrentFilePath));
         OnPropertyChanged(nameof(HasMedia));
         OnPropertyChanged(nameof(RecentFiles));
-        RefreshTracks();
+        RefreshTracksIfNeeded();
 
         // Update Avalonia subtitle overlay text.
         if (_useSubtitleOverlay && _subtitleLines.Count > 0 && state.IsPlaying)
@@ -411,6 +415,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             CurrentSubtitleText = null;
         }
+    }
+
+    public void QueueRefreshState()
+    {
+        if (Interlocked.Exchange(ref _stateRefreshQueued, 1) == 1)
+            return;
+
+        Dispatcher.UIThread.Post(RefreshState, DispatcherPriority.Background);
     }
 
     public void SaveResumePosition()
@@ -544,6 +556,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         SubtitleTracks = [.. _playback.GetSubtitleTracks()
             .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name, t.IsSelected))];
+    }
+
+    private void RefreshTracksIfNeeded()
+    {
+        var revision = _playback.TrackRevision;
+        if (revision == _lastTrackRevision)
+            return;
+
+        _lastTrackRevision = revision;
+        RefreshTracks();
     }
 
     private static string FormatTime(TimeSpan value)

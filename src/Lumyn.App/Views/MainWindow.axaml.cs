@@ -12,13 +12,14 @@ public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _positionTimer;
     private readonly DispatcherTimer _hideControlsTimer;
+    private long _lastControlsPulseMs;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-        _positionTimer.Tick += (_, _) => ViewModel?.RefreshState();
+        _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        _positionTimer.Tick += (_, _) => ViewModel?.QueueRefreshState();
         _positionTimer.Start();
 
         _hideControlsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
@@ -41,10 +42,23 @@ public partial class MainWindow : Window
     private void ShowControls()
     {
         if (ViewModel is null) return;
-        ViewModel.ControlsVisible = true;
-        Cursor = Cursor.Default;
-        _hideControlsTimer.Stop();
-        _hideControlsTimer.Start();
+
+        var now = Environment.TickCount64;
+        if (ViewModel.ControlsVisible && now - _lastControlsPulseMs < 250)
+            return;
+
+        _lastControlsPulseMs = now;
+        if (!ViewModel.ControlsVisible)
+        {
+            ViewModel.ControlsVisible = true;
+            Cursor = Cursor.Default;
+        }
+
+        if (!_hideControlsTimer.IsEnabled || ViewModel.IsPlaying || WindowState == WindowState.FullScreen)
+        {
+            _hideControlsTimer.Stop();
+            _hideControlsTimer.Start();
+        }
     }
 
     private void HideControls()

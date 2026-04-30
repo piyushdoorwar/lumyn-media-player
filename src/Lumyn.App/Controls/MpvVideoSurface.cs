@@ -13,6 +13,7 @@ public sealed class MpvVideoSurface : OpenGlControlBase
         AvaloniaProperty.Register<MpvVideoSurface, PlaybackService?>(nameof(Playback));
 
     private bool _rendererInitialized;
+    private int _renderRequestQueued;
 
     public PlaybackService? Playback
     {
@@ -35,6 +36,8 @@ public sealed class MpvVideoSurface : OpenGlControlBase
 
     protected override void OnOpenGlRender(GlInterface gl, int fb)
     {
+        Interlocked.Exchange(ref _renderRequestQueued, 0);
+
         var playback = Playback;
         if (playback is null)
             return;
@@ -54,7 +57,15 @@ public sealed class MpvVideoSurface : OpenGlControlBase
 
         Playback.InitializeRenderer(
             proc => gl.GetProcAddress(proc),
-            () => Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Render));
+            QueueRenderRequest);
         _rendererInitialized = true;
+    }
+
+    private void QueueRenderRequest()
+    {
+        if (Interlocked.Exchange(ref _renderRequestQueued, 1) == 1)
+            return;
+
+        Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Background);
     }
 }

@@ -1,12 +1,12 @@
-name: Build release artifacts
+name: Release
 
 on:
   push:
-    branches: ["main"]
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   linux-deb:
@@ -56,3 +56,18 @@ jobs:
         with:
           name: lumyn-windows-x64-portable
           path: artifacts/packages/*.zip
+
+  github-release:
+    name: Attach artifacts to release
+    runs-on: ubuntu-latest
+    needs: [linux-deb, windows-zip]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*

@@ -1,51 +1,48 @@
 # Lumyn
 
-Lumyn is a small desktop media player built with .NET 10, C#, Avalonia UI, and mpv. Avalonia owns the interface, while libmpv handles playback and decoding.
+Lumyn is a clean desktop media player for local audio and video files. It keeps the interface quiet, gives you fast playback controls, and includes practical subtitle support.
+
+Website: https://piyushdoorwar.github.io/lumyn-media-player/
 
 ## Features
 
-- Open local media files with a file picker.
-- Drag and drop a media file onto the window.
-- Play, pause, seek, volume, mute, and fullscreen controls.
-- Keyboard shortcuts: Space, Left/Right, Up/Down, F, M, O, and Esc.
-- Dark UI with a centered video area and bottom control bar.
-- Controls auto-hide during playback or fullscreen.
-- Resume playback per file using a local JSON settings file.
-- Current file name appears in the title bar.
+- Open local audio and video files.
+- Drag and drop media into the player.
+- Play, pause, seek, mute, fullscreen, loop, and adjust speed.
+- Keyboard shortcuts for common playback actions.
+- Subtitle file loading, embedded subtitle track selection, appearance settings, and sync delay.
+- Resume playback position per file.
+- Screenshots for video playback.
+- Ubuntu "Open With" integration for supported audio and video formats.
 
-## Structure
+## Tech Stack
 
-```text
-Lumyn/
-  Lumyn.sln
-  src/
-    Lumyn.App/
-      Assets/
-      Controls/
-      Program.cs
-      ViewModels/
-      Views/
-    Lumyn.Core/
-      Models/
-      Services/
-  packaging/
-    windows/
-  scripts/
-    build-linux.sh
-    build-windows.ps1
-```
+- .NET 10
+- C#
+- Avalonia UI
+- mpv / libmpv for playback
 
-## Dependencies
+## Supported OS
 
-- .NET 10 SDK
-- libmpv on Linux for local development and Linux package creation
+- Ubuntu Linux, amd64
+- Windows, x64
 
-On Ubuntu:
+The Ubuntu package is the main supported build right now. It is intended for recent Ubuntu desktop releases and works best on a modern GNOME desktop session. Wayland is fine; X11 should also work.
+
+The release packages bundle the app runtime and mpv pieces needed for playback. For development on Ubuntu, install the .NET SDK and libmpv development package.
 
 ```bash
 sudo apt update
 sudo apt install dotnet-sdk-10.0 libmpv-dev
 ```
+
+## Download
+
+Download the latest release from:
+
+https://github.com/piyushdoorwar/lumyn-media-player/releases/latest
+
+Ubuntu users can install the `.deb` package. Windows users can download and extract the portable `.zip`, then run `Lumyn.exe`.
 
 ## Run Locally
 
@@ -55,44 +52,18 @@ dotnet build Lumyn.sln
 dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 ```
 
-## Build A Linux Package
+## Build Packages
 
-Publish self-contained:
-
-```bash
-dotnet publish src/Lumyn.App/Lumyn.App.csproj -c Release -r linux-x64 --self-contained true -o artifacts/publish/linux-x64
-```
-
-Create a bundled `.deb`:
+Build the Ubuntu `.deb`:
 
 ```bash
-chmod +x scripts/build-linux.sh
 ./scripts/build-linux.sh
 ```
 
-Output:
-
-```text
-artifacts/packages/lumyn_0.1.4_amd64.deb
-```
-
-## Build A Windows Package
-
-Create a portable Windows zip:
+Build the Windows portable `.zip` from Windows PowerShell:
 
 ```powershell
 ./scripts/build-windows.ps1
 ```
 
-The script publishes `win-x64`, downloads the latest mpv Windows runtime if `MPV_BIN_DIR` is not set, copies the mpv DLLs beside `Lumyn.exe`, and writes:
-
-```text
-artifacts/packages/lumyn_0.1.4_win-x64.zip
-```
-
-## Known Issues
-
-- The `.deb` script bundles the self-contained .NET publish output, libmpv, and discovered native shared-library dependencies.
-- The package targets `amd64` by default. Set `RID=linux-arm64` to build an `arm64` package.
-- The Windows script currently targets `win-x64` and produces a portable zip, not an installer.
-- The MVP has no playlist, media library, subtitle download, URL streaming, accounts, themes, or advanced settings.
+GitHub Actions also builds release artifacts through the `Build release artifacts` workflow.

@@ -63,7 +63,7 @@ Publish self-contained:
 dotnet publish src/Lumyn.App/Lumyn.App.csproj -c Release -r linux-x64 --self-contained true -o artifacts/publish/linux-x64
 ```
 
-Create a simple `.deb`:
+Create a bundled `.deb`:
 
 ```bash
 chmod +x scripts/build-linux.sh
@@ -78,6 +78,6 @@ artifacts/packages/lumyn_0.1.0_amd64.deb
 
 ## Known Issues
 
-- The `.deb` script is intentionally simple and targets `amd64`.
-- VLC/libvlc must be available on the Linux system.
+- The `.deb` script bundles the self-contained .NET publish output, libmpv, and discovered native shared-library dependencies.
+- The package targets `amd64` by default. Set `RID=linux-arm64` to build an `arm64` package.
 - The MVP has no playlist, media library, subtitle download, URL streaming, accounts, themes, or advanced settings.

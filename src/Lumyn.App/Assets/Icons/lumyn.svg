@@ -9,5 +9,5 @@
   <path d="M96 118V181H62L67 207H189L194 181H159V130" stroke="#E95420" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M71 217L184 197" stroke="#E95420" stroke-width="12" stroke-linecap="round"/>
   <path d="M75 239L176 221" stroke="#E95420" stroke-width="12" stroke-linecap="round"/>
-  <path d="M119 150C119 147.7 121.5 146.3 123.5 147.5L149.5 163.2C152.5 165 152.5 170 149.5 171.8L123.5 187.5C121.5 188.7 119 187.3 119 185V150Z" fill="#F7F5F3"/>
+  <path d="M112 150C112 147.7 114.5 146.3 116.5 147.5L142.5 163.2C145.5 165 145.5 170 142.5 171.8L116.5 187.5C114.5 188.7 112 187.3 112 185V150Z" fill="#F7F5F3"/>
 </svg>

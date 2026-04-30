@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  BUILD_NUMBER: ${{ github.run_number }}
+
 jobs:
   linux-deb:
     name: Linux Debian package

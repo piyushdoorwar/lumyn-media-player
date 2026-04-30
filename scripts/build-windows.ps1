@@ -10,7 +10,23 @@ $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($Configuration)) { $Configuration = "Release" }
 if ([string]::IsNullOrWhiteSpace($Rid)) { $Rid = "win-x64" }
-if ([string]::IsNullOrWhiteSpace($Version)) { $Version = "0.1.4" }
+if ([string]::IsNullOrWhiteSpace($Version)) {
+    $versionFile = Join-Path (Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "..")) "VERSION"
+    $baseVersion = $env:BASE_VERSION
+    if ([string]::IsNullOrWhiteSpace($baseVersion)) {
+        $baseVersion = (Get-Content $versionFile -Raw).Trim()
+    }
+
+    $buildNumber = $env:BUILD_NUMBER
+    if ([string]::IsNullOrWhiteSpace($buildNumber)) {
+        $buildNumber = $env:GITHUB_RUN_NUMBER
+    }
+    if ([string]::IsNullOrWhiteSpace($buildNumber)) {
+        $buildNumber = "0"
+    }
+
+    $Version = "$baseVersion.$buildNumber"
+}
 
 if ($Rid -ne "win-x64") {
     throw "Unsupported Windows RID: $Rid. This script currently packages win-x64."

@@ -67,3 +67,5 @@ Build the Windows portable `.zip` from Windows PowerShell:
 ```
 
 GitHub Actions also builds release artifacts through the `Build release artifacts` workflow.
+
+Package versions use the base version in `VERSION` plus the GitHub Actions run number, for example `0.1.42`. Set `VERSION` in the environment to override the full package version manually.

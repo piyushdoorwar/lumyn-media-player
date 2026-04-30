@@ -11,7 +11,7 @@ RID="${RID:-linux-x64}"
 PUBLISH_DIR="artifacts/publish/${RID}"
 PACKAGE_ROOT="artifacts/pkg/lumyn-deb"
 DEB_DIR="artifacts/packages"
-VERSION="${VERSION:-0.1.4}"
+VERSION="${VERSION:-0.1.5}"
 
 case "${RID}" in
   linux-x64) DEB_ARCH="amd64" ;;

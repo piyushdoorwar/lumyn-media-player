@@ -71,10 +71,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
         StopCommand            = new RelayCommand(_ => Stop());
         ToggleMuteCommand      = new RelayCommand(_ => ToggleMute());
-        SeekBackwardCommand    = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(-5)));
-        SeekForwardCommand     = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(5)));
-        SeekBackward30Command  = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(-30)));
-        SeekForward30Command   = new RelayCommand(_ => _playback.SeekRelative(TimeSpan.FromSeconds(30)));
+        SeekBackwardCommand    = new RelayCommand(_ => SeekRelative(-5));
+        SeekForwardCommand     = new RelayCommand(_ => SeekRelative(5));
+        SeekBackward30Command  = new RelayCommand(_ => SeekRelative(-30));
+        SeekForward30Command   = new RelayCommand(_ => SeekRelative(30));
         VolumeUpCommand        = new RelayCommand(_ => { Volume += 5; ShowOsd($"Volume: {Volume}%"); });
         VolumeDownCommand      = new RelayCommand(_ => { Volume -= 5; ShowOsd($"Volume: {Volume}%"); });
         SpeedUpCommand         = new RelayCommand(_ => AdjustSpeed(+1));
@@ -548,6 +548,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         _playback.ToggleMute();
         ShowOsd(_playback.IsMuted ? "Muted" : $"Volume: {_playback.Volume}%");
+    }
+
+    private void SeekRelative(int seconds)
+    {
+        _playback.SeekRelative(TimeSpan.FromSeconds(seconds));
+        ShowOsd(seconds < 0 ? $"Rewind {Math.Abs(seconds)}s" : $"Forward {seconds}s");
     }
 
     private void SetSpeed(float rate)

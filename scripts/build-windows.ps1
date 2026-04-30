@@ -28,17 +28,29 @@ $packageOutDir = "artifacts/packages"
 $zipFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64.zip"
 
 function Get-MpvArchiveUrl {
+    param(
+        [ValidateSet("Runtime", "Dev")]
+        [string]$Kind
+    )
+
     $apiUrl = "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest"
     $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "Lumyn-Packager" }
+
+    $pattern = if ($Kind -eq "Dev") {
+        '^mpv-dev-x86_64.*\.7z$'
+    } else {
+        '^mpv-x86_64.*\.7z$'
+    }
+
     $asset = $release.assets |
         Where-Object {
-            $_.name -match '^mpv-x86_64.*\.7z$' -and
-            $_.name -notmatch 'dev|debug|symbols'
+            $_.name -match $pattern -and
+            $_.name -notmatch 'debug|symbols'
         } |
         Select-Object -First 1
 
     if ($null -eq $asset) {
-        throw "Could not find a win-x64 mpv runtime archive in the latest shinchiro/mpv-winbuild-cmake release."
+        throw "Could not find a win-x64 mpv $Kind archive in the latest shinchiro/mpv-winbuild-cmake release."
     }
 
     return $asset.browser_download_url
@@ -47,11 +59,12 @@ function Get-MpvArchiveUrl {
 function Expand-MpvArchive {
     param(
         [string]$ArchiveUrl,
-        [string]$Destination
+        [string]$Destination,
+        [string]$FileName
     )
 
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
-    $archivePath = Join-Path $Destination "mpv.7z"
+    $archivePath = Join-Path $Destination $FileName
     Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archivePath -Headers @{ "User-Agent" = "Lumyn-Packager" }
 
     $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
@@ -79,25 +92,29 @@ function Resolve-MpvDirectory {
         if ($null -eq $dll) {
             throw "MPV_BIN_DIR does not contain mpv-2.dll or libmpv-2.dll: $ProvidedDir"
         }
-        return $dll.Directory.FullName
-    }
-
-    if ([string]::IsNullOrWhiteSpace($ArchiveUrl)) {
-        $ArchiveUrl = Get-MpvArchiveUrl
+        return $resolved.Path
     }
 
     $extractDir = Join-Path "artifacts/downloads" "mpv-win-x64"
     Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
-    Expand-MpvArchive -ArchiveUrl $ArchiveUrl -Destination $extractDir
+
+    if ([string]::IsNullOrWhiteSpace($ArchiveUrl)) {
+        $runtimeUrl = Get-MpvArchiveUrl -Kind Runtime
+        $devUrl = Get-MpvArchiveUrl -Kind Dev
+        Expand-MpvArchive -ArchiveUrl $runtimeUrl -Destination $extractDir -FileName "mpv-runtime.7z"
+        Expand-MpvArchive -ArchiveUrl $devUrl -Destination $extractDir -FileName "mpv-dev.7z"
+    } else {
+        Expand-MpvArchive -ArchiveUrl $ArchiveUrl -Destination $extractDir -FileName "mpv.7z"
+    }
 
     $mpvDll = Get-ChildItem -Path $extractDir -Recurse -File |
         Where-Object { $_.Name -in @("mpv-2.dll", "libmpv-2.dll") } |
         Select-Object -First 1
     if ($null -eq $mpvDll) {
-        throw "The mpv archive did not contain mpv-2.dll or libmpv-2.dll."
+        throw "The mpv archive set did not contain mpv-2.dll or libmpv-2.dll."
     }
 
-    return $mpvDll.Directory.FullName
+    return $extractDir
 }
 
 function Copy-MpvRuntime {
@@ -106,9 +123,11 @@ function Copy-MpvRuntime {
         [string]$DestinationDir
     )
 
-    Get-ChildItem -Path $SourceDir -File |
+    Get-ChildItem -Path $SourceDir -Recurse -File |
         Where-Object { $_.Extension -in @(".dll", ".conf") } |
-        Copy-Item -Destination $DestinationDir -Force
+        ForEach-Object {
+            Copy-Item $_.FullName (Join-Path $DestinationDir $_.Name) -Force
+        }
 
     $mpvDll = Get-ChildItem -Path $DestinationDir -File |
         Where-Object { $_.Name -in @("mpv-2.dll", "libmpv-2.dll") } |
@@ -134,7 +153,7 @@ function Copy-Notices {
         Copy-Item $projectNotice (Join-Path $noticesDir "THIRD-PARTY-NOTICES.txt") -Force
     }
 
-    Get-ChildItem -Path $MpvSourceDir -File |
+    Get-ChildItem -Path $MpvSourceDir -Recurse -File |
         Where-Object { $_.Name -match '^(LICENSE|COPYING|Copyright|NOTICE)' } |
         ForEach-Object {
             Copy-Item $_.FullName (Join-Path $noticesDir ("mpv-" + $_.Name + ".txt")) -Force

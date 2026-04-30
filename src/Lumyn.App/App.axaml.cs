@@ -24,19 +24,35 @@ public sealed partial class App : Application
 
             desktop.MainWindow = new MainWindow { DataContext = vm };
 
-            // Handle command-line file argument: lumyn path/to/file.mp4
-            var args = desktop.Args;
-            if (args?.Length > 0)
+            // Handle command-line file/URI argument: lumyn path/to/file.mp4 or lumyn file:///path/to/file.mp4
+            var filePath = TryGetStartupFilePath(desktop.Args);
+            if (!string.IsNullOrWhiteSpace(filePath))
             {
-                var filePath = args[0];
-                if (File.Exists(filePath))
-                {
-                    desktop.MainWindow.Opened += async (_, _) =>
-                        await vm.OpenFileAsync(filePath);
-                }
+                desktop.MainWindow.Opened += async (_, _) =>
+                    await vm.OpenFileAsync(filePath);
             }
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static string? TryGetStartupFilePath(string[]? args)
+    {
+        if (args is null) return null;
+
+        foreach (var arg in args)
+        {
+            if (string.IsNullOrWhiteSpace(arg) || arg.StartsWith('-'))
+                continue;
+
+            var path = arg;
+            if (Uri.TryCreate(arg, UriKind.Absolute, out var uri) && uri.IsFile)
+                path = uri.LocalPath;
+
+            if (File.Exists(path))
+                return path;
+        }
+
+        return null;
     }
 }

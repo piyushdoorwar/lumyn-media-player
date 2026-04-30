@@ -60,10 +60,42 @@ jobs:
           name: lumyn-windows-x64-portable
           path: artifacts/packages/*.zip
 
+  macos-zip:
+    name: macOS app zip (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: osx-arm64
+            runner: macos-15
+          - rid: osx-x64
+            runner: macos-15-intel
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install native packaging inputs
+        run: brew install mpv
+
+      - name: Build app zip
+        run: RID=${{ matrix.rid }} ./scripts/build-macos.sh
+
+      - name: Upload app zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumyn-macos-${{ matrix.rid }}
+          path: artifacts/packages/*.zip
+
   github-release:
     name: Attach artifacts to release
     runs-on: ubuntu-latest
-    needs: [linux-deb, windows-zip]
+    needs: [linux-deb, windows-zip, macos-zip]
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4

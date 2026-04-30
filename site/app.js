@@ -2,6 +2,7 @@ const repo = "piyushdoorwar/lumyn-media-player";
 
 const linuxLink = document.querySelector("#linuxDownloadLink");
 const windowsLink = document.querySelector("#windowsDownloadLink");
+const macosLink = document.querySelector("#macosDownloadLink");
 const heroDownloadLink = document.querySelector("#downloadLink");
 
 heroDownloadLink.href = "#download";
@@ -25,6 +26,8 @@ async function hydrateDownloadLinks() {
 
     const linuxAsset = release.assets.find((asset) => /_amd64\.deb$/i.test(asset.name));
     const windowsAsset = release.assets.find((asset) => /win-x64\.zip$/i.test(asset.name));
+    const macosAsset = release.assets.find((asset) => /macos-arm64\.zip$/i.test(asset.name)) ??
+      release.assets.find((asset) => /macos-x64\.zip$/i.test(asset.name));
 
     if (linuxAsset?.browser_download_url) {
       enableDownload(linuxLink, linuxAsset.browser_download_url);
@@ -32,6 +35,10 @@ async function hydrateDownloadLinks() {
 
     if (windowsAsset?.browser_download_url) {
       enableDownload(windowsLink, windowsAsset.browser_download_url);
+    }
+
+    if (macosAsset?.browser_download_url) {
+      enableDownload(macosLink, macosAsset.browser_download_url);
     }
   } catch {
     // Keep the buttons disabled if GitHub is unreachable or matching assets are absent.

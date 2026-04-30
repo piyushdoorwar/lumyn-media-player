@@ -1,0 +1,13 @@
+Lumyn macOS package third-party notices
+
+The macOS package includes Lumyn and may include redistributable native mpv
+runtime libraries plus dependency dylibs. mpv is licensed under GPLv2 or later.
+Some codecs and dependency libraries bundled with mpv may have separate open
+source licenses.
+
+Unsigned macOS packages may show a Gatekeeper warning. Signing and notarization
+require an Apple Developer ID certificate and are not enabled by this package
+script yet.
+
+mpv project: https://mpv.io/
+Homebrew mpv formula: https://formulae.brew.sh/formula/mpv

@@ -18,86 +18,12 @@
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
   <Border CornerRadius="6" ClipToBounds="True" Background="#111111">
-  <Panel Name="Root" Background="#111111" DragDrop.AllowDrop="True">
+  <Grid RowDefinitions="38,*">
 
-    <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
-    <controls:MpvVideoSurface Name="VideoSurface"
-           Playback="{Binding Playback}"
-           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-           IsHitTestVisible="False" />
-
-    <!-- ── Transparent click / double-click surface ───────────────────────── -->
-    <Border Name="VideoClickLayer" Background="Transparent"
-            PointerPressed="VideoClickLayer_OnPointerPressed" />
-
-    <!-- ── Subtitle overlay (Avalonia-rendered; VLC SPU is disabled) ───────── -->
-    <Border VerticalAlignment="Bottom"
-            HorizontalAlignment="Stretch"
-            Margin="24,0,24,72"
-            IsHitTestVisible="False"
-            IsVisible="{Binding CurrentSubtitleText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-      <TextBlock Text="{Binding CurrentSubtitleText}"
-                 HorizontalAlignment="Center"
-                 TextAlignment="Center"
-                 FontSize="{Binding SubtitleFontSizeValue}"
-                 FontFamily="{Binding SubtitleFontFamily}"
-                 FontWeight="SemiBold"
-                 Foreground="{Binding SubtitleForeground}"
-                 TextWrapping="Wrap"
-                 MaxWidth="900">
-        <TextBlock.Effect>
-          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="Black" Opacity="0.9" />
-        </TextBlock.Effect>
-      </TextBlock>
-    </Border>
-
-    <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
-    <StackPanel
-        HorizontalAlignment="Center"
-        VerticalAlignment="Center"
-        Spacing="12"
-        IsVisible="{Binding !HasMedia}"
-        IsHitTestVisible="False">
-      <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
-      <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
-                 Foreground="#F7F5F3" HorizontalAlignment="Center" />
-      <TextBlock Text="Drop a file here, press O to open, or right-click"
-                 FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
-    </StackPanel>
-
-    <!-- ── Error banner ──────────────────────────────────────────────────── -->
-    <Border
-        VerticalAlignment="Top"
-        Margin="0,48,0,0"
-        IsVisible="{Binding HasError}"
-        Padding="16,8"
-        Background="#CC77216F"
-        IsHitTestVisible="False">
-      <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFFFFF"
-                 TextWrapping="Wrap" HorizontalAlignment="Center" />
-    </Border>
-
-    <!-- ── OSD toast (bottom-right) ─────────────────────────────────────── -->
-    <Border
-        HorizontalAlignment="Left"
-        VerticalAlignment="Top"
-        Margin="16,46,0,0"
-        Padding="14,8"
-        CornerRadius="6"
-        Background="#DD1A1A1A"
-        BorderBrush="#44FFFFFF"
-        BorderThickness="1"
-        IsVisible="{Binding HasOsd}"
-        IsHitTestVisible="False">
-      <TextBlock Text="{Binding OsdMessage}" FontSize="13" FontWeight="SemiBold"
-                 Foreground="#F7F5F3" />
-    </Border>
-
-    <!-- ── Top bar (custom chrome + media actions, always visible) ──────── -->
+    <!-- ── Top bar (own row – no mpv surface behind it) ─────────────────── -->
     <Border
         Name="TopBar"
-        VerticalAlignment="Top"
-        Height="38"
+        Grid.Row="0"
         Background="#141414"
         IsHitTestVisible="True">
       <Grid ColumnDefinitions="Auto,*,Auto">
@@ -157,6 +83,83 @@
       </Grid>
     </Border>
 
+    <!-- ── Video area (mpv + overlays + bottom bar) ──────────────────────── -->
+    <Panel Name="Root" Grid.Row="1" Background="#111111" DragDrop.AllowDrop="True">
+
+    <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
+    <controls:MpvVideoSurface Name="VideoSurface"
+           Playback="{Binding Playback}"
+           HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+           IsHitTestVisible="False" />
+
+    <!-- ── Transparent click / double-click surface ──────────────────────── -->
+    <Border Name="VideoClickLayer" Background="Transparent"
+            DragDrop.AllowDrop="True"
+            PointerPressed="VideoClickLayer_OnPointerPressed" />
+
+    <!-- ── Subtitle overlay (Avalonia-rendered) ──────────────────────────── -->
+    <Border VerticalAlignment="Bottom"
+            HorizontalAlignment="Stretch"
+            Margin="24,0,24,72"
+            IsHitTestVisible="False"
+            IsVisible="{Binding CurrentSubtitleText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <TextBlock Text="{Binding CurrentSubtitleText}"
+                 HorizontalAlignment="Center"
+                 TextAlignment="Center"
+                 FontSize="{Binding SubtitleFontSizeValue}"
+                 FontFamily="{Binding SubtitleFontFamily}"
+                 FontWeight="SemiBold"
+                 Foreground="{Binding SubtitleForeground}"
+                 TextWrapping="Wrap"
+                 MaxWidth="900">
+        <TextBlock.Effect>
+          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="Black" Opacity="0.9" />
+        </TextBlock.Effect>
+      </TextBlock>
+    </Border>
+
+    <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
+    <StackPanel
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Spacing="12"
+        IsVisible="{Binding !HasMedia}"
+        IsHitTestVisible="False">
+      <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
+      <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
+                 Foreground="#F7F5F3" HorizontalAlignment="Center" />
+      <TextBlock Text="Drop a file here, press O to open, or right-click"
+                 FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <!-- ── Error banner ──────────────────────────────────────────────────── -->
+    <Border
+        VerticalAlignment="Top"
+        Margin="0,48,0,0"
+        IsVisible="{Binding HasError}"
+        Padding="16,8"
+        Background="#CC77216F"
+        IsHitTestVisible="False">
+      <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFFFFF"
+                 TextWrapping="Wrap" HorizontalAlignment="Center" />
+    </Border>
+
+    <!-- ── OSD toast (bottom-right) ─────────────────────────────────────── -->
+    <Border
+        HorizontalAlignment="Left"
+        VerticalAlignment="Top"
+        Margin="16,10,0,0"
+        Padding="14,8"
+        CornerRadius="6"
+        Background="#DD1A1A1A"
+        BorderBrush="#44FFFFFF"
+        BorderThickness="1"
+        IsVisible="{Binding HasOsd}"
+        IsHitTestVisible="False">
+      <TextBlock Text="{Binding OsdMessage}" FontSize="13" FontWeight="SemiBold"
+                 Foreground="#F7F5F3" />
+    </Border>
+
     <!-- ── Bottom control bar overlay ────────────────────────────────────── -->
     <Border
         Name="ControlBar"
@@ -182,11 +185,18 @@
             SeekCommitted="SeekSlider_OnSeekCommitted" />
 
         <!-- Transport row -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="2" Margin="2,0">
 
-          <!-- Play / Pause -->
+          <!-- Seek back 5s -->
           <Button Grid.Column="0" Classes="ctrl"
+                  Command="{Binding SeekBackwardCommand}"
+                  ToolTip.Tip="Back 5s">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SeekBack}" />
+          </Button>
+
+          <!-- Play / Pause -->
+          <Button Grid.Column="1" Classes="ctrl"
                   Command="{Binding TogglePlayPauseCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.Play}"
@@ -196,36 +206,47 @@
             </Panel>
           </Button>
 
+          <!-- Seek forward 5s -->
+          <Button Grid.Column="2" Classes="ctrl"
+                  Command="{Binding SeekForwardCommand}"
+                  ToolTip.Tip="Forward 5s">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SeekForward}" />
+          </Button>
+
           <!-- Stop -->
-          <Button Grid.Column="1" Classes="ctrl"
+          <Button Grid.Column="3" Classes="ctrl"
                   Command="{Binding StopCommand}">
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
           </Button>
 
           <!-- Time display -->
-          <TextBlock Grid.Column="2" Text="{Binding TimeText}"
+          <TextBlock Grid.Column="4" Text="{Binding TimeText}"
                      VerticalAlignment="Center" FontSize="12"
                      Foreground="#C8C3C2" Margin="6,0" />
 
           <!-- Spacer -->
-          <Border Grid.Column="3" />
+          <Border Grid.Column="5" />
 
           <!-- Speed badge -->
-          <Button Grid.Column="4" Classes="ctrl"
-                  Command="{Binding ResetSpeedCommand}">
-            <TextBlock Text="{Binding SpeedLabel}" FontSize="11" Foreground="#C8C3C2"
-                       VerticalAlignment="Center" />
+          <Button Grid.Column="6" Classes="ctrl"
+                  Command="{Binding ResetSpeedCommand}"
+                  IsVisible="{Binding !IsNormalSpeed}">
+            <Border Background="#2A2A2A" CornerRadius="4" Padding="6,2">
+              <TextBlock Text="{Binding SpeedLabel}" FontSize="11"
+                         Foreground="#E8E4E0" FontWeight="Medium"
+                         VerticalAlignment="Center" />
+            </Border>
           </Button>
 
           <!-- Loop -->
-          <Button Grid.Column="5" Classes="ctrl"
+          <Button Grid.Column="7" Classes="ctrl"
                   Classes.dim="{Binding !IsLooping}"
                   Command="{Binding ToggleLoopCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
           </Button>
 
           <!-- Mute / Unmute -->
-          <Button Grid.Column="6" Classes="ctrl"
+          <Button Grid.Column="8" Classes="ctrl"
                   Command="{Binding ToggleMuteCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
@@ -236,19 +257,19 @@
           </Button>
 
           <!-- Volume slider -->
-          <Slider Grid.Column="7" Width="80" Minimum="0" Maximum="100"
+          <Slider Grid.Column="9" Width="80" Minimum="0" Maximum="100"
                   Value="{Binding Volume}"
                   VerticalAlignment="Center"
                   Margin="2,0,6,0" />
 
           <!-- Screenshot -->
-          <Button Grid.Column="8" Classes="ctrl"
+          <Button Grid.Column="10" Classes="ctrl"
                   Command="{Binding TakeScreenshotCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
           </Button>
 
           <!-- Fullscreen -->
-          <Button Grid.Column="9" Classes="ctrl"
+          <Button Grid.Column="11" Classes="ctrl"
                   Click="FullscreenButton_OnClick">
             <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                       Data="{StaticResource Icon.Fullscreen}" />
@@ -297,4 +318,6 @@
     </Panel.ContextMenu>
 
     </Panel>
+  </Grid>
+  </Border>
 </Window>

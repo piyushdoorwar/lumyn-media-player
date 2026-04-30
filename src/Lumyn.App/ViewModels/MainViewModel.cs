@@ -211,7 +211,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public string SpeedLabel => Math.Abs(_speed - 1.0f) < 0.001f ? "1×" : $"{_speed:0.##}×";
+    public string SpeedLabel => $"{_speed:0.##}×";
 
     public bool IsNormalSpeed => Math.Abs(_speed - 1.0f) < 0.001f;
 
@@ -325,6 +325,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _useSubtitleOverlay = lines.Count > 0;
         if (_useSubtitleOverlay)
             _playback.SetSubtitleTrack(-1);
+
+        // Keep appearance settings but update the file path so the dialog reopens correctly.
+        CurrentSubtitleSettings = CurrentSubtitleSettings with { FilePath = path };
+        if (!string.IsNullOrWhiteSpace(_playback.CurrentFilePath))
+            _settings.SaveSubtitleSettings(_playback.CurrentFilePath, SubtitleEntryFromSettings(CurrentSubtitleSettings));
 
         ShowOsd($"Subtitle: {Path.GetFileName(path)}");
     }

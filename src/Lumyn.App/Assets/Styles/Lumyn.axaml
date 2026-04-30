@@ -13,6 +13,9 @@
     <Setter Property="MinHeight" Value="34" />
     <Setter Property="FontWeight" Value="SemiBold" />
     <Setter Property="Focusable" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions />
+    </Setter>
   </Style>
 
   <Style Selector="Button:pointerover">
@@ -128,8 +131,7 @@
   </Style>
 
   <Style Selector="Button.wchrome:pointerover">
-    <Setter Property="Background" Value="#2A2A2A" />
-    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <Style Selector="Button.wchrome:pressed">
@@ -137,8 +139,7 @@
   </Style>
 
   <Style Selector="Button.wchrome.close:pointerover">
-    <Setter Property="Background" Value="#C42B1C" />
-    <Setter Property="Foreground" Value="#FFFFFF" />
+    <Setter Property="Background" Value="Transparent" />
   </Style>
 
   <Style Selector="Button.wchrome.close:pressed">

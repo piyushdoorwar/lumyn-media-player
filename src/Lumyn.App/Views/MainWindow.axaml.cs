@@ -237,6 +237,10 @@ public partial class MainWindow : Window
             case Key.G when ctrl:
                 await OpenJumpToTimeDialogAsync();
                 e.Handled = true; break;
+            case Key.OemQuestion: // ? → keyboard shortcuts
+            case Key.F1:
+                OpenKeyboardShortcutsDialog();
+                e.Handled = true; break;
             case Key.I when alt:
                 ViewModel.TakeScreenshotCommand.Execute(null);
                 e.Handled = true; break;
@@ -316,11 +320,17 @@ public partial class MainWindow : Window
     private async void VideoAdjustments_Click(object? sender, RoutedEventArgs e)
         => await OpenVideoAdjustmentsDialogAsync();
 
+    private void KeyboardShortcuts_Click(object? sender, RoutedEventArgs e)
+        => OpenKeyboardShortcutsDialog();
+
     private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
         => await OpenSubtitleSettingsDialogAsync();
 
     private async void VideoAdjustmentsButton_OnClick(object? sender, RoutedEventArgs e)
         => await OpenVideoAdjustmentsDialogAsync();
+
+    private void KeyboardShortcutsButton_OnClick(object? sender, RoutedEventArgs e)
+        => OpenKeyboardShortcutsDialog();
 
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
@@ -401,6 +411,12 @@ public partial class MainWindow : Window
             await ViewModel.ApplySubtitleSettingsAsync(result);
             Focus();
         }
+    }
+
+    private void OpenKeyboardShortcutsDialog()
+    {
+        var dialog = new KeyboardShortcutsDialog();
+        dialog.ShowDialog(this);
     }
 
     private async Task OpenVideoAdjustmentsDialogAsync()

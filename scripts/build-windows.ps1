@@ -41,7 +41,6 @@ $publishDir = Join-Path "artifacts/publish" $Rid
 $packageDir = Join-Path "artifacts/pkg" "lumyn-windows"
 $packageRoot = Join-Path $packageDir "Lumyn"
 $packageOutDir = "artifacts/packages"
-$zipFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64.zip"
 
 function Get-MpvArchiveUrl {
     param(
@@ -327,10 +326,37 @@ New-Item -ItemType Directory -Force -Path $packageRoot, $packageOutDir | Out-Nul
 Copy-Item (Join-Path $publishDir "*") $packageRoot -Recurse -Force
 Copy-MpvRuntime -SourceDir $mpvDir -DestinationDir $packageRoot
 Copy-Notices -MpvSourceDir $mpvDir -DestinationDir $packageRoot
-Write-FileAssociationScript -DestinationDir $packageRoot
 
-Remove-Item -Force $zipFile -ErrorAction SilentlyContinue
-Compress-Archive -Path (Join-Path $packageRoot "*") -DestinationPath $zipFile -CompressionLevel Optimal
+# ── Compile Windows installer via Inno Setup ──────────────────────────────
+# Inno Setup 6 is pre-installed on GitHub Actions windows-latest runners.
+$isccExe = $null
+$iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+if ($null -ne $iscc) {
+    $isccExe = $iscc.Source
+} else {
+    foreach ($candidate in @(
+        "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+        "C:\Program Files\Inno Setup 6\ISCC.exe",
+        "C:\Program Files (x86)\Inno Setup 5\ISCC.exe"
+    )) {
+        if (Test-Path $candidate) { $isccExe = $candidate; break }
+    }
+}
+if ($null -eq $isccExe) {
+    throw "Inno Setup compiler (ISCC.exe) not found. Install Inno Setup 6 from https://jrsoftware.org/isinfo.php"
+}
 
+$issScript = Join-Path $scriptDir "..\packaging\windows\lumyn.iss"
+& $isccExe `
+    "/DAppVersion=$Version" `
+    "/DSourceDir=$packageRoot" `
+    "/DRepoRoot=$repoRoot" `
+    $issScript
+
+if ($LASTEXITCODE -ne 0) {
+    throw "ISCC.exe exited with code $LASTEXITCODE."
+}
+
+$installerFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64_setup.exe"
 Write-Host "Windows artifacts:"
-Write-Host $zipFile
+Write-Host $installerFile

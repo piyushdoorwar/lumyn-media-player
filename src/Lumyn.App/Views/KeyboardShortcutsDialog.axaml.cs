@@ -1,5 +1,7 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 
@@ -68,6 +70,8 @@ public partial class KeyboardShortcutsDialog : Window
     public KeyboardShortcutsDialog()
     {
         AvaloniaXamlLoader.Load(this);
+        KeyDown += OnKeyDown;
+
         PopulateGroup("PlaybackGroup", Playback);
         PopulateGroup("SeekingGroup",  Seeking);
         PopulateGroup("VolumeGroup",   Volume);
@@ -83,9 +87,9 @@ public partial class KeyboardShortcutsDialog : Window
         if (grid is null) return;
 
         for (var i = 0; i < rows.Length; i++)
-            grid.RowDefinitions.Add(new RowDefinition(GridLength.Auto));
+            grid.RowDefinitions.Add(new RowDefinition(new GridLength(43)));
 
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(150)));
+        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(178)));
         grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
 
         for (var i = 0; i < rows.Length; i++)
@@ -114,9 +118,11 @@ public partial class KeyboardShortcutsDialog : Window
                 BorderBrush = new SolidColorBrush(Color.Parse("#4D4658")),
                 BorderThickness = new Avalonia.Thickness(1),
                 CornerRadius = new Avalonia.CornerRadius(4),
-                Padding = new Avalonia.Thickness(8, 4),
-                Margin = new Avalonia.Thickness(8, 5, 8, 5),
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+                Padding = new Avalonia.Thickness(10, 3),
+                Margin = new Avalonia.Thickness(10, 6),
+                MinHeight = 28,
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
             };
             var keyText = new TextBlock
             {
@@ -137,8 +143,8 @@ public partial class KeyboardShortcutsDialog : Window
                 Text = action,
                 FontSize = 13,
                 Foreground = new SolidColorBrush(Color.Parse("#DEDAD5")),
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-                Margin = new Avalonia.Thickness(0, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Avalonia.Thickness(10, 0, 10, 0),
             };
             Grid.SetRow(actionText, i);
             Grid.SetColumn(actionText, 1);
@@ -146,5 +152,11 @@ public partial class KeyboardShortcutsDialog : Window
         }
     }
 
-    private void CloseBtn_Click(object? sender, RoutedEventArgs e) => Close();
+    private void OnKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape) return;
+
+        Close();
+        e.Handled = true;
+    }
 }

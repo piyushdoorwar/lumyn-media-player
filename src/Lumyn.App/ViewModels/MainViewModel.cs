@@ -17,6 +17,21 @@ public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent)
     public string DisplayName => Path.GetFileName(FilePath);
 }
 
+/// <summary>A recently-played file shown on the start screen.</summary>
+public sealed record RecentFileItem(
+    string FilePath,
+    double ProgressPct,
+    TimeSpan ResumePosition)
+{
+    public string DisplayName   => Path.GetFileNameWithoutExtension(FilePath);
+    public string Directory     => Path.GetDirectoryName(FilePath) ?? "";
+    public bool   HasResume     => ProgressPct >= 0;
+    public string ResumeLabel   =>
+        ResumePosition.TotalHours >= 1
+            ? $"Resume from {(int)ResumePosition.TotalHours}:{ResumePosition.Minutes:D2}:{ResumePosition.Seconds:D2}"
+            : $"Resume from {ResumePosition.Minutes}:{ResumePosition.Seconds:D2}";
+}
+
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 {
     private static readonly string[] SubtitleExtensions = [".srt", ".ass", ".ssa", ".vtt", ".sub"];
@@ -142,6 +157,51 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public PlaybackService Playback => _playback;
     public string? CurrentFilePath => _playback.CurrentFilePath;
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
+
+    public bool HasRecentFiles => _settings.RecentFiles.Count > 0;
+
+    public IReadOnlyList<RecentFileItem> RecentFileItems =>
+        _settings.RecentFiles
+            .Where(File.Exists)
+            .Select(f =>
+            {
+                var (pos, pct) = _settings.GetResumeInfo(f);
+                return new RecentFileItem(f, pct, pos);
+            })
+            .ToList();
+
+    // ── Bookmarks ────────────────────────────────────────────────────────────
+
+    public IReadOnlyList<BookmarkEntry> GetBookmarksForCurrentFile()
+        => string.IsNullOrWhiteSpace(CurrentFilePath)
+            ? []
+            : _settings.GetBookmarks(CurrentFilePath);
+
+    public void AddBookmarkAtCurrentPosition(string label)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
+        var pos = _playback.Position;
+        if (pos == TimeSpan.Zero && !HasMedia) return;
+        var lbl = string.IsNullOrWhiteSpace(label)
+            ? (pos.TotalHours >= 1
+                ? $"{(int)pos.TotalHours}:{pos.Minutes:D2}:{pos.Seconds:D2}"
+                : $"{pos.Minutes}:{pos.Seconds:D2}")
+            : label.Trim();
+        _settings.AddBookmark(CurrentFilePath, pos, lbl);
+        ShowOsd($"Bookmark added: {lbl}");
+    }
+
+    public void RemoveBookmark(int index)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
+        _settings.RemoveBookmark(CurrentFilePath, index);
+    }
+
+    public void JumpToBookmark(TimeSpan position)
+    {
+        _playback.Seek(position);
+        ShowOsd($"Jumped to {(position.TotalHours >= 1 ? $"{(int)position.TotalHours}:{position.Minutes:D2}:{position.Seconds:D2}" : $"{position.Minutes}:{position.Seconds:D2}")}");
+    }
 
     // ── Bindable properties ──────────────────────────────────────────────────
 

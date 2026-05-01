@@ -268,7 +268,11 @@ public partial class MainWindow : Window
                 e.Handled = true; break;
             case Key.Q:
                 ViewModel.TogglePlaylistCommand.Execute(null);
-                e.Handled = true; break;        }
+                e.Handled = true; break;
+            case Key.B:
+                await OpenBookmarksDialogAsync();
+                e.Handled = true; break;
+        }
     }
 
     // ── Mouse scroll → volume ────────────────────────────────────────────────
@@ -380,6 +384,18 @@ public partial class MainWindow : Window
 
     private void About_Click(object? sender, RoutedEventArgs e)
         => OpenAboutDialog();
+
+    private async void BookmarksButton_Click(object? sender, RoutedEventArgs e)
+        => await OpenBookmarksDialogAsync();
+
+    private async void Bookmarks_Click(object? sender, RoutedEventArgs e)
+        => await OpenBookmarksDialogAsync();
+
+    private async void RecentItem_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: string filePath } && ViewModel is not null)
+            await ViewModel.OpenFileAsync(filePath);
+    }
 
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
@@ -519,6 +535,13 @@ public partial class MainWindow : Window
     {
         var dialog = new AboutDialog();
         dialog.ShowDialog(this);
+    }
+
+    private async Task OpenBookmarksDialogAsync()
+    {
+        if (ViewModel is null) return;
+        var dialog = new BookmarksDialog(ViewModel);
+        await dialog.ShowDialog(this);
     }
 
     private async Task OpenVideoAdjustmentsDialogAsync()

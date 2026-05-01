@@ -38,6 +38,10 @@
   <!-- Info / About -->
   <StreamGeometry x:Key="Icon.Info">M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z</StreamGeometry>
 
+  <!-- Bookmark -->
+  <StreamGeometry x:Key="Icon.Bookmark">M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z</StreamGeometry>
+  <StreamGeometry x:Key="Icon.BookmarkOutline">M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z</StreamGeometry>
+
   <!-- Pin / Always on Top -->
   <StreamGeometry x:Key="Icon.AlwaysOnTop">M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H19v-2c-1.66 0-3-1.34-3-3z</StreamGeometry>
 

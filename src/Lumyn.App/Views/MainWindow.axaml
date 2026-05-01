@@ -208,19 +208,91 @@
                  IsVisible="{Binding HasFolderTracks}" />
     </Grid>
 
-    <!-- ── Empty-state placeholder ───────────────────────────────────────── -->
-    <StackPanel
-        HorizontalAlignment="Center"
-        VerticalAlignment="Center"
-        Spacing="12"
-        IsVisible="{Binding !HasMedia}"
-        IsHitTestVisible="False">
-      <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
-      <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
-                 Foreground="#F7F5F3" HorizontalAlignment="Center" />
-      <TextBlock Text="Drop a file here, press O to open, or right-click"
-                 FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
-    </StackPanel>
+    <!-- ── Start / Empty screen ───────────────────────────────────────────── -->
+    <Grid IsVisible="{Binding !HasMedia}"
+          IsHitTestVisible="{Binding !HasMedia}">
+
+      <!-- No recent files: simple logo placeholder -->
+      <StackPanel
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center"
+          Spacing="12"
+          IsVisible="{Binding !HasRecentFiles}">
+        <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
+        <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
+                   Foreground="#F7F5F3" HorizontalAlignment="Center" />
+        <TextBlock Text="Drop a file here, press O to open, or right-click"
+                   FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
+      </StackPanel>
+
+      <!-- Has recent files: recent files grid -->
+      <Grid IsVisible="{Binding HasRecentFiles}"
+            RowDefinitions="Auto,*"
+            Margin="24,18,24,12">
+
+        <!-- Heading -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
+          <Image Width="22" Height="22" Source="{StaticResource Icon.LumynMark}" Opacity="0.7" />
+          <TextBlock Text="Recently Played"
+                     FontSize="16" FontWeight="SemiBold"
+                     Foreground="#E0DCD8" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <!-- File cards -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+          <ItemsControl ItemsSource="{Binding RecentFileItems}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Click="RecentItem_Click"
+                        Tag="{Binding FilePath}"
+                        Width="180" Height="80"
+                        Margin="0,0,10,10"
+                        Padding="12,10"
+                        Background="#1E1E1E"
+                        BorderBrush="#2A2A2A" BorderThickness="1"
+                        CornerRadius="6"
+                        HorizontalContentAlignment="Left"
+                        VerticalContentAlignment="Top">
+                  <Grid RowDefinitions="*,Auto,Auto" HorizontalAlignment="Stretch">
+
+                    <!-- File name -->
+                    <TextBlock Grid.Row="0"
+                               Text="{Binding DisplayName}"
+                               FontSize="12" FontWeight="SemiBold"
+                               Foreground="#E8E4E0"
+                               TextTrimming="CharacterEllipsis"
+                               MaxLines="2" TextWrapping="Wrap" />
+
+                    <!-- Directory -->
+                    <TextBlock Grid.Row="1"
+                               Text="{Binding Directory}"
+                               FontSize="10" Foreground="#4A4948"
+                               TextTrimming="CharacterEllipsis"
+                               Margin="0,3,0,0" />
+
+                    <!-- Resume progress bar -->
+                    <ProgressBar Grid.Row="2" Margin="0,6,0,0"
+                                 IsVisible="{Binding HasResume}"
+                                 Height="2"
+                                 Minimum="0" Maximum="100"
+                                 Value="{Binding ProgressPct}"
+                                 Background="#2A2A2A"
+                                 Foreground="#3A9B4B"
+                                 CornerRadius="1" />
+
+                  </Grid>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
 
     <!-- ── Error banner ──────────────────────────────────────────────────── -->
     <Border
@@ -275,7 +347,7 @@
             SeekCommitted="SeekSlider_OnSeekCommitted" />
 
         <!-- Transport row -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto"
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="2" Margin="2,0">
 
           <!-- Seek back 5s -->
@@ -374,8 +446,14 @@
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
           </Button>
 
-          <!-- Fullscreen -->
+          <!-- Bookmarks -->
           <Button Grid.Column="13" Classes="ctrl"
+                  Click="BookmarksButton_Click" ToolTip.Tip="Bookmarks (B)">
+            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.BookmarkOutline}" />
+          </Button>
+
+          <!-- Fullscreen -->
+          <Button Grid.Column="14" Classes="ctrl"
                   Click="FullscreenButton_OnClick">
             <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                       Data="{StaticResource Icon.Fullscreen}" />
@@ -402,6 +480,7 @@
         <MenuItem Header="Video Adjustments..." Click="VideoAdjustments_Click" />
         <MenuItem Header="Keyboard Shortcuts" Click="KeyboardShortcuts_Click" />
         <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
+        <MenuItem Header="Bookmarks…" Click="Bookmarks_Click" InputGesture="B" />
         <Separator />
 
         <!-- Speed sub-menu -->

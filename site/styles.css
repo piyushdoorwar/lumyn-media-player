@@ -881,6 +881,68 @@ nav a:hover::after {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
+/* ── Feature marquee ────────────────────────────────────────────────────── */
+.marquee-wrap {
+  margin-top: 40px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-scroll 42s linear infinite;
+}
+
+.marquee-wrap:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+.marquee-row {
+  display: flex;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0 5px;
+  flex-shrink: 0;
+}
+
+.marquee-row li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fg);
+  white-space: nowrap;
+  transition: border-color 0.18s ease, background 0.18s ease;
+  cursor: default;
+}
+
+.marquee-row li:hover {
+  border-color: rgba(58, 155, 75, 0.45);
+  background: rgba(58, 155, 75, 0.07);
+}
+
+.marquee-row li svg,
+.marquee-row li img {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  /* tint to green #3a9b4b */
+  filter: invert(52%) sepia(40%) saturate(500%) hue-rotate(90deg) brightness(90%);
+}
+
 .page-label {
   font-size: 13px;
   color: var(--muted);
@@ -942,5 +1004,11 @@ nav a:hover::after {
   .releases-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
   }
 }

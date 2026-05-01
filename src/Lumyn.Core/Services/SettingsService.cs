@@ -142,6 +142,15 @@ public sealed class SettingsService
         Save();
     }
 
+    public void RenameBookmark(string filePath, int index, string newLabel)
+    {
+        var key = KeyForFile(filePath);
+        if (!_bookmarks.TryGetValue(key, out var list) || index < 0 || index >= list.Count) return;
+        var entry = list[index];
+        list[index] = new BookmarkEntry { PositionSeconds = entry.PositionSeconds, Label = newLabel };
+        Save();
+    }
+
     // ── Persistence ─────────────────────────────────────────────────────────
 
     private SettingsFile LoadSettings()

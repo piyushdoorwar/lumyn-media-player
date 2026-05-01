@@ -271,7 +271,8 @@
                                  FontSize="12" FontWeight="SemiBold"
                                  Foreground="#E8E4E0"
                                  TextTrimming="CharacterEllipsis"
-                                 MaxLines="2" TextWrapping="Wrap" />
+                                 MaxLines="2" TextWrapping="Wrap"
+                                 Margin="0,0,18,0" />
 
                       <!-- Directory -->
                       <TextBlock Grid.Row="1"
@@ -283,12 +284,12 @@
                       <!-- Resume progress bar -->
                       <ProgressBar Grid.Row="2" Margin="0,6,0,0"
                                    IsVisible="{Binding HasResume}"
-                                   Height="2"
+                                   Height="3"
                                    Minimum="0" Maximum="100"
                                    Value="{Binding ProgressPct}"
                                    Background="#2A2A2A"
                                    Foreground="#3A9B4B"
-                                   CornerRadius="1" />
+                                   CornerRadius="1.5" />
 
                     </Grid>
                   </Button>

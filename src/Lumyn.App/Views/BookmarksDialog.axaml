@@ -13,19 +13,22 @@
   <StackPanel Margin="16,14,16,16" Spacing="10">
 
     <!-- Header row: file name + Add button -->
-    <Grid ColumnDefinitions="*,Auto">
+    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
       <TextBlock Grid.Column="0" Name="FileNameText"
                  FontSize="12" Foreground="#6A6560"
                  TextTrimming="CharacterEllipsis"
-                 VerticalAlignment="Center" />
+                 VerticalAlignment="Center"
+                 Margin="0,0,10,0" />
       <Button Grid.Column="1"
               Name="AddButton"
               Content="+ Add here"
               Click="AddButton_Click"
               Background="#2A3A2E" Foreground="#3A9B4B"
               BorderBrush="#3A5A40" BorderThickness="1"
-              Padding="10,5" CornerRadius="4"
-              FontSize="12" />
+              Padding="10,6" CornerRadius="4"
+              FontSize="12"
+              VerticalAlignment="Center"
+              VerticalContentAlignment="Center" />
     </Grid>
 
     <Border Height="1" Background="#2A2A2A" />

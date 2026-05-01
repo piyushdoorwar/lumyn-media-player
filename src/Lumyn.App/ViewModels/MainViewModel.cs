@@ -212,6 +212,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _settings.RemoveBookmark(CurrentFilePath, index);
     }
 
+    public void RenameBookmark(int index, string newLabel)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
+        _settings.RenameBookmark(CurrentFilePath, index, newLabel);
+    }
+
     public void RemoveRecentFile(string filePath)
     {
         _settings.RemoveRecentFile(filePath);
@@ -870,8 +876,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void ToggleMute()
     {
+        var willBeMuted = !_playback.IsMuted;
         _playback.ToggleMute();
-        ShowOsd(_playback.IsMuted ? "Muted" : $"Volume: {_playback.Volume}%");
+        ShowOsd(willBeMuted ? "Muted" : $"Volume: {_playback.Volume}%");
     }
 
     private void SeekRelative(int seconds)

@@ -1,0 +1,85 @@
+app-id: io.github.piyushdoorwar.lumyn
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: lumyn
+
+finish-args:
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  # GPU / video decoding
+  - --device=dri
+  # Audio
+  - --socket=pulseaudio
+  # Filesystem — read home for media, write Pictures for screenshots
+  - --filesystem=home:ro
+  - --filesystem=xdg-pictures:create
+  # Portals (file chooser, etc.)
+  - --talk-name=org.freedesktop.portal.Desktop
+
+modules:
+
+  # ── libmpv ─────────────────────────────────────────────────────────────────
+  # Built from source so we control the version and keep the sandbox clean.
+  # libplacebo is disabled to avoid the shaderc/glslang chain; mpv falls back
+  # to its legacy OpenGL renderer which is sufficient for the render API Lumyn uses.
+  - name: libmpv
+    buildsystem: meson
+    config-opts:
+      - -Dlibmpv=true
+      - -Dcplayer=false
+      - -Dbuild-date=false
+      - -Dlua=disabled
+      - -Djavascript=disabled
+      - -Dlibplacebo=disabled
+      - -Dvulkan=disabled
+      - -Dgl=enabled
+      - -Dwayland=enabled
+      - -Dx11=enabled
+      - -Dpulse=enabled
+      - -Dalsa=enabled
+      - -Dmanpage-build=disabled
+    sources:
+      - type: git
+        url: https://github.com/mpv-player/mpv.git
+        tag: v0.39.0
+
+  # ── Lumyn ───────────────────────────────────────────────────────────────────
+  # The .NET binary is pre-built by the CI/build script (dotnet publish
+  # --self-contained -r linux-x64) and staged in packaging/flatpak/build-src/
+  # before flatpak-builder is invoked.
+  - name: lumyn
+    buildsystem: simple
+    sources:
+      # Pre-built self-contained .NET binary + runtime files
+      - type: dir
+        path: build-src
+      # Desktop entry, AppStream metainfo, and icon are in a separate subdir
+      - type: file
+        path: io.github.piyushdoorwar.lumyn.desktop
+        dest: meta
+      - type: file
+        path: io.github.piyushdoorwar.lumyn.metainfo.xml
+        dest: meta
+      - type: file
+        path: ../../src/Lumyn.App/Assets/Icons/lumyn.svg
+        dest: meta
+        dest-filename: io.github.piyushdoorwar.lumyn.svg
+    build-commands:
+      # Install the .NET runtime tree to /app/lib/lumyn/
+      - mkdir -p /app/lib/lumyn
+      - cp -r . /app/lib/lumyn/
+      - rm -rf /app/lib/lumyn/meta
+      - chmod +x /app/lib/lumyn/Lumyn
+      # Wrapper script at /app/bin/lumyn so the binary finds its assemblies
+      - printf '#!/bin/sh\nexec /app/lib/lumyn/Lumyn "$@"\n' > /tmp/lumyn-launch
+      - install -Dm755 /tmp/lumyn-launch /app/bin/lumyn
+      # Desktop integration
+      - install -Dm644 meta/io.github.piyushdoorwar.lumyn.desktop
+          /app/share/applications/io.github.piyushdoorwar.lumyn.desktop
+      - install -Dm644 meta/io.github.piyushdoorwar.lumyn.metainfo.xml
+          /app/share/metainfo/io.github.piyushdoorwar.lumyn.metainfo.xml
+      - install -Dm644 meta/io.github.piyushdoorwar.lumyn.svg
+          /app/share/icons/hicolor/scalable/apps/io.github.piyushdoorwar.lumyn.svg

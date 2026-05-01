@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Lumyn
+GenericName=Media Player
+Comment=A clean desktop media player
+Exec=lumyn %F
+Icon=io.github.piyushdoorwar.lumyn
+Terminal=false
+StartupWMClass=Lumyn
+Categories=AudioVideo;Video;Player;
+MimeType=video/mp4;video/x-matroska;video/webm;video/x-msvideo;video/quicktime;video/x-flv;video/ogg;video/MP2T;video/x-ms-wmv;video/3gpp;video/x-divx;audio/mpeg;audio/flac;audio/ogg;audio/x-wav;audio/mp4;audio/aac;audio/x-ms-wma;audio/opus;audio/x-matroska;
+Keywords=video;audio;media;player;mpv;

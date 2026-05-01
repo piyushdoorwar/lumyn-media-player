@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.piyushdoorwar.lumyn</id>
+
+  <name>Lumyn</name>
+  <summary>A clean desktop media player</summary>
+
+  <description>
+    <p>
+      Lumyn is a quiet, fast local video and audio player with a focused interface,
+      mpv-powered playback, subtitle tools, and the controls you expect close at hand.
+    </p>
+    <ul>
+      <li>Native playback through mpv — hardware-decoded, smooth, and format-flexible</li>
+      <li>Subtitle file loading, embedded track selection, delay adjustment, and appearance settings</li>
+      <li>Speed control, looping, screenshots, and audio track switching</li>
+      <li>Playlist and queue support with drag-to-reorder and right-click context menu</li>
+      <li>Audio-only mode with cover art display and folder-scanning queue</li>
+      <li>Compact custom title bar with keyboard-driven workflow</li>
+    </ul>
+  </description>
+
+  <url type="homepage">https://github.com/piyushdoorwar/lumyn-media-player</url>
+  <url type="bugtracker">https://github.com/piyushdoorwar/lumyn-media-player/issues</url>
+  <url type="vcs-browser">https://github.com/piyushdoorwar/lumyn-media-player</url>
+
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+
+  <launchable type="desktop-id">io.github.piyushdoorwar.lumyn.desktop</launchable>
+
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Player</category>
+  </categories>
+
+  <keywords>
+    <keyword>video</keyword>
+    <keyword>audio</keyword>
+    <keyword>media</keyword>
+    <keyword>player</keyword>
+    <keyword>mpv</keyword>
+    <keyword>mkv</keyword>
+    <keyword>subtitles</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1" />
+
+  <requires>
+    <display_length compare="ge">640</display_length>
+  </requires>
+
+  <recommends>
+    <control>pointing</control>
+    <control>keyboard</control>
+  </recommends>
+
+  <releases>
+    <!-- Populated automatically from GitHub releases -->
+  </releases>
+</component>

@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
 
         PointerMoved += (_, _) => ShowControls();
+        PointerWheelChanged += OnWindowPointerWheelChanged;
         Opened += (_, _) =>
         {
             Focus();
@@ -268,6 +269,19 @@ public partial class MainWindow : Window
             case Key.Q:
                 ViewModel.TogglePlaylistCommand.Execute(null);
                 e.Handled = true; break;        }
+    }
+
+    // ── Mouse scroll → volume ────────────────────────────────────────────────
+
+    private void OnWindowPointerWheelChanged(object? sender, PointerWheelEventArgs e)
+    {
+        if (ViewModel is null) return;
+        if (e.Delta.Y > 0)
+            ViewModel.VolumeUpCommand.Execute(null);
+        else if (e.Delta.Y < 0)
+            ViewModel.VolumeDownCommand.Execute(null);
+        ShowControls();
+        e.Handled = true;
     }
 
     // ── Context menu ─────────────────────────────────────────────────────────

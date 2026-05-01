@@ -83,14 +83,14 @@ jobs:
       - name: Install native packaging inputs
         run: brew install mpv
 
-      - name: Build app zip
+      - name: Build app DMG
         run: RID=${{ matrix.rid }} ./scripts/build-macos.sh
 
-      - name: Upload app zip
+      - name: Upload app DMG
         uses: actions/upload-artifact@v4
         with:
           name: lumyn-macos-${{ matrix.rid }}
-          path: artifacts/packages/*.zip
+          path: artifacts/packages/*.dmg
 
   github-release:
     name: Attach artifacts to release

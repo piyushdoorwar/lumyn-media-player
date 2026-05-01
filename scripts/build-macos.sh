@@ -28,7 +28,7 @@ case "${RID}" in
     ;;
 esac
 
-ZIP_FILE="${PACKAGE_OUT_DIR}/lumyn_${VERSION}_macos-${MAC_ARCH}.zip"
+DMG_FILE="${PACKAGE_OUT_DIR}/lumyn_${VERSION}_macos-${MAC_ARCH}.dmg"
 
 find_libmpv() {
   if [[ -n "${MPV_LIB_PATH:-}" ]]; then
@@ -207,8 +207,27 @@ PLIST
 printf 'APPL????' > "${CONTENTS_DIR}/PkgInfo"
 chmod +x "${MACOS_DIR}/Lumyn"
 
-rm -f "${ZIP_FILE}"
-ditto -c -k --sequesterRsrc --keepParent "${APP_ROOT}" "${ZIP_FILE}"
+# ── Build drag-install DMG ───────────────────────────────────────────────
+# Stage the .app + /Applications symlink in a temp folder, then convert to a
+# read-only compressed DMG using only macOS built-in tools.
+DMG_STAGING_DIR="${PACKAGE_OUT_DIR}/dmg-staging"
+rm -rf "${DMG_STAGING_DIR}"
+mkdir -p "${DMG_STAGING_DIR}"
+cp -R "${APP_ROOT}" "${DMG_STAGING_DIR}/Lumyn.app"
+ln -s /Applications "${DMG_STAGING_DIR}/Applications"
+
+# Create a writable image first, then convert to compressed read-only.
+DMG_TEMP="${PACKAGE_OUT_DIR}/lumyn-tmp.dmg"
+rm -f "${DMG_TEMP}" "${DMG_FILE}"
+hdiutil create \
+  -volname "Lumyn" \
+  -srcfolder "${DMG_STAGING_DIR}" \
+  -ov \
+  -format UDRW \
+  "${DMG_TEMP}"
+hdiutil convert "${DMG_TEMP}" -format UDZO -imagekey zlib-level=9 -o "${DMG_FILE}"
+rm -f "${DMG_TEMP}"
+rm -rf "${DMG_STAGING_DIR}"
 
 echo "macOS artifacts:"
-echo "${ZIP_FILE}"
+echo "${DMG_FILE}"

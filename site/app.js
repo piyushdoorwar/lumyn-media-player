@@ -27,7 +27,9 @@ async function hydrateDownloadLinks() {
     const linuxAsset = release.assets.find((asset) => /_amd64\.deb$/i.test(asset.name));
     const windowsAsset = release.assets.find((asset) => /win-x64.*_setup\.exe$/i.test(asset.name)) ??
       release.assets.find((asset) => /win-x64\.zip$/i.test(asset.name));
-    const macosAsset = release.assets.find((asset) => /macos-arm64\.zip$/i.test(asset.name)) ??
+    const macosAsset = release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name)) ??
+      release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name)) ??
+      release.assets.find((asset) => /macos-arm64\.zip$/i.test(asset.name)) ??
       release.assets.find((asset) => /macos-x64\.zip$/i.test(asset.name));
 
     if (linuxAsset?.browser_download_url) {

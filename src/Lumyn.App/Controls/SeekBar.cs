@@ -88,7 +88,7 @@ public sealed class SeekBar : Control
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = double.IsInfinity(availableSize.Width) ? 240 : availableSize.Width;
-        return new Size(width, 16);
+        return new Size(width, 18);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -103,7 +103,7 @@ public sealed class SeekBar : Control
         var height = Bounds.Height;
         if (width <= 0 || height <= 0) return;
 
-        var trackHeight = 4.0;
+        var trackHeight = 5.0;
         var trackY = (height - trackHeight) / 2;
         var track = new Rect(0, trackY, width, trackHeight);
         var radius = trackHeight / 2;
@@ -119,7 +119,7 @@ public sealed class SeekBar : Control
         if (chapters is { Count: > 0 })
         {
             var range = Maximum - Minimum;
-            const double tickH = 6.0;
+            const double tickH = 8.0;
             var tickY = (height - tickH) / 2;
             if (range > 0)
             {

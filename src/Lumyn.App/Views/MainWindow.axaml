@@ -515,107 +515,140 @@
     <!-- ── Playlist / Queue sidebar ─────────────────────────────────────── -->
     <Border Grid.Column="1"
             Width="260"
-            Background="#141414"
-            BorderBrush="#252525"
+            Background="#111111"
+            BorderBrush="#1E1E1E"
             BorderThickness="1,0,0,0"
             IsVisible="{Binding IsPlaylistVisible}">
-      <Grid RowDefinitions="Auto,*,Auto">
+      <Grid RowDefinitions="44,*,Auto">
+
         <!-- Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto" Margin="14,10,8,8">
-          <TextBlock Grid.Column="0" Text="Queue"
-                     FontSize="13" FontWeight="SemiBold"
-                     Foreground="#C8C3C2" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="1"
-                     Text="{Binding PlaylistCount}"
-                     FontSize="11" Foreground="#5A5755"
-                     VerticalAlignment="Center" Margin="0,0,8,0" />
-          <Button Grid.Column="2" Classes="ctrl"
-                  Command="{Binding ClearPlaylistCommand}"
-                  ToolTip.Tip="Clear queue" Width="28" Height="28" MinWidth="28" MinHeight="28">
-            <PathIcon Width="12" Height="12" Data="{StaticResource Icon.Stop}" Foreground="#5A5755" />
-          </Button>
-        </Grid>
-        <!-- Divider -->
-        <Border Grid.Row="0" Height="1" VerticalAlignment="Bottom" Background="#252525" />
+        <Border Grid.Row="0"
+                BorderBrush="#1E1E1E"
+                BorderThickness="0,0,0,1"
+                Padding="14,0,8,0">
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBlock Grid.Column="0" Text="Queue"
+                       FontSize="11" FontWeight="SemiBold"
+                       Foreground="#5A5755"
+                       VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding PlaylistCount}"
+                       FontSize="11" Foreground="#353230"
+                       VerticalAlignment="Center" Margin="0,0,4,0" />
+            <Button Grid.Column="2" Classes="ctrl"
+                    Command="{Binding ClearPlaylistCommand}"
+                    ToolTip.Tip="Clear queue" Width="28" Height="28" MinWidth="28" MinHeight="28">
+              <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Stop}" Foreground="#3A3836" />
+            </Button>
+          </Grid>
+        </Border>
+
         <!-- Item list -->
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
           <ItemsControl Name="PlaylistItemsControl"
                         ItemsSource="{Binding PlaylistItems}"
                         DragDrop.AllowDrop="True">
+
+            <!-- Hover / active / reveal styles scoped to the list -->
+            <ItemsControl.Styles>
+              <Style Selector="Border.playlist-row:pointerover">
+                <Setter Property="Background" Value="#0BFFFFFF" />
+              </Style>
+              <Style Selector="Border.playlist-row.active">
+                <Setter Property="Background" Value="#0C3A9B4B" />
+              </Style>
+              <Style Selector="Border.playlist-row:pointerover PathIcon.drag-icon">
+                <Setter Property="Foreground" Value="#4A4846" />
+              </Style>
+              <Style Selector="TextBlock.track-name.active">
+                <Setter Property="Foreground" Value="#D0CBC7" />
+              </Style>
+            </ItemsControl.Styles>
+
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Grid ColumnDefinitions="26,4,*,28">
+                <Border Classes="playlist-row"
+                        Classes.active="{Binding IsCurrent}"
+                        Background="Transparent"
+                        Padding="0,1">
+                  <Grid ColumnDefinitions="26,3,*,28">
 
-                  <!-- ── Drag handle ──────────────────────────────────── -->
-                  <Border Grid.Column="0"
-                          Background="Transparent"
-                          Cursor="SizeAll"
-                          PointerPressed="PlaylistDragHandle_PointerPressed"
-                          ToolTip.Tip="Drag to reorder">
-                    <PathIcon Width="10" Height="10"
-                              Data="{StaticResource Icon.DragHandle}"
-                              Foreground="#3A3836"
-                              HorizontalAlignment="Center"
-                              VerticalAlignment="Center" />
-                  </Border>
+                    <!-- ── Drag handle ──────────────────────────────────── -->
+                    <Border Grid.Column="0"
+                            Background="Transparent"
+                            Cursor="SizeAll"
+                            PointerPressed="PlaylistDragHandle_PointerPressed"
+                            ToolTip.Tip="Drag to reorder">
+                      <PathIcon Classes="drag-icon"
+                                Width="9" Height="9"
+                                Data="{StaticResource Icon.DragHandle}"
+                                Foreground="#272523"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
+                    </Border>
 
-                  <!-- ── Active indicator bar ────────────────────────── -->
-                  <Border Grid.Column="1" Width="3" HorizontalAlignment="Left"
-                          Margin="0,4" CornerRadius="2"
-                          IsVisible="{Binding IsCurrent}"
-                          Background="#3A9B4B" />
+                    <!-- ── Active indicator bar ────────────────────────── -->
+                    <Border Grid.Column="1" Width="2" HorizontalAlignment="Left"
+                            Margin="0,7" CornerRadius="1"
+                            IsVisible="{Binding IsCurrent}"
+                            Background="#3A9B4B" />
 
-                  <!-- ── Filename (click to play) ────────────────────── -->
-                  <Button Grid.Column="2"
-                          Command="{Binding $parent[Window].DataContext.OpenPlaylistItemCommand}"
-                          CommandParameter="{Binding Index}"
-                          Padding="4,8" HorizontalContentAlignment="Left"
-                          Background="Transparent" BorderThickness="0"
-                          ToolTip.Tip="{Binding FilePath}">
-                    <TextBlock Text="{Binding DisplayName}"
-                               FontSize="12"
-                               Foreground="#A09C99"
-                               TextTrimming="CharacterEllipsis" />
-                  </Button>
+                    <!-- ── Filename (click to play) ────────────────────── -->
+                    <Button Grid.Column="2"
+                            Command="{Binding $parent[Window].DataContext.OpenPlaylistItemCommand}"
+                            CommandParameter="{Binding Index}"
+                            Padding="4,9" HorizontalContentAlignment="Left"
+                            Background="Transparent" BorderThickness="0"
+                            ToolTip.Tip="{Binding FilePath}">
+                      <TextBlock Classes="track-name"
+                                 Classes.active="{Binding IsCurrent}"
+                                 Text="{Binding DisplayName}"
+                                 FontSize="12"
+                                 Foreground="#5C5855"
+                                 TextTrimming="CharacterEllipsis" />
+                    </Button>
 
-                  <!-- ── Remove button ───────────────────────────────── -->
-                  <Button Grid.Column="3" Classes="ctrl"
-                          Command="{Binding $parent[Window].DataContext.RemovePlaylistItemCommand}"
-                          CommandParameter="{Binding Index}"
-                          Width="28" Height="28" MinWidth="28" MinHeight="28"
-                          Opacity="0.4"
-                          ToolTip.Tip="Remove">
-                    <PathIcon Width="10" Height="10" Data="{StaticResource Icon.WindowClose}" />
-                  </Button>
+                    <!-- ── Remove button (dim at rest, full on row hover) ───── -->
+                    <Button Grid.Column="3" Classes="ctrl remove-btn"
+                            Command="{Binding $parent[Window].DataContext.RemovePlaylistItemCommand}"
+                            CommandParameter="{Binding Index}"
+                            Width="28" Height="28" MinWidth="28" MinHeight="28"
+                            Opacity="0.35"
+                            ToolTip.Tip="Remove">
+                      <PathIcon Width="9" Height="9"
+                                Data="{StaticResource Icon.WindowClose}"
+                                Foreground="#6A6560" />
+                    </Button>
 
-                  <!-- ── Right-click context menu ────────────────────── -->
-                  <Grid.ContextMenu>
-                    <ContextMenu>
-                      <MenuItem Header="▶  Play"
-                                Click="PlaylistCtx_Play" />
-                      <Separator />
-                      <MenuItem Header="Remove from queue"
-                                Click="PlaylistCtx_Remove" />
-                      <Separator />
-                      <MenuItem Header="Add file to queue…"
-                                Click="PlaylistCtx_AddFile" />
-                      <MenuItem Header="Add folder to queue…"
-                                Click="PlaylistCtx_AddFolder" />
-                    </ContextMenu>
-                  </Grid.ContextMenu>
+                    <!-- ── Right-click context menu ────────────────────── -->
+                    <Grid.ContextMenu>
+                      <ContextMenu>
+                        <MenuItem Header="▶  Play"
+                                  Click="PlaylistCtx_Play" />
+                        <Separator />
+                        <MenuItem Header="Remove from queue"
+                                  Click="PlaylistCtx_Remove" />
+                        <Separator />
+                        <MenuItem Header="Add file to queue…"
+                                  Click="PlaylistCtx_AddFile" />
+                        <MenuItem Header="Add folder to queue…"
+                                  Click="PlaylistCtx_AddFolder" />
+                      </ContextMenu>
+                    </Grid.ContextMenu>
 
-                </Grid>
+                  </Grid>
+                </Border>
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
-        <!-- Footer -->
-        <Border Grid.Row="2" Height="1" Background="#252525" VerticalAlignment="Top" />
+
+        <!-- Footer: track position -->
         <TextBlock Grid.Row="2"
                    Text="{Binding PlaylistPositionLabel}"
-                   FontSize="11" Foreground="#4A4948"
+                   FontSize="11" Foreground="#353230"
                    HorizontalAlignment="Center"
-                   Margin="0,8"
+                   Margin="0,9"
                    IsVisible="{Binding HasPlaylist}" />
       </Grid>
     </Border>

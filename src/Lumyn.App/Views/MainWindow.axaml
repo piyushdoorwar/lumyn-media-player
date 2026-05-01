@@ -19,14 +19,16 @@
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
   <Border CornerRadius="6" ClipToBounds="True" Background="#111111">
-  <Grid RowDefinitions="38,*">
+  <Grid RowDefinitions="Auto,*">
 
     <!-- ── Top bar (own row – no mpv surface behind it) ─────────────────── -->
     <Border
         Name="TopBar"
         Grid.Row="0"
         Background="#141414"
-        IsHitTestVisible="True">
+        IsHitTestVisible="True"
+        IsVisible="{Binding ControlsVisible}"
+        MinHeight="38">
       <Grid ColumnDefinitions="Auto,*,Auto">
 
         <!-- Left: logo + open + subtitles -->

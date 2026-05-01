@@ -11,8 +11,6 @@ public sealed class SeekBar : Control
 {
     private static readonly IBrush TrackBrush   = new SolidColorBrush(Color.Parse("#554A4A4A"));
     private static readonly IBrush FillBrush    = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush ThumbBrush   = new SolidColorBrush(Color.Parse("#F7F5F3"));
-    private static readonly IPen   ThumbPen     = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
     private static readonly IBrush ChapterBrush = new SolidColorBrush(Color.Parse("#80F7F5F3"));
 
     public static readonly StyledProperty<double> MinimumProperty =
@@ -133,13 +131,6 @@ public sealed class SeekBar : Control
                 }
             }
         }
-
-        context.DrawEllipse(
-            ThumbBrush,
-            ThumbPen,
-            new Point(thumbX, height / 2),
-            6,
-            6);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)

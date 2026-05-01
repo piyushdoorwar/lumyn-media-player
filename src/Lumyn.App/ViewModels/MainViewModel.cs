@@ -70,6 +70,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private TrackInfo[] _audioTracks = [];
     private TrackInfo[] _subtitleTracks = [];
     private string? _currentSubtitleText;
+    private int _seekStep = 5;   // seconds; 5 | 10 | 30
+    private IReadOnlyList<double> _chapterPositions = [];
 
     // ── Subtitle overlay (Avalonia-rendered to avoid duplicate native subtitles) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
@@ -99,6 +101,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback = playback;
         _settings = settings;
 
+        // Restore persisted session preferences
+        _volume   = _settings.LastVolume;
+        _speed    = _settings.LastSpeed;
+        _seekStep = _settings.SeekStep;
+        _playback.SetVolume(_volume);
+        if (Math.Abs(_speed - 1.0f) > 0.001f)
+            _playback.SetSpeed(_speed);
+
         _osdTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _osdTimer.Tick += (_, _) =>
         {
@@ -111,8 +121,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
         StopCommand            = new RelayCommand(_ => Stop());
         ToggleMuteCommand      = new RelayCommand(_ => ToggleMute());
-        SeekBackwardCommand    = new RelayCommand(_ => SeekRelative(-5));
-        SeekForwardCommand     = new RelayCommand(_ => SeekRelative(5));
+        SeekBackwardCommand    = new RelayCommand(_ => SeekRelative(-_seekStep));
+        SeekForwardCommand     = new RelayCommand(_ => SeekRelative(_seekStep));
         SeekBackward30Command  = new RelayCommand(_ => SeekRelative(-30));
         SeekForward30Command   = new RelayCommand(_ => SeekRelative(30));
         VolumeUpCommand        = new RelayCommand(_ => { Volume += 5; ShowOsd($"Volume: {Volume}%"); });
@@ -122,6 +132,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ResetSpeedCommand      = new RelayCommand(_ => SetSpeed(1.0f));
         ToggleLoopCommand      = new RelayCommand(_ => ToggleLoop());
         StepFrameCommand       = new RelayCommand(_ => _playback.StepFrame());
+        StepFrameBackCommand   = new RelayCommand(_ => _playback.StepFrameBack());
         TakeScreenshotCommand  = new RelayCommand(_ => TakeScreenshot());
         ToggleAlwaysOnTopCommand = new RelayCommand(_ => IsAlwaysOnTop = !IsAlwaysOnTop);
         SetAudioTrackCommand   = new RelayCommand(p => SetAudioTrack(p));
@@ -136,6 +147,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
         ClearPlaylistCommand   = new RelayCommand(_ => ClearPlaylist());
         RemoveRecentFileCommand = new RelayCommand(p => { if (p is string path) RemoveRecentFile(path); });
+        PreviousChapterCommand = new RelayCommand(_ => _playback.SeekToChapter(-1));
+        NextChapterCommand     = new RelayCommand(_ => _playback.SeekToChapter(+1));
+        CycleSeekStepCommand   = new RelayCommand(_ => CycleSeekStep());
 
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -390,7 +404,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             var next = Math.Clamp(value, 0, 150);
             if (SetField(ref _volume, next))
+            {
                 _playback.SetVolume(next);
+                _settings.SaveSessionPreferences(next, _speed, _seekStep);
+            }
         }
     }
 
@@ -434,6 +451,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public string SpeedLabel => $"{_speed:0.##}×";
 
     public bool IsNormalSpeed => Math.Abs(_speed - 1.0f) < 0.001f;
+
+    public int SeekStep
+    {
+        get => _seekStep;
+        private set
+        {
+            if (SetField(ref _seekStep, value))
+                OnPropertyChanged(nameof(SeekStepLabel));
+        }
+    }
+
+    public string SeekStepLabel => $"{_seekStep}s";
+
+    public IReadOnlyList<double> ChapterPositions
+    {
+        get => _chapterPositions;
+        private set => SetField(ref _chapterPositions, value);
+    }
 
     public bool IsLooping
     {
@@ -487,6 +522,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand ResetSpeedCommand { get; }
     public ICommand ToggleLoopCommand { get; }
     public ICommand StepFrameCommand { get; }
+    public ICommand StepFrameBackCommand { get; }
     public ICommand TakeScreenshotCommand { get; }
     public ICommand ToggleAlwaysOnTopCommand { get; }
     public ICommand SetAudioTrackCommand { get; }
@@ -500,6 +536,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand RemovePlaylistItemCommand { get; }
     public ICommand ClearPlaylistCommand { get; }
     public ICommand RemoveRecentFileCommand { get; }
+    public ICommand PreviousChapterCommand { get; }
+    public ICommand NextChapterCommand { get; }
+    public ICommand CycleSeekStepCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
     public void PausePlayback() => _playback.Pause();
@@ -823,6 +862,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TrackArtist   = null;
         TrackAlbum    = null;
         CoverArtBitmap = null;
+        ChapterPositions = [];
         // Leave the playlist intact so the user can resume or navigate.
         NotifyPlaylistState();
         RefreshState();
@@ -844,7 +884,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         _playback.SetSpeed(rate);
         Speed = rate;
+        _settings.SaveSessionPreferences(_volume, rate, _seekStep);
         ShowOsd($"Speed: {new MainViewModel.SpeedDisplay(rate)}");
+    }
+
+    private void CycleSeekStep()
+    {
+        SeekStep = _seekStep switch { 5 => 10, 10 => 30, _ => 5 };
+        _settings.SaveSessionPreferences(_volume, _speed, _seekStep);
+        ShowOsd($"Seek step: {_seekStep}s");
     }
 
     private void AdjustSpeed(int direction)
@@ -979,6 +1027,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         SubtitleTracks = [.. _playback.GetSubtitleTracks()
             .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name, t.IsSelected))];
+
+        ChapterPositions = _playback.GetChapterPositions();
     }
 
     private void RefreshTracksIfNeeded()

@@ -210,6 +210,13 @@ public sealed class PlaybackService : IDisposable
         Command("frame-step");
     }
 
+    public void StepFrameBack()
+    {
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        SetFlag("pause", true);
+        Command("frame-back-step");
+    }
+
     public void SetVolume(int volume)
     {
         var clamped = Math.Clamp(volume, 0, 150);
@@ -570,8 +577,28 @@ public sealed class PlaybackService : IDisposable
         }
     }
 
-    private bool GetFlag(string name)
+    public double[] GetChapterPositions()
     {
+        if (_mpv == IntPtr.Zero) return [];
+        var count = GetInt64("chapter-list/count");
+        if (count <= 0) return [];
+        var positions = new List<double>((int)count);
+        for (var i = 0; i < count; i++)
+        {
+            var t = GetDouble($"chapter-list/{i}/time");
+            if (!double.IsNaN(t))
+                positions.Add(t);
+        }
+        return [.. positions];
+    }
+
+    public void SeekToChapter(int direction)
+    {
+        if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        Command("add", "chapter", direction > 0 ? "1" : "-1");
+    }
+
+    private bool GetFlag(string name)    {
         if (_mpv == IntPtr.Zero) return false;
         var raw = 0;
         unsafe

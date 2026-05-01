@@ -15,6 +15,11 @@ public sealed class SettingsService
     private readonly Dictionary<string, SubtitleEntry> _subtitleSettings;
     private readonly Dictionary<string, List<BookmarkEntry>> _bookmarks;
 
+    // ── Session-level preferences ─────────────────────────────────────────
+    public int   LastVolume   { get; private set; } = 80;
+    public float LastSpeed    { get; private set; } = 1.0f;
+    public int   SeekStep     { get; private set; } = 5;    // seconds (5 | 10 | 30)
+
     public SettingsService()
     {
         var configDir = Path.Combine(
@@ -30,9 +35,22 @@ public sealed class SettingsService
         _recentFiles      = settings.RecentFiles;
         _subtitleSettings = settings.SubtitleSettings;
         _bookmarks        = settings.Bookmarks;
+        LastVolume        = settings.LastVolume;
+        LastSpeed         = settings.LastSpeed;
+        SeekStep          = settings.SeekStep;
     }
 
     public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
+
+    // ── Recent files ────────────────────────────────────────────────────────
+
+    public void SaveSessionPreferences(int volume, float speed, int seekStep)
+    {
+        LastVolume = Math.Clamp(volume, 0, 150);
+        LastSpeed  = Math.Clamp(speed, 0.25f, 4.0f);
+        SeekStep   = seekStep is 5 or 10 or 30 ? seekStep : 5;
+        Save();
+    }
 
     // ── Recent files ────────────────────────────────────────────────────────
 
@@ -148,7 +166,10 @@ public sealed class SettingsService
             ResumeDurations  = _resumeDurations,
             RecentFiles      = _recentFiles,
             SubtitleSettings = _subtitleSettings,
-            Bookmarks        = _bookmarks
+            Bookmarks        = _bookmarks,
+            LastVolume       = LastVolume,
+            LastSpeed        = LastSpeed,
+            SeekStep         = SeekStep
         };
         var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
@@ -188,6 +209,9 @@ public sealed class SettingsService
         public List<string> RecentFiles { get; set; } = [];
         public Dictionary<string, SubtitleEntry> SubtitleSettings { get; set; } = [];
         public Dictionary<string, List<BookmarkEntry>> Bookmarks { get; set; } = [];
+        public int   LastVolume { get; set; } = 80;
+        public float LastSpeed  { get; set; } = 1.0f;
+        public int   SeekStep   { get; set; } = 5;
     }
 }
 

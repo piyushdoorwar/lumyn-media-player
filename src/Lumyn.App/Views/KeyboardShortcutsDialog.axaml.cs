@@ -13,15 +13,19 @@ public partial class KeyboardShortcutsDialog : Window
         ("Space",        "Play / Pause"),
         ("S",            "Open subtitles dialog"),
         (".",            "Step one frame forward"),
+        (",",            "Step one frame back"),
+        ("Page Up",      "Previous chapter"),
+        ("Page Down",    "Next chapter"),
         ("L",            "Toggle loop"),
     ];
 
     private static readonly (string Key, string Action)[] Seeking =
     [
-        ("←",            "Seek back 5 s"),
-        ("→",            "Seek forward 5 s"),
+        ("←",            "Seek back (step)"),
+        ("→",            "Seek forward (step)"),
         ("Ctrl + ←",     "Seek back 30 s"),
         ("Ctrl + →",     "Seek forward 30 s"),
+        ("click badge",  "Cycle seek step: 5s / 10s / 30s"),
     ];
 
     private static readonly (string Key, string Action)[] Volume =

@@ -192,8 +192,18 @@ public partial class MainWindow : Window
                 ViewModel.SeekForwardCommand.Execute(null);
                 ShowControls(); e.Handled = true; break;
 
-            case Key.OemPeriod: // . → frame step
+            case Key.OemPeriod: // . → frame step forward
                 ViewModel.StepFrameCommand.Execute(null);
+                ShowControls(); e.Handled = true; break;
+            case Key.OemComma: // , → frame step back
+                ViewModel.StepFrameBackCommand.Execute(null);
+                ShowControls(); e.Handled = true; break;
+
+            case Key.PageUp: // page up → previous chapter
+                ViewModel.PreviousChapterCommand.Execute(null);
+                ShowControls(); e.Handled = true; break;
+            case Key.PageDown: // page down → next chapter
+                ViewModel.NextChapterCommand.Execute(null);
                 ShowControls(); e.Handled = true; break;
 
             // ── Volume ──────────────────────────────────────────────────────

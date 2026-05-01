@@ -45,7 +45,7 @@ Download the latest release from:
 
 https://github.com/piyushdoorwar/lumyn-media-player/releases/latest
 
-Ubuntu users can install the `.deb` package. Windows users can download and extract the portable `.zip`, then run `Lumyn.exe`. macOS users can download and extract the `.app` zip.
+Ubuntu users can install the `.deb` package. Windows users can run the `.exe` installer. macOS users can open the `.dmg` and drag Lumyn to their Applications folder.
 
 ## Run Locally
 

@@ -11,11 +11,11 @@
     MinHeight="420"
     CanResize="True"
     WindowStartupLocation="CenterOwner"
-    Background="#1E1E1E">
+    Background="#1A1A1A">
 
   <Grid RowDefinitions="*,Auto">
 
-    <TabControl Grid.Row="0" Margin="16,10,16,0">
+    <TabControl Grid.Row="0" Margin="14,10,14,0">
 
       <!-- File tab: current file + inline search -->
       <TabItem Header="Subtitle file">
@@ -196,71 +196,146 @@
 
       <!-- Appearance tab -->
       <TabItem Header="Appearance">
-        <StackPanel Margin="0,16,0,0" Spacing="16">
+        <Grid RowDefinitions="Auto,16,*" Margin="0,14,0,0">
 
-          <!-- Text size -->
-          <Grid ColumnDefinitions="130,*">
-            <TextBlock Grid.Column="0" Text="Text size"
-                       VerticalAlignment="Center" Foreground="#DEDAD5" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-              <Button Name="SizeSmallBtn"  Content="Small"  MinWidth="80"
-                      Click="SizeButton_Click" Tag="Small" />
-              <Button Name="SizeMediumBtn" Content="Medium" MinWidth="80"
-                      Click="SizeButton_Click" Tag="Medium" />
-              <Button Name="SizeLargeBtn"  Content="Large"  MinWidth="80"
-                      Click="SizeButton_Click" Tag="Large" />
-            </StackPanel>
-          </Grid>
-
-          <!-- Font -->
-          <Grid ColumnDefinitions="130,*">
-            <TextBlock Grid.Column="0" Text="Font"
-                       VerticalAlignment="Center" Foreground="#DEDAD5" />
-            <ComboBox Grid.Column="1" Name="FontCombo"
-                      Background="#2D2D2D" Foreground="#F7F5F3"
-                      BorderBrush="#4D4658"
-                      MaxDropDownHeight="220"
-                      Focusable="True"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="FontCombo_SelectionChanged" />
-          </Grid>
-
-          <!-- Colour -->
-          <Grid ColumnDefinitions="130,*">
-            <TextBlock Grid.Column="0" Text="Colour"
-                       VerticalAlignment="Center" Foreground="#DEDAD5" />
-            <ComboBox Grid.Column="1" Name="ColorCombo"
-                      Background="#2D2D2D" Foreground="#F7F5F3"
-                      BorderBrush="#4D4658"
-                      MaxDropDownHeight="220"
-                      Focusable="True"
-                      HorizontalAlignment="Stretch"
-                      SelectionChanged="ColorCombo_SelectionChanged" />
-          </Grid>
-
-          <!-- Sync delay -->
-          <Grid ColumnDefinitions="130,Auto,8,Auto,8,Auto">
-            <TextBlock Grid.Column="0" Text="Sync delay"
-                       VerticalAlignment="Center" Foreground="#DEDAD5" />
-            <Button Grid.Column="1" Name="DelayMinusBtn" Content="&#8722;"
-                    Width="36" Height="36" Click="DelayMinus_Click" FontSize="18"
-                    Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
-            <Border Grid.Column="3" Width="110"
-                    Background="#2D2D2D" CornerRadius="5"
-                    BorderBrush="#4D4658" BorderThickness="1"
-                    Padding="8,6">
-              <TextBlock Name="DelayLabel" Text="0 ms"
+          <!-- Live preview -->
+          <Border Grid.Row="0"
+                  MinHeight="132"
+                  Background="#101010"
+                  BorderBrush="#2A2A2A"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  ClipToBounds="True">
+            <Grid RowDefinitions="*,Auto" Margin="16,14">
+              <Border Grid.Row="0"
+                      Width="190"
+                      Height="70"
+                      Background="#181818"
+                      CornerRadius="4"
+                      HorizontalAlignment="Center"
+                      VerticalAlignment="Center"
+                      Opacity="0.9" />
+              <TextBlock Grid.Row="0"
+                         Name="PreviewText"
+                         Text="Every line should feel easy to read."
+                         TextAlignment="Center"
                          HorizontalAlignment="Center"
-                         Foreground="#F7F5F3" FontSize="14" FontWeight="SemiBold" />
-            </Border>
-            <Button Grid.Column="5" Name="DelayPlusBtn" Content="+"
-                    Width="36" Height="36" Click="DelayPlus_Click" FontSize="18"
-                    Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
-          </Grid>
-          <TextBlock Text="Positive = later  ·  Negative = earlier"
-                     FontSize="11" Foreground="#807C79" Margin="130,0,0,0" />
+                         VerticalAlignment="Center"
+                         TextWrapping="Wrap"
+                         MaxWidth="460"
+                         FontWeight="SemiBold">
+                <TextBlock.Effect>
+                  <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="Black" Opacity="0.9" />
+                </TextBlock.Effect>
+              </TextBlock>
+              <TextBlock Grid.Row="1"
+                         Text="PREVIEW"
+                         FontSize="10"
+                         FontWeight="SemiBold"
+                         Foreground="#55514E"
+                         HorizontalAlignment="Center"
+                         Margin="0,8,0,0" />
+            </Grid>
+          </Border>
 
-        </StackPanel>
+          <!-- Controls -->
+          <StackPanel Grid.Row="2" Spacing="10">
+
+            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+              <Grid ColumnDefinitions="120,*">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="Text size"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="#DEDAD5" />
+                  <TextBlock Text="Subtitle scale"
+                             FontSize="10"
+                             Foreground="#6A6560" />
+                </StackPanel>
+                <Grid Grid.Column="1" ColumnDefinitions="*,8,*,8,*">
+                  <Button Grid.Column="0" Name="SizeSmallBtn" Content="Small"
+                          Click="SizeButton_Click" Tag="Small" />
+                  <Button Grid.Column="2" Name="SizeMediumBtn" Content="Medium"
+                          Click="SizeButton_Click" Tag="Medium" />
+                  <Button Grid.Column="4" Name="SizeLargeBtn" Content="Large"
+                          Click="SizeButton_Click" Tag="Large" />
+                </Grid>
+              </Grid>
+            </Border>
+
+            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+              <Grid ColumnDefinitions="120,*">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="Font"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="#DEDAD5" />
+                  <TextBlock Text="Typeface"
+                             FontSize="10"
+                             Foreground="#6A6560" />
+                </StackPanel>
+                <ComboBox Grid.Column="1" Name="FontCombo"
+                          Background="#2D2D2D" Foreground="#F7F5F3"
+                          BorderBrush="#4D4658"
+                          MaxDropDownHeight="220"
+                          Focusable="True"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="FontCombo_SelectionChanged" />
+              </Grid>
+            </Border>
+
+            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+              <Grid ColumnDefinitions="120,*">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="Colour"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="#DEDAD5" />
+                  <TextBlock Text="Foreground"
+                             FontSize="10"
+                             Foreground="#6A6560" />
+                </StackPanel>
+                <ComboBox Grid.Column="1" Name="ColorCombo"
+                          Background="#2D2D2D" Foreground="#F7F5F3"
+                          BorderBrush="#4D4658"
+                          MaxDropDownHeight="220"
+                          Focusable="True"
+                          HorizontalAlignment="Stretch"
+                          SelectionChanged="ColorCombo_SelectionChanged" />
+              </Grid>
+            </Border>
+
+            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+              <Grid ColumnDefinitions="120,Auto,8,*,8,Auto">
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                  <TextBlock Text="Sync delay"
+                             FontSize="13"
+                             FontWeight="SemiBold"
+                             Foreground="#DEDAD5" />
+                  <TextBlock Text="Earlier / later"
+                             FontSize="10"
+                             Foreground="#6A6560" />
+                </StackPanel>
+                <Button Grid.Column="1" Name="DelayMinusBtn" Content="&#8722;"
+                        Width="36" Height="34" Click="DelayMinus_Click" FontSize="18"
+                        Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+                <Border Grid.Column="3"
+                        Background="#2D2D2D" CornerRadius="5"
+                        BorderBrush="#4D4658" BorderThickness="1"
+                        Padding="8,6">
+                  <TextBlock Name="DelayLabel" Text="0 ms"
+                             HorizontalAlignment="Center"
+                             Foreground="#F7F5F3" FontSize="13" FontWeight="SemiBold" />
+                </Border>
+                <Button Grid.Column="5" Name="DelayPlusBtn" Content="+"
+                        Width="36" Height="34" Click="DelayPlus_Click" FontSize="18"
+                        Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+              </Grid>
+            </Border>
+
+          </StackPanel>
+
+        </Grid>
       </TabItem>
 
     </TabControl>

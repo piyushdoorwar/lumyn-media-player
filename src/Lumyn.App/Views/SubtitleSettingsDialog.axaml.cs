@@ -268,19 +268,26 @@ public partial class SubtitleSettingsDialog : Window
         {
             _fontSize = size;
             RefreshSizeButtons();
+            RefreshPreview();
         }
     }
 
     private void FontCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox { SelectedItem: Choice<SubtitleFont> choice })
+        {
             _font = choice.Value;
+            RefreshPreview();
+        }
     }
 
     private void ColorCombo_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ComboBox { SelectedItem: Choice<SubtitleColor> choice })
+        {
             _color = choice.Value;
+            RefreshPreview();
+        }
     }
 
     private void DelayMinus_Click(object? sender, RoutedEventArgs e)
@@ -318,6 +325,7 @@ public partial class SubtitleSettingsDialog : Window
         RefreshFontCombo();
         RefreshColorCombo();
         RefreshDelayLabel();
+        RefreshPreview();
     }
 
     private void RefreshFilePath()
@@ -362,6 +370,35 @@ public partial class SubtitleSettingsDialog : Window
         var label = this.FindControl<TextBlock>("DelayLabel");
         if (label is not null)
             label.Text = _delayMs == 0 ? "0 ms" : $"{_delayMs:+0;-0} ms";
+    }
+
+    private void RefreshPreview()
+    {
+        var preview = this.FindControl<TextBlock>("PreviewText");
+        if (preview is null) return;
+
+        preview.FontSize = _fontSize switch
+        {
+            SubtitleFontSize.Small  => 18,
+            SubtitleFontSize.Large  => 28,
+            _                       => 23
+        };
+
+        preview.FontFamily = _font switch
+        {
+            SubtitleFont.Serif     => new FontFamily("Liberation Serif,DejaVu Serif,Times New Roman,serif"),
+            SubtitleFont.Monospace => new FontFamily("Courier New,Liberation Mono,DejaVu Sans Mono,monospace"),
+            SubtitleFont.Arial     => new FontFamily("Arial,Liberation Sans,sans-serif"),
+            _                      => FontFamily.Default
+        };
+
+        preview.Foreground = _color switch
+        {
+            SubtitleColor.Yellow => new SolidColorBrush(Color.Parse("#FFE600")),
+            SubtitleColor.Grey   => new SolidColorBrush(Color.Parse("#BBBBBB")),
+            SubtitleColor.Black  => new SolidColorBrush(Color.Parse("#111111")),
+            _                    => new SolidColorBrush(Color.Parse("#F7F5F3"))
+        };
     }
 
     private void MarkSelected(string name, bool selected)

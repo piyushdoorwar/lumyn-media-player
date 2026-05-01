@@ -375,6 +375,12 @@ public partial class MainWindow : Window
     private void KeyboardShortcutsButton_OnClick(object? sender, RoutedEventArgs e)
         => OpenKeyboardShortcutsDialog();
 
+    private void AboutButton_Click(object? sender, RoutedEventArgs e)
+        => OpenAboutDialog();
+
+    private void About_Click(object? sender, RoutedEventArgs e)
+        => OpenAboutDialog();
+
     private void Speed_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is MenuItem mi &&
@@ -506,6 +512,12 @@ public partial class MainWindow : Window
     private void OpenKeyboardShortcutsDialog()
     {
         var dialog = new KeyboardShortcutsDialog();
+        dialog.ShowDialog(this);
+    }
+
+    private void OpenAboutDialog()
+    {
+        var dialog = new AboutDialog();
         dialog.ShowDialog(this);
     }
 

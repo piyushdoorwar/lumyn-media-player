@@ -70,8 +70,12 @@
                      IsHitTestVisible="False" />
         </Border>
 
-        <!-- Right: pin | window chrome -->
+        <!-- Right: info | pin | window chrome -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="0">
+          <Button Classes="icon ctrl" Name="AboutButton"
+                  Click="AboutButton_Click" ToolTip.Tip="About Lumyn">
+            <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Info}" />
+          </Button>
           <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"
                   Command="{Binding ToggleAlwaysOnTopCommand}" ToolTip.Tip="Always on top">
@@ -421,6 +425,8 @@
 
         <!-- Always on top (header updated in code-behind) -->
         <MenuItem Name="AlwaysOnTopMenuItem" Header="Always on Top" Click="AlwaysOnTop_Click" />
+        <Separator />
+        <MenuItem Header="About Lumyn…" Click="About_Click" />
 
       </ContextMenu>
     </Panel.ContextMenu>

@@ -20,4 +20,9 @@
   <ItemGroup>
     <AvaloniaResource Include="Assets/**" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copy VERSION file to output so AboutDialog can read it at runtime -->
+    <None Include="../../VERSION" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

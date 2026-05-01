@@ -31,6 +31,7 @@ AllowNoIcons=yes
 LicenseFile={#RepoRoot}\LICENSE
 OutputDir={#RepoRoot}\artifacts\packages
 OutputBaseFilename=lumyn_{#AppVersion}_win-x64_setup
+SetupIconFile={#RepoRoot}\src\Lumyn.App\Assets\Icons\lumyn.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern

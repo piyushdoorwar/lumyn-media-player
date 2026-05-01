@@ -4,6 +4,7 @@
     <AssemblyName>Lumyn</AssemblyName>
     <RootNamespace>Lumyn.App</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ApplicationIcon>Assets/Icons/lumyn.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -18,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets/**" />
+    <AvaloniaResource Include="Assets/**" Exclude="Assets/Icons/lumyn.ico" />
   </ItemGroup>
 
   <ItemGroup>

@@ -175,6 +175,7 @@ cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
 copy_dylib_closure "${MPV_LIB}"
 fix_install_names
 cp "src/Lumyn.App/Assets/Icons/lumyn.svg" "${RESOURCES_DIR}/lumyn.svg"
+cp "packaging/macos/lumyn.icns" "${RESOURCES_DIR}/lumyn.icns"
 mkdir -p "${RESOURCES_DIR}/licenses"
 cp "LICENSE" "${RESOURCES_DIR}/licenses/Lumyn-LICENSE.txt"
 cp "packaging/macos/THIRD-PARTY-NOTICES.txt" "${RESOURCES_DIR}/licenses/THIRD-PARTY-NOTICES.txt"
@@ -196,6 +197,8 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
   <string>${VERSION}</string>
   <key>CFBundleExecutable</key>
   <string>Lumyn</string>
+  <key>CFBundleIconFile</key>
+  <string>lumyn</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>NSHighResolutionCapable</key>

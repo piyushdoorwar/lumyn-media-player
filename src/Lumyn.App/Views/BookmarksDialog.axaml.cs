@@ -51,7 +51,9 @@ public partial class BookmarksDialog : Window
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"),
-            Margin = new Avalonia.Thickness(0, 2)
+            ColumnSpacing = 6,
+            Margin = new Avalonia.Thickness(0, 3),
+            MinHeight = 34
         };
 
         // ── Timestamp pill ──────────────────────────────────────────────────
@@ -73,15 +75,22 @@ public partial class BookmarksDialog : Window
         Grid.SetColumn(timeBorder, 0);
 
         // ── Label panel (TextBlock + TextBox toggled) ───────────────────────
-        var labelPanel = new Panel { VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        var labelPanel = new Panel
+        {
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
+        };
 
         var labelText = new TextBlock
         {
-            Text = string.IsNullOrWhiteSpace(entry.Label) ? entry.FormattedTime : entry.Label,
+            Text = string.IsNullOrWhiteSpace(entry.Label) ? "Add label…" : entry.Label,
             FontSize = 12,
+            FontStyle = string.IsNullOrWhiteSpace(entry.Label)
+                ? Avalonia.Media.FontStyle.Italic
+                : Avalonia.Media.FontStyle.Normal,
             Foreground = new Avalonia.Media.SolidColorBrush(
                 string.IsNullOrWhiteSpace(entry.Label)
-                    ? Avalonia.Media.Color.Parse("#4A4948")
+                    ? Avalonia.Media.Color.Parse("#3A3937")
                     : Avalonia.Media.Color.Parse("#C8C3C2")),
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
@@ -92,11 +101,13 @@ public partial class BookmarksDialog : Window
         {
             Text = entry.Label,
             FontSize = 12,
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A2A2A")),
+            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#252525")),
             Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#E8E4E0")),
-            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A5A40")),
+            CaretBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")),
+            SelectionBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B40")),
+            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A3937")),
             BorderThickness = new Avalonia.Thickness(1),
-            Padding = new Avalonia.Thickness(6, 3),
+            Padding = new Avalonia.Thickness(8, 5),
             CornerRadius = new Avalonia.CornerRadius(4),
             Watermark = "Add a name…",
             IsVisible = startEditing,
@@ -107,11 +118,11 @@ public partial class BookmarksDialog : Window
         {
             var newLabel = labelBox.Text?.Trim() ?? "";
             _vm.RenameBookmark(index, newLabel);
-            labelText.Text = string.IsNullOrWhiteSpace(newLabel) ? entry.FormattedTime : newLabel;
+            var hasLabel = !string.IsNullOrWhiteSpace(newLabel);
+            labelText.Text = hasLabel ? newLabel : "Add label…";
+            labelText.FontStyle = hasLabel ? Avalonia.Media.FontStyle.Normal : Avalonia.Media.FontStyle.Italic;
             labelText.Foreground = new Avalonia.Media.SolidColorBrush(
-                string.IsNullOrWhiteSpace(newLabel)
-                    ? Avalonia.Media.Color.Parse("#4A4948")
-                    : Avalonia.Media.Color.Parse("#C8C3C2"));
+                hasLabel ? Avalonia.Media.Color.Parse("#C8C3C2") : Avalonia.Media.Color.Parse("#3A3937"));
             labelBox.IsVisible = false;
             labelText.IsVisible = true;
         }
@@ -153,15 +164,26 @@ public partial class BookmarksDialog : Window
         Grid.SetColumn(editBtn, 2);
 
         // ── Jump button ─────────────────────────────────────────────────────
+        var jumpContent = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 5,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+        if (Application.Current?.Resources.TryGetResource("Icon.Play", Avalonia.Styling.ThemeVariant.Default, out var playIcon) == true
+            && playIcon is Avalonia.Media.StreamGeometry playGeom)
+            jumpContent.Children.Add(new PathIcon { Data = playGeom, Width = 10, Height = 10, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")) });
+        jumpContent.Children.Add(new TextBlock { Text = "Jump", FontSize = 11, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
         var jumpBtn = new Button
         {
-            Content = "▶ Jump",
-            Background = Avalonia.Media.Brushes.Transparent,
-            Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A6560")),
-            BorderThickness = new Avalonia.Thickness(0),
-            Padding = new Avalonia.Thickness(8, 4),
-            FontSize = 11,
+            Content = jumpContent,
+            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A3A2E")),
+            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A5A40")),
+            BorderThickness = new Avalonia.Thickness(1),
+            CornerRadius = new Avalonia.CornerRadius(4),
+            Padding = new Avalonia.Thickness(10, 5),
             VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
             Tag = entry
         };
         jumpBtn.Click += JumpBtn_Click;

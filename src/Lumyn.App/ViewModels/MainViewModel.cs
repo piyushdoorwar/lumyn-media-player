@@ -135,6 +135,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OpenPlaylistItemCommand   = new RelayCommand(p => { if (p is int i) _ = PlayFromIndexAsync(i); });
         RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
         ClearPlaylistCommand   = new RelayCommand(_ => ClearPlaylist());
+        RemoveRecentFileCommand = new RelayCommand(p => { if (p is string path) RemoveRecentFile(path); });
 
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -195,6 +196,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
         _settings.RemoveBookmark(CurrentFilePath, index);
+    }
+
+    public void RemoveRecentFile(string filePath)
+    {
+        _settings.RemoveRecentFile(filePath);
+        OnPropertyChanged(nameof(RecentFiles));
+        OnPropertyChanged(nameof(RecentFileItems));
+        OnPropertyChanged(nameof(HasRecentFiles));
     }
 
     public void JumpToBookmark(TimeSpan position)
@@ -490,6 +499,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand OpenPlaylistItemCommand { get; }
     public ICommand RemovePlaylistItemCommand { get; }
     public ICommand ClearPlaylistCommand { get; }
+    public ICommand RemoveRecentFileCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
     public void PausePlayback() => _playback.Pause();

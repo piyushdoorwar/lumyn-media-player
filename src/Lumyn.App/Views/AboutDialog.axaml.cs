@@ -90,7 +90,55 @@ public partial class AboutDialog : Window
                 new ProductInfoHeaderValue("Lumyn", AppVersion));
             http.Timeout = TimeSpan.FromSeconds(10);
 
-            var json = await http.GetStringAsync(GitHubReleasesApi);
+            var response = await http.GetAsync(GitHubReleasesApi);
+
+            // 404 = no releases published yet; 403 = rate-limited.
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (statusText is not null)
+                    {
+                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
+                            Avalonia.Media.Color.Parse("#6A6560"));
+                        statusText.Text = "No releases published yet.";
+                    }
+                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                });
+                return;
+            }
+
+            if (response.StatusCode == System.Net.HttpStatusCode.Forbidden)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (statusText is not null)
+                    {
+                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
+                            Avalonia.Media.Color.Parse("#B05050"));
+                        statusText.Text = "GitHub rate limit reached. Try again later.";
+                    }
+                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                });
+                return;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (statusText is not null)
+                    {
+                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
+                            Avalonia.Media.Color.Parse("#B05050"));
+                        statusText.Text = $"GitHub returned {(int)response.StatusCode}. Try again later.";
+                    }
+                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                });
+                return;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
 

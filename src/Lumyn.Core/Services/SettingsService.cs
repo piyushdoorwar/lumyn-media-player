@@ -45,6 +45,12 @@ public sealed class SettingsService
         Save();
     }
 
+    public void RemoveRecentFile(string filePath)
+    {
+        if (_recentFiles.Remove(filePath))
+            Save();
+    }
+
     // ── Resume positions ────────────────────────────────────────────────────
 
     public TimeSpan GetResumePosition(string filePath)

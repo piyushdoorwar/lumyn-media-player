@@ -3,15 +3,17 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using System.Collections.Generic;
 
 namespace Lumyn.App.Controls;
 
 public sealed class SeekBar : Control
 {
-    private static readonly IBrush TrackBrush = new SolidColorBrush(Color.Parse("#554A4A4A"));
-    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush ThumbBrush = new SolidColorBrush(Color.Parse("#F7F5F3"));
-    private static readonly IPen ThumbPen = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
+    private static readonly IBrush TrackBrush   = new SolidColorBrush(Color.Parse("#554A4A4A"));
+    private static readonly IBrush FillBrush    = new SolidColorBrush(Color.Parse("#3A9B4B"));
+    private static readonly IBrush ThumbBrush   = new SolidColorBrush(Color.Parse("#F7F5F3"));
+    private static readonly IPen   ThumbPen     = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
+    private static readonly IBrush ChapterBrush = new SolidColorBrush(Color.Parse("#80F7F5F3"));
 
     public static readonly StyledProperty<double> MinimumProperty =
         AvaloniaProperty.Register<SeekBar, double>(nameof(Minimum), 0);
@@ -23,6 +25,13 @@ public sealed class SeekBar : Control
         AvaloniaProperty.Register<SeekBar, double>(
             nameof(Value),
             defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+
+    // List of chapter start positions in the same units as Value (e.g. seconds).
+    // First chapter is at 0 and is not drawn (it would sit on the left edge).
+    public static readonly StyledProperty<IReadOnlyList<double>> ChapterPositionsProperty =
+        AvaloniaProperty.Register<SeekBar, IReadOnlyList<double>>(
+            nameof(ChapterPositions),
+            defaultValue: []);
 
     public static readonly RoutedEvent<RoutedEventArgs> SeekCommittedEvent =
         RoutedEvent.Register<SeekBar, RoutedEventArgs>(
@@ -50,6 +59,12 @@ public sealed class SeekBar : Control
         set => SetValue(ValueProperty, value);
     }
 
+    public IReadOnlyList<double> ChapterPositions
+    {
+        get => GetValue(ChapterPositionsProperty);
+        set => SetValue(ChapterPositionsProperty, value);
+    }
+
     public event EventHandler<RoutedEventArgs>? SeekCommitted
     {
         add => AddHandler(SeekCommittedEvent, value);
@@ -58,7 +73,7 @@ public sealed class SeekBar : Control
 
     static SeekBar()
     {
-        AffectsRender<SeekBar>(ValueProperty, MinimumProperty, MaximumProperty);
+        AffectsRender<SeekBar>(ValueProperty, MinimumProperty, MaximumProperty, ChapterPositionsProperty);
         FocusableProperty.OverrideDefaultValue<SeekBar>(false);
     }
 
@@ -98,6 +113,27 @@ public sealed class SeekBar : Control
 
         context.DrawRectangle(TrackBrush, null, track, radius, radius);
         context.DrawRectangle(FillBrush, null, filled, radius, radius);
+
+        // Chapter tick marks — 1 px wide, slightly taller than the track
+        var chapters = ChapterPositions;
+        if (chapters is { Count: > 0 })
+        {
+            var range = Maximum - Minimum;
+            const double tickH = 6.0;
+            var tickY = (height - tickH) / 2;
+            if (range > 0)
+            {
+                foreach (var pos in chapters)
+                {
+                    // Skip the very start (chapter 1 at 0) and out-of-range values
+                    if (pos <= Minimum || pos >= Maximum) continue;
+                    var tickX = Math.Round(width * (pos - Minimum) / range);
+                    context.DrawRectangle(ChapterBrush, null,
+                        new Rect(tickX - 0.5, tickY, 1, tickH));
+                }
+            }
+        }
+
         context.DrawEllipse(
             ThumbBrush,
             ThumbPen,

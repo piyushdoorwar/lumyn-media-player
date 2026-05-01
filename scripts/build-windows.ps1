@@ -37,10 +37,10 @@ $repoRoot = Resolve-Path (Join-Path $scriptDir "..")
 Set-Location $repoRoot
 
 $appProject = "src/Lumyn.App/Lumyn.App.csproj"
-$publishDir = Join-Path "artifacts/publish" $Rid
-$packageDir = Join-Path "artifacts/pkg" "lumyn-windows"
+$publishDir = Join-Path $repoRoot "artifacts\publish\$Rid"
+$packageDir = Join-Path $repoRoot "artifacts\pkg\lumyn-windows"
 $packageRoot = Join-Path $packageDir "Lumyn"
-$packageOutDir = "artifacts/packages"
+$packageOutDir = Join-Path $repoRoot "artifacts\packages"
 
 function Get-MpvArchiveUrl {
     param(

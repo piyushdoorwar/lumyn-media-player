@@ -441,8 +441,15 @@ public sealed class PlaybackService : IDisposable
                     RaiseStateChanged();
                     break;
                 case MpvEventId.EndFile:
-                    if (!_loop)
-                        EndReached?.Invoke(this, EventArgs.Empty);
+                    // reason 0 = MPV_END_FILE_REASON_EOF (natural end).
+                    // Any other reason (stop=2, quit=3, error=4, redirect=5) means the file
+                    // was replaced or stopped externally — do NOT auto-advance in those cases.
+                    if (!_loop && evt.data != IntPtr.Zero)
+                    {
+                        var endFileEvt = Marshal.PtrToStructure<MpvNative.MpvEventEndFile>(evt.data);
+                        if (endFileEvt.reason == 0)
+                            EndReached?.Invoke(this, EventArgs.Empty);
+                    }
                     RaiseStateChanged();
                     break;
                 case MpvEventId.Pause:
@@ -826,6 +833,15 @@ internal static partial class MpvNative
         public readonly IntPtr name;
         public readonly MpvFormat format;
         public readonly IntPtr data;
+    }
+
+    /// <summary>Maps to <c>mpv_event_end_file</c>.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvEventEndFile
+    {
+        /// <summary>0 = EOF (natural end), 2 = stop, 3 = quit, 4 = error, 5 = redirect.</summary>
+        public readonly int reason;
+        public readonly int error;
     }
 
     [StructLayout(LayoutKind.Sequential)]

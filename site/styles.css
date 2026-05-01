@@ -84,6 +84,11 @@ main {
   gap: clamp(32px, 6vw, 78px);
   min-height: calc(100vh - 64px);
   padding: clamp(48px, 8vw, 96px) clamp(18px, 5vw, 64px);
+  padding-bottom: clamp(32px, 5vw, 56px);
+}
+
+.hero > .marquee-wrap {
+  grid-column: 1 / -1;
 }
 
 .hero-copy {
@@ -1008,7 +1013,75 @@ nav a:hover::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track {
+  .marquee-track,
+  .marquee-track--rtl {
     animation: none;
   }
+}
+
+/* ── Feature preview card marquee ───────────────────────────────────────── */
+.marquee-wrap--cards {
+  margin-top: 48px;
+  margin-bottom: -8px;
+}
+
+.marquee-track--rtl {
+  animation-name: marquee-scroll-rtl;
+  animation-duration: 120s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.marquee-wrap--cards:hover .marquee-track--rtl {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-scroll-rtl {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+
+.marquee-cards {
+  display: flex;
+  gap: 20px;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+.preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-shrink: 0;
+  cursor: default;
+}
+
+.preview-card__img {
+  width: 380px;
+  /* SVGs are 320×220, so aspect ratio is 16/11 */
+  aspect-ratio: 320 / 220;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition:
+    transform 0.28s ease,
+    box-shadow 0.28s ease,
+    border-color 0.28s ease;
+}
+
+.preview-card:hover .preview-card__img {
+  transform: translateY(-5px) scale(1.015);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
+  border-color: rgba(58, 155, 75, 0.4);
+}
+
+.preview-card span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-align: center;
+  letter-spacing: 0.02em;
 }

@@ -69,31 +69,6 @@
             </div>
           </div>
         </div>
-      </section>
-
-      <section class="band" id="features">
-        <div class="section-heading" data-reveal>
-          <p class="eyebrow">What it does</p>
-          <h2>Built for watching, not managing.</h2>
-        </div>
-        <div class="feature-grid">
-          <article data-reveal>
-            <h3>mpv powered</h3>
-            <p>Native playback through mpv, packaged with release builds for a smoother first run.</p>
-          </article>
-          <article data-reveal style="--reveal-delay: 0.1s">
-            <h3>Subtitle friendly</h3>
-            <p>Load subtitle files, pick embedded tracks, adjust appearance, and tune sync delay.</p>
-          </article>
-          <article data-reveal style="--reveal-delay: 0.2s">
-            <h3>Focused controls</h3>
-            <p>Hover controls, seek shortcuts, speed controls, screenshots, looping, and track switching.</p>
-          </article>
-          <article data-reveal style="--reveal-delay: 0.3s">
-            <h3>Desktop native</h3>
-            <p>Avalonia UI with a compact custom title bar and a simple local-media workflow.</p>
-          </article>
-        </div>
 
         <!-- ── Feature marquee ──────────────────────────────────────────── -->
         <div class="marquee-wrap" aria-hidden="true">
@@ -138,6 +113,55 @@
             </ul>
           </div>
         </div>
+      </section>
+
+      <section class="band" id="features">
+        <div class="section-heading" data-reveal>
+          <p class="eyebrow">What it does</p>
+          <h2>Built for watching, not managing.</h2>
+        </div>
+        <div class="feature-grid">
+          <article data-reveal>
+            <h3>mpv powered</h3>
+            <p>Native playback through mpv, packaged with release builds for a smoother first run.</p>
+          </article>
+          <article data-reveal style="--reveal-delay: 0.1s">
+            <h3>Subtitle friendly</h3>
+            <p>Load subtitle files, pick embedded tracks, adjust appearance, and tune sync delay.</p>
+          </article>
+          <article data-reveal style="--reveal-delay: 0.2s">
+            <h3>Focused controls</h3>
+            <p>Hover controls, seek shortcuts, speed controls, screenshots, looping, and track switching.</p>
+          </article>
+          <article data-reveal style="--reveal-delay: 0.3s">
+            <h3>Desktop native</h3>
+            <p>Avalonia UI with a compact custom title bar and a simple local-media workflow.</p>
+          </article>
+        </div>
+
+        <!-- ── Feature preview card marquee (image-based) ──────────────── -->
+        <div class="marquee-wrap marquee-wrap--cards" aria-hidden="true">
+          <div class="marquee-track marquee-track--rtl">
+            <div class="marquee-cards">
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-bookmarks.svg')"></div><span>Bookmarks</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-playlist.svg')"></div><span>Playlist &amp; Queue</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-subtitle-search.svg')"></div><span>Subtitle Search</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-subtitles.svg')"></div><span>Subtitle Settings</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-speed.svg')"></div><span>Playback Speed</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-screenshot.svg')"></div><span>Screenshot</span></div>
+            </div>
+            <!-- duplicate for loop -->
+            <div class="marquee-cards" aria-hidden="true">
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-bookmarks.svg')"></div><span>Bookmarks</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-playlist.svg')"></div><span>Playlist &amp; Queue</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-subtitle-search.svg')"></div><span>Subtitle Search</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-subtitles.svg')"></div><span>Subtitle Settings</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-speed.svg')"></div><span>Playback Speed</span></div>
+              <div class="preview-card"><div class="preview-card__img" style="background-image:url('assets/preview-screenshot.svg')"></div><span>Screenshot</span></div>
+            </div>
+          </div>
+        </div>
+
       </section>
 
       <section class="download" id="download">

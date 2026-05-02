@@ -14,6 +14,23 @@ public sealed class MpvVideoSurface : OpenGlControlBase
 
     private bool _rendererInitialized;
     private int _renderRequestQueued;
+    private bool _isReadyForPlaybackOpen;
+
+    public event EventHandler? ReadyForPlaybackOpen;
+
+    public bool IsReadyForPlaybackOpen
+    {
+        get => _isReadyForPlaybackOpen;
+        private set
+        {
+            if (_isReadyForPlaybackOpen == value)
+                return;
+
+            _isReadyForPlaybackOpen = value;
+            if (value)
+                ReadyForPlaybackOpen?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     public PlaybackService? Playback
     {
@@ -25,11 +42,13 @@ public sealed class MpvVideoSurface : OpenGlControlBase
     {
         base.OnOpenGlInit(gl);
         TryInitializeRenderer(gl);
+        IsReadyForPlaybackOpen = true;
         RequestNextFrameRendering();
     }
 
     protected override void OnOpenGlDeinit(GlInterface gl)
     {
+        IsReadyForPlaybackOpen = false;
         _rendererInitialized = false;
         base.OnOpenGlDeinit(gl);
     }

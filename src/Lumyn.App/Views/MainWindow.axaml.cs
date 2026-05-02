@@ -52,6 +52,16 @@ public partial class MainWindow : Window
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
 
+    public async Task OpenFileWhenReadyAsync(string filePath)
+    {
+        await WaitForVideoSurfaceAsync();
+        if (ViewModel is null) return;
+
+        await ViewModel.OpenFileAsync(filePath);
+        Focus();
+        ShowControls();
+    }
+
     // ── Controls visibility ──────────────────────────────────────────────────
 
     private void ShowControls()
@@ -586,11 +596,13 @@ public partial class MainWindow : Window
         e.DragEffects = e.DataTransfer.Contains(DataFormat.File)
             ? DragDropEffects.Copy
             : DragDropEffects.None;
+        e.Handled = true;
     }
 
     private async void OnDrop(object? sender, DragEventArgs e)
     {
         var items = e.DataTransfer.TryGetFiles()?.ToArray() ?? [];
+        e.Handled = true;
         if (items.Length == 0 || ViewModel is null) return;
 
         var mediaExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -612,6 +624,9 @@ public partial class MainWindow : Window
         var subtitlePath = paths.FirstOrDefault(IsSubtitleFile);
         var mediaPaths = paths.Where(p => !IsSubtitleFile(p)).ToList();
 
+        if (mediaPaths.Count > 0)
+            await WaitForVideoSurfaceAsync();
+
         if (mediaPaths.Count == 1)
             await ViewModel.OpenFileAsync(mediaPaths[0]);
         else if (mediaPaths.Count > 1)
@@ -622,6 +637,31 @@ public partial class MainWindow : Window
 
         Focus();
         ShowControls();
+    }
+
+    private Task WaitForVideoSurfaceAsync()
+    {
+        var surface = this.FindControl<Controls.MpvVideoSurface>("VideoSurface");
+        if (surface is null || surface.IsReadyForPlaybackOpen)
+            return Task.CompletedTask;
+
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var timeout = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+
+        void Complete()
+        {
+            surface.ReadyForPlaybackOpen -= OnReady;
+            timeout.Stop();
+            tcs.TrySetResult();
+        }
+
+        void OnReady(object? sender, EventArgs e) => Complete();
+
+        timeout.Tick += (_, _) => Complete();
+        surface.ReadyForPlaybackOpen += OnReady;
+        timeout.Start();
+
+        return tcs.Task;
     }
 
     private static bool IsSubtitleFile(string path)

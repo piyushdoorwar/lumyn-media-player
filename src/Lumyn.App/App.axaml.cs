@@ -22,14 +22,15 @@ public sealed partial class App : Application
             var settings = new SettingsService();
             var vm = new MainViewModel(playback, settings);
 
-            desktop.MainWindow = new MainWindow { DataContext = vm };
+            var window = new MainWindow { DataContext = vm };
+            desktop.MainWindow = window;
 
             // Handle command-line file/URI argument: lumyn path/to/file.mp4 or lumyn file:///path/to/file.mp4
             var filePath = TryGetStartupFilePath(desktop.Args);
             if (!string.IsNullOrWhiteSpace(filePath))
             {
                 desktop.MainWindow.Opened += async (_, _) =>
-                    await vm.OpenFileAsync(filePath);
+                    await window.OpenFileWhenReadyAsync(filePath);
             }
         }
 

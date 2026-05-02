@@ -556,7 +556,7 @@
         <MenuItem Header="Jump to Time..." Click="JumpToTime_Click" InputGesture="Ctrl+G" />
         <MenuItem Header="Load Subtitle..." Click="LoadSubtitle_Click" InputGesture="S" />
         <MenuItem Header="Video Adjustments..." Click="VideoAdjustments_Click" />
-        <MenuItem Name="CastMenuItem" Header="Cast To" />
+        <MenuItem Header="Cast..." Click="Cast_Click" />
         <MenuItem Header="Keyboard Shortcuts" Click="KeyboardShortcuts_Click" />
         <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
         <MenuItem Header="Bookmarks…" Click="Bookmarks_Click" InputGesture="B" />

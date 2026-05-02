@@ -661,7 +661,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             IsCastPlaying = false;
             CastTargetName = null;
             CastStatusText = $"Cast failed: {ex.Message}";
-            ShowOsd("Cast failed");
+            ShowOsd(CastStatusText);
         }
     }
 

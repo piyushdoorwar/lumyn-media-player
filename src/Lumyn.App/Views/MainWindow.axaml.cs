@@ -7,7 +7,6 @@ using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using Lumyn.App.ViewModels;
-using Lumyn.Core.Services;
 
 namespace Lumyn.App.Views;
 
@@ -387,9 +386,6 @@ public partial class MainWindow : Window
         if (aotItem is not null)
             aotItem.Header = ViewModel.IsAlwaysOnTop ? "✓ Always on Top" : "Always on Top";
 
-        var castItem = cm.Items.OfType<MenuItem>().FirstOrDefault(m => m.Name == "CastMenuItem");
-        if (castItem is not null)
-            _ = PopulateCastMenuItemAsync(castItem);
     }
 
     private async void JumpToTime_Click(object? sender, RoutedEventArgs e)
@@ -403,6 +399,9 @@ public partial class MainWindow : Window
 
     private void KeyboardShortcuts_Click(object? sender, RoutedEventArgs e)
         => OpenKeyboardShortcutsDialog();
+
+    private async void Cast_Click(object? sender, RoutedEventArgs e)
+        => await OpenCastDialogAsync();
 
     private async void OpenFolder_Click(object? sender, RoutedEventArgs e)
         => await OpenFolderAsync();
@@ -420,13 +419,7 @@ public partial class MainWindow : Window
         => OpenKeyboardShortcutsDialog();
 
     private async void CastButton_Click(object? sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button || ViewModel is null) return;
-
-        var menu = await BuildCastMenuAsync();
-        button.ContextMenu = menu;
-        menu.Open(button);
-    }
+        => await OpenCastDialogAsync();
 
     private void AboutButton_Click(object? sender, RoutedEventArgs e)
         => OpenAboutDialog();
@@ -458,57 +451,13 @@ public partial class MainWindow : Window
     private void AlwaysOnTop_Click(object? sender, RoutedEventArgs e)
         => ViewModel?.ToggleAlwaysOnTopCommand.Execute(null);
 
-    private async Task<ContextMenu> BuildCastMenuAsync()
-    {
-        var menu = new ContextMenu();
-        var root = new MenuItem { Header = "Cast To" };
-        menu.Items.Add(root);
-        await PopulateCastMenuItemAsync(root);
-        return menu;
-    }
-
-    private async Task PopulateCastMenuItemAsync(MenuItem castItem)
+    private async Task OpenCastDialogAsync()
     {
         if (ViewModel is null) return;
 
-        castItem.Items.Clear();
-        castItem.Items.Add(new MenuItem { Header = "Searching...", IsEnabled = false });
-        castItem.IsEnabled = ViewModel.HasMedia || ViewModel.IsCasting;
-
-        if (ViewModel.IsCasting)
-        {
-            var stop = new MenuItem { Header = "Stop Casting" };
-            stop.Click += (_, _) => ViewModel.StopCastingCommand.Execute(null);
-            castItem.Items.Clear();
-            castItem.Items.Add(stop);
-            castItem.Items.Add(new Separator());
-        }
-
-        if (!ViewModel.HasMedia)
-        {
-            castItem.Items.Clear();
-            castItem.Items.Add(new MenuItem { Header = "Open media before casting", IsEnabled = false });
-            return;
-        }
-
-        await ViewModel.RefreshCastDevicesAsync();
-
-        if (!ViewModel.IsCasting)
-            castItem.Items.Clear();
-
-        if (ViewModel.CastDevices.Count == 0)
-        {
-            castItem.Items.Add(new MenuItem { Header = "No devices found", IsEnabled = false });
-            return;
-        }
-
-        foreach (var device in ViewModel.CastDevices)
-        {
-            var target = device;
-            var item = new MenuItem { Header = target.Name };
-            item.Click += async (_, _) => await ViewModel.CastToDeviceAsync(target);
-            castItem.Items.Add(item);
-        }
+        var dialog = new CastDialog(ViewModel);
+        await dialog.ShowDialog(this);
+        Focus();
     }
 
     // ── File open helpers ────────────────────────────────────────────────────

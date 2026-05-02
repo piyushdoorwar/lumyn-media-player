@@ -45,6 +45,8 @@ public sealed class DlnaCastService : IDisposable
         _devices.Clear();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         linked.CancelAfter(timeout);
+        var descriptionTasks = new List<Task>();
+        var seenLocations = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         using var udp = new UdpClient(AddressFamily.InterNetwork);
         udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -74,7 +76,10 @@ public sealed class DlnaCastService : IDisposable
                     !Uri.TryCreate(location, UriKind.Absolute, out var descriptionUrl))
                     continue;
 
-                _ = AddDeviceFromDescriptionAsync(descriptionUrl, linked.Token);
+                if (!IsHttpUri(descriptionUrl) || !seenLocations.Add(descriptionUrl.ToString()))
+                    continue;
+
+                descriptionTasks.Add(AddDeviceFromDescriptionAsync(descriptionUrl, cancellationToken));
             }
             catch (OperationCanceledException)
             {
@@ -86,7 +91,14 @@ public sealed class DlnaCastService : IDisposable
             }
         }
 
-        await Task.Delay(250, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await Task.WhenAll(descriptionTasks).WaitAsync(TimeSpan.FromSeconds(3), cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Return whatever discovery completed within the window.
+        }
         return _devices.Values.OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).ToList();
     }
 
@@ -95,18 +107,22 @@ public sealed class DlnaCastService : IDisposable
         var mediaUri = StartServer(filePath, subtitlePath);
         var didl = BuildDidlLite(filePath, mediaUri, _servedSubtitleUri);
 
-        await SoapAsync(device.ControlUrl, AvTransportService, "SetAVTransportURI",
-            $"""
-            <InstanceID>0</InstanceID>
-            <CurrentURI>{SecurityElement.Escape(mediaUri.ToString())}</CurrentURI>
-            <CurrentURIMetaData>{SecurityElement.Escape(didl)}</CurrentURIMetaData>
-            """, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await SetTransportUriAsync(device, mediaUri, didl, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Several renderers reject otherwise valid DIDL-Lite metadata. Retry with
+            // an empty metadata field before reporting the cast as failed.
+            await SetTransportUriAsync(device, mediaUri, "", cancellationToken).ConfigureAwait(false);
+        }
 
         if (device.RenderingControlUrl is not null)
-            await SetVolumeAsync(device, volume, cancellationToken).ConfigureAwait(false);
+            await TrySoapAsync(() => SetVolumeAsync(device, volume, cancellationToken)).ConfigureAwait(false);
 
         if (startPosition > TimeSpan.Zero)
-            await SeekAsync(device, startPosition, cancellationToken).ConfigureAwait(false);
+            await TrySoapAsync(() => SeekAsync(device, startPosition, cancellationToken)).ConfigureAwait(false);
 
         await PlayAsync(device, cancellationToken).ConfigureAwait(false);
         _activeDevice = device;
@@ -160,6 +176,14 @@ public sealed class DlnaCastService : IDisposable
     private static Task StopAsync(DlnaCastDevice device, CancellationToken cancellationToken)
         => SoapAsync(device.ControlUrl, AvTransportService, "Stop",
             "<InstanceID>0</InstanceID>", cancellationToken);
+
+    private static Task SetTransportUriAsync(DlnaCastDevice device, Uri mediaUri, string metadata, CancellationToken cancellationToken)
+        => SoapAsync(device.ControlUrl, AvTransportService, "SetAVTransportURI",
+            $"""
+            <InstanceID>0</InstanceID>
+            <CurrentURI>{SecurityElement.Escape(mediaUri.ToString())}</CurrentURI>
+            <CurrentURIMetaData>{SecurityElement.Escape(metadata)}</CurrentURIMetaData>
+            """, cancellationToken);
 
     private static Task SeekAsync(DlnaCastDevice device, TimeSpan position, CancellationToken cancellationToken)
         => SoapAsync(device.ControlUrl, AvTransportService, "Seek",
@@ -230,7 +254,7 @@ public sealed class DlnaCastService : IDisposable
     private async Task ServeClientAsync(TcpClient client, CancellationToken cancellationToken)
     {
         using var _ = client;
-        await using var network = client.GetStream();
+        using var network = client.GetStream();
 
         var request = await ReadHttpRequestAsync(network, cancellationToken).ConfigureAwait(false);
         if (request is null) return;
@@ -286,9 +310,19 @@ public sealed class DlnaCastService : IDisposable
         }
         catch
         {
-            if (client.Connected)
-                await WriteResponseHeadersAsync(network, 500, "Internal Server Error", "text/plain", 0, null, CancellationToken.None)
-                    .ConfigureAwait(false);
+            // Renderers often close probe/range connections early. Treat that as a normal client disconnect.
+        }
+    }
+
+    private static async Task TrySoapAsync(Func<Task> action)
+    {
+        try
+        {
+            await action().ConfigureAwait(false);
+        }
+        catch
+        {
+            // Some renderers do not support optional controls such as volume or seek-before-play.
         }
     }
 
@@ -354,6 +388,7 @@ public sealed class DlnaCastService : IDisposable
             var xml = await Http.GetStringAsync(descriptionUrl, cancellationToken).ConfigureAwait(false);
             var doc = XDocument.Parse(xml);
             XNamespace ns = doc.Root?.Name.Namespace ?? "";
+            var baseUrl = ResolveBaseUrl(descriptionUrl, doc.Root?.Element(ns + "URLBase")?.Value);
             var device = doc.Descendants(ns + "device").FirstOrDefault(d =>
                 d.Elements(ns + "deviceType").Any(e => e.Value.Contains("MediaRenderer", StringComparison.OrdinalIgnoreCase)));
             if (device is null) return;
@@ -367,9 +402,11 @@ public sealed class DlnaCastService : IDisposable
             if (av is null) return;
 
             var rc = services.FirstOrDefault(s => s.Element(ns + "serviceType")?.Value.Trim() == RenderingControlService);
-            var control = ResolveDeviceUrl(descriptionUrl, av.Element(ns + "controlURL")?.Value);
+            var control = ResolveDeviceUrl(baseUrl, av.Element(ns + "controlURL")?.Value) ??
+                ResolveDeviceUrl(descriptionUrl, av.Element(ns + "controlURL")?.Value);
             if (control is null) return;
-            var rendering = ResolveDeviceUrl(descriptionUrl, rc?.Element(ns + "controlURL")?.Value);
+            var rendering = ResolveDeviceUrl(baseUrl, rc?.Element(ns + "controlURL")?.Value) ??
+                ResolveDeviceUrl(descriptionUrl, rc?.Element(ns + "controlURL")?.Value);
 
             _devices[udn] = new DlnaCastDevice(udn, name, descriptionUrl, control, rendering);
         }
@@ -396,16 +433,63 @@ public sealed class DlnaCastService : IDisposable
         request.Headers.TryAddWithoutValidation("SOAPACTION", $"\"{serviceType}#{action}\"");
         request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
         using var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var detail = ExtractSoapFault(text);
+            throw new InvalidOperationException(string.IsNullOrWhiteSpace(detail)
+                ? $"{action} failed: HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
+                : $"{action} failed: {detail}");
+        }
     }
 
-    private static Uri? ResolveDeviceUrl(Uri descriptionUrl, string? path)
+    private static string? ExtractSoapFault(string xml)
+    {
+        if (string.IsNullOrWhiteSpace(xml)) return null;
+        try
+        {
+            var doc = XDocument.Parse(xml);
+            var errorDescription = doc.Descendants()
+                .FirstOrDefault(e => e.Name.LocalName.Equals("errorDescription", StringComparison.OrdinalIgnoreCase))
+                ?.Value;
+            if (!string.IsNullOrWhiteSpace(errorDescription))
+                return errorDescription.Trim();
+
+            var faultString = doc.Descendants()
+                .FirstOrDefault(e => e.Name.LocalName.Equals("faultstring", StringComparison.OrdinalIgnoreCase))
+                ?.Value;
+            return string.IsNullOrWhiteSpace(faultString) ? null : faultString.Trim();
+        }
+        catch
+        {
+            return xml.Length > 180 ? $"{xml[..180]}..." : xml;
+        }
+    }
+
+    private static Uri ResolveBaseUrl(Uri descriptionUrl, string? urlBase)
+    {
+        if (Uri.TryCreate(urlBase, UriKind.Absolute, out var parsed) && IsHttpUri(parsed))
+            return parsed;
+        return descriptionUrl;
+    }
+
+    private static Uri? ResolveDeviceUrl(Uri baseUrl, string? path)
     {
         if (string.IsNullOrWhiteSpace(path)) return null;
-        return Uri.TryCreate(path, UriKind.Absolute, out var absolute)
+        var trimmed = path.Trim();
+        var resolved = Uri.TryCreate(trimmed, UriKind.Absolute, out var absolute)
             ? absolute
-            : new Uri(descriptionUrl, path);
+            : new Uri(baseUrl, trimmed);
+
+        if (!IsHttpUri(resolved) && !string.IsNullOrWhiteSpace(resolved.AbsolutePath))
+            resolved = new Uri(baseUrl, resolved.PathAndQuery);
+
+        return IsHttpUri(resolved) ? resolved : null;
     }
+
+    private static bool IsHttpUri(Uri uri)
+        => uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase) ||
+           uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
 
     private static Dictionary<string, string> ParseHeaders(string response)
     {

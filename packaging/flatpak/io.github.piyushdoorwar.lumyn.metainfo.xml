@@ -24,8 +24,8 @@
   <url type="bugtracker">https://github.com/piyushdoorwar/lumyn-media-player/issues</url>
   <url type="vcs-browser">https://github.com/piyushdoorwar/lumyn-media-player</url>
 
-  <metadata_license>MIT</metadata_license>
-  <project_license>MIT</project_license>
+  <metadata_license>FSFAP</metadata_license>
+  <project_license>LicenseRef-Lumyn-Source-Available</project_license>
 
   <launchable type="desktop-id">io.github.piyushdoorwar.lumyn.desktop</launchable>
 

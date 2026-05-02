@@ -55,6 +55,18 @@ dotnet build Lumyn.sln
 dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 ```
 
+## License
+
+Lumyn is source available, not open source under an OSI-approved license.
+Personal, non-commercial use of official releases is permitted. You may view
+the source code, build it for personal evaluation, and submit issues or pull
+requests to the official repository.
+
+Copying, redistribution, republishing, modification for distribution,
+commercial use, resale, hosting as a service, and use in commercial products
+or services are not permitted without explicit written permission from the
+copyright holder.
+
 ## Build Packages
 
 Build the Ubuntu `.deb`:

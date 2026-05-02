@@ -86,7 +86,7 @@
     </StackPanel>
 
     <!-- License note -->
-    <TextBlock Text="MIT License · © 2025 Piyush Doorwar"
+    <TextBlock Text="Source Available · © 2026 Piyush Doorwar"
                HorizontalAlignment="Center"
                FontSize="11" Foreground="#3A3835" Margin="0,10,0,4" />
 

@@ -94,6 +94,7 @@
   // ── Render ─────────────────────────────────────────────────────────────────
   function renderPage() {
     const filtered = allReleases.filter(r => hasOsAsset(r, currentOS));
+    const latestStable = filtered.find(r => !r.prerelease);
 
     if (filtered.length === 0) {
       itemsEl.innerHTML = "";
@@ -109,7 +110,7 @@
     const page  = filtered.slice(start, start + PER_PAGE);
 
     itemsEl.innerHTML = page.map((release, idx) => {
-      const isLatest  = start === 0 && idx === 0;
+      const isLatest  = latestStable?.id === release.id;
       const linux   = linuxAsset(release);
       const windows = windowsAsset(release);
       const macos   = macosAsset(release);

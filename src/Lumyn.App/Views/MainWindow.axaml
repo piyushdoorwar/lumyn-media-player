@@ -48,10 +48,6 @@
                   Click="VideoAdjustmentsButton_OnClick" ToolTip.Tip="Video adjustments">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
           </Button>
-          <Button Classes="icon ctrl" Name="KeyboardShortcutsButton"
-                  Click="KeyboardShortcutsButton_OnClick" ToolTip.Tip="Keyboard shortcuts">
-            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
-          </Button>
           <Button Classes="icon ctrl" Name="PlaylistButton"
                   Classes.dim="{Binding !IsPlaylistVisible}"
                   Command="{Binding TogglePlaylistCommand}" ToolTip.Tip="Queue (Q)">
@@ -76,6 +72,10 @@
           <Button Classes="icon ctrl" Name="AboutButton"
                   Click="AboutButton_Click" ToolTip.Tip="About Lumyn">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Info}" />
+          </Button>
+          <Button Classes="icon ctrl" Name="KeyboardShortcutsButton"
+                  Click="KeyboardShortcutsButton_OnClick" ToolTip.Tip="Keyboard shortcuts">
+            <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Keyboard}" />
           </Button>
           <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"

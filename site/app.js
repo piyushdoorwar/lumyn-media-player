@@ -13,35 +13,53 @@ function enableDownload(link, url) {
   link.removeAttribute("aria-disabled");
 }
 
+function linuxAsset(release) {
+  return release.assets.find((asset) => /_amd64\.deb$/i.test(asset.name));
+}
+
+function windowsAsset(release) {
+  return release.assets.find((asset) => /win-x64.*_setup\.exe$/i.test(asset.name));
+}
+
+function macosAsset(release) {
+  return release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name)) ??
+    release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name));
+}
+
+function latestAssetWithInstaller(releases, findAsset) {
+  for (const release of releases) {
+    const asset = findAsset(release);
+    if (asset?.browser_download_url) return asset;
+  }
+  return null;
+}
+
 async function hydrateDownloadLinks() {
   try {
-    const response = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=10`, {
+    const response = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=100`, {
       headers: { Accept: "application/vnd.github+json" },
     });
     if (!response.ok) return;
 
     const releases = await response.json();
-    const release = releases.find((item) => !item.draft);
-    if (!release?.assets?.length) return;
+    const stableReleases = releases
+      .filter((item) => !item.draft && !item.prerelease && item.assets?.length)
+      .sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
 
-    const linuxAsset = release.assets.find((asset) => /_amd64\.deb$/i.test(asset.name));
-    const windowsAsset = release.assets.find((asset) => /win-x64.*_setup\.exe$/i.test(asset.name)) ??
-      release.assets.find((asset) => /win-x64\.zip$/i.test(asset.name));
-    const macosAsset = release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name)) ??
-      release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name)) ??
-      release.assets.find((asset) => /macos-arm64\.zip$/i.test(asset.name)) ??
-      release.assets.find((asset) => /macos-x64\.zip$/i.test(asset.name));
+    const linux = latestAssetWithInstaller(stableReleases, linuxAsset);
+    const windows = latestAssetWithInstaller(stableReleases, windowsAsset);
+    const macos = latestAssetWithInstaller(stableReleases, macosAsset);
 
-    if (linuxAsset?.browser_download_url) {
-      enableDownload(linuxLink, linuxAsset.browser_download_url);
+    if (linux?.browser_download_url) {
+      enableDownload(linuxLink, linux.browser_download_url);
     }
 
-    if (windowsAsset?.browser_download_url) {
-      enableDownload(windowsLink, windowsAsset.browser_download_url);
+    if (windows?.browser_download_url) {
+      enableDownload(windowsLink, windows.browser_download_url);
     }
 
-    if (macosAsset?.browser_download_url) {
-      enableDownload(macosLink, macosAsset.browser_download_url);
+    if (macos?.browser_download_url) {
+      enableDownload(macosLink, macos.browser_download_url);
     }
   } catch {
     // Keep the buttons disabled if GitHub is unreachable or matching assets are absent.

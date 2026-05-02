@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using Avalonia.Media;
@@ -50,6 +51,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
+    private readonly DlnaCastService _casting;
     private readonly DispatcherTimer _osdTimer;
     private int _stateRefreshQueued;
     private long _lastTrackRevision = -1;
@@ -66,6 +68,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private float _speed = 1.0f;
     private bool _isLooping;
     private bool _isAlwaysOnTop;
+    private bool _isCasting;
+    private bool _isCastPlaying;
+    private bool _isDiscoveringCastDevices;
+    private string? _castTargetName;
+    private string? _castStatusText;
     private string? _osdMessage;
     private TrackInfo[] _audioTracks = [];
     private TrackInfo[] _subtitleTracks = [];
@@ -96,10 +103,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _playlistIndex = -1;
     private bool _isPlaylistVisible;
 
-    public MainViewModel(PlaybackService playback, SettingsService settings)
+    public MainViewModel(PlaybackService playback, SettingsService settings, DlnaCastService? casting = null)
     {
         _playback = playback;
         _settings = settings;
+        _casting = casting ?? new DlnaCastService();
 
         // Restore persisted session preferences
         _volume   = _settings.LastVolume;
@@ -150,6 +158,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         PreviousChapterCommand = new RelayCommand(_ => _playback.SeekToChapter(-1));
         NextChapterCommand     = new RelayCommand(_ => _playback.SeekToChapter(+1));
         CycleSeekStepCommand   = new RelayCommand(_ => CycleSeekStep());
+        StopCastingCommand     = new RelayCommand(_ => { _ = StopCastingAsync(); });
+        ToggleCastPlaybackCommand = new RelayCommand(_ => { _ = ToggleCastPlaybackAsync(); });
+        CastVolumeDownCommand  = new RelayCommand(_ => { _ = ChangeCastVolumeAsync(-5); });
+        CastVolumeUpCommand    = new RelayCommand(_ => { _ = ChangeCastVolumeAsync(+5); });
 
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
@@ -172,6 +184,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public PlaybackService Playback => _playback;
     public string? CurrentFilePath => _playback.CurrentFilePath;
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
+    public ObservableCollection<DlnaCastDevice> CastDevices { get; } = [];
 
     public bool HasRecentFiles => _settings.RecentFiles.Count > 0;
 
@@ -488,6 +501,46 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         set => SetField(ref _isAlwaysOnTop, value);
     }
 
+    public bool IsCasting
+    {
+        get => _isCasting;
+        private set
+        {
+            if (SetField(ref _isCasting, value))
+                OnPropertyChanged(nameof(CastStatusText));
+        }
+    }
+
+    public bool IsCastPlaying
+    {
+        get => _isCastPlaying;
+        private set => SetField(ref _isCastPlaying, value);
+    }
+
+    public bool IsDiscoveringCastDevices
+    {
+        get => _isDiscoveringCastDevices;
+        private set => SetField(ref _isDiscoveringCastDevices, value);
+    }
+
+    public string? CastTargetName
+    {
+        get => _castTargetName;
+        private set
+        {
+            if (SetField(ref _castTargetName, value))
+                OnPropertyChanged(nameof(CastStatusText));
+        }
+    }
+
+    public string? CastStatusText
+    {
+        get => _castStatusText ?? (IsCasting && !string.IsNullOrWhiteSpace(CastTargetName)
+            ? $"Casting to {CastTargetName}"
+            : null);
+        private set => SetField(ref _castStatusText, value);
+    }
+
     public string? OsdMessage
     {
         get => _osdMessage;
@@ -545,11 +598,129 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand PreviousChapterCommand { get; }
     public ICommand NextChapterCommand { get; }
     public ICommand CycleSeekStepCommand { get; }
+    public ICommand StopCastingCommand { get; }
+    public ICommand ToggleCastPlaybackCommand { get; }
+    public ICommand CastVolumeDownCommand { get; }
+    public ICommand CastVolumeUpCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
     public void PausePlayback() => _playback.Pause();
 
     public void ResumePlayback() => _playback.Play();
+
+    public async Task RefreshCastDevicesAsync()
+    {
+        IsDiscoveringCastDevices = true;
+        CastStatusText = "Looking for cast devices...";
+        try
+        {
+            var devices = await _casting.DiscoverAsync(TimeSpan.FromSeconds(3));
+            CastDevices.Clear();
+            foreach (var device in devices)
+                CastDevices.Add(device);
+
+            CastStatusText = devices.Count == 0
+                ? "No cast devices found"
+                : null;
+        }
+        catch (Exception ex)
+        {
+            CastStatusText = $"Cast discovery failed: {ex.Message}";
+        }
+        finally
+        {
+            IsDiscoveringCastDevices = false;
+            if (!IsCasting && CastDevices.Count > 0)
+                CastStatusText = null;
+        }
+    }
+
+    public async Task CastToDeviceAsync(DlnaCastDevice device)
+    {
+        if (string.IsNullOrWhiteSpace(CurrentFilePath) || !File.Exists(CurrentFilePath))
+        {
+            ShowOsd("Open a media file before casting");
+            return;
+        }
+
+        try
+        {
+            CastStatusText = $"Connecting to {device.Name}...";
+            var subtitlePath = CurrentSubtitleSettings.FilePath;
+            await _casting.CastAsync(device, CurrentFilePath, subtitlePath, _playback.Position, Math.Clamp(Volume, 0, 100));
+            _playback.Pause();
+            IsCasting = true;
+            IsCastPlaying = true;
+            CastTargetName = device.Name;
+            CastStatusText = null;
+            ShowOsd($"Casting to {device.Name}");
+        }
+        catch (Exception ex)
+        {
+            IsCasting = false;
+            IsCastPlaying = false;
+            CastTargetName = null;
+            CastStatusText = $"Cast failed: {ex.Message}";
+            ShowOsd("Cast failed");
+        }
+    }
+
+    public async Task StopCastingAsync()
+    {
+        try
+        {
+            await _casting.StopAsync();
+        }
+        catch
+        {
+            // Some renderers close the SOAP session before acknowledging stop.
+        }
+        finally
+        {
+            _casting.StopServer();
+            IsCasting = false;
+            IsCastPlaying = false;
+            CastTargetName = null;
+            CastStatusText = null;
+            ShowOsd("Casting stopped");
+        }
+    }
+
+    private async Task ToggleCastPlaybackAsync()
+    {
+        if (!IsCasting) return;
+        try
+        {
+            if (IsCastPlaying)
+            {
+                await _casting.PauseAsync();
+                IsCastPlaying = false;
+            }
+            else
+            {
+                await _casting.PlayAsync();
+                IsCastPlaying = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            CastStatusText = $"Cast control failed: {ex.Message}";
+        }
+    }
+
+    private async Task ChangeCastVolumeAsync(int delta)
+    {
+        if (!IsCasting) return;
+        Volume = Math.Clamp(Volume + delta, 0, 100);
+        try
+        {
+            await _casting.SetVolumeAsync(Volume);
+        }
+        catch (Exception ex)
+        {
+            CastStatusText = $"Cast volume failed: {ex.Message}";
+        }
+    }
 
     public async Task OpenFileAsync(string filePath)
     {
@@ -853,6 +1024,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         _osdTimer.Stop();
         _coverArtBitmap?.Dispose();
+        _casting.Dispose();
         _playback.Dispose();
     }
 

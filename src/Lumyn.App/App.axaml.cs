@@ -20,7 +20,8 @@ public sealed partial class App : Application
         {
             var playback = new PlaybackService();
             var settings = new SettingsService();
-            var vm = new MainViewModel(playback, settings);
+            var casting = new DlnaCastService();
+            var vm = new MainViewModel(playback, settings, casting);
 
             var window = new MainWindow { DataContext = vm };
             desktop.MainWindow = window;

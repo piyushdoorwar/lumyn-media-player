@@ -349,6 +349,41 @@
 
     <!-- ── Bottom control bar overlay ────────────────────────────────────── -->
     <Border
+        Name="CastStatusBar"
+        VerticalAlignment="Bottom"
+        Margin="14,0,14,74"
+        Padding="10,7"
+        CornerRadius="6"
+        Background="#E51B1B1B"
+        BorderBrush="#334D9EFF"
+        BorderThickness="1"
+        IsVisible="{Binding IsCasting}"
+        HorizontalAlignment="Center">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="#BFD8FF" />
+        <TextBlock Text="{Binding CastStatusText}" Foreground="#F4F0EC" FontSize="12"
+                   VerticalAlignment="Center" />
+        <Button Classes="ctrl" Command="{Binding ToggleCastPlaybackCommand}" ToolTip.Tip="Play / pause cast">
+          <Panel>
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Play}"
+                      IsVisible="{Binding !IsCastPlaying}" />
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Pause}"
+                      IsVisible="{Binding IsCastPlaying}" />
+          </Panel>
+        </Button>
+        <Button Classes="ctrl" Command="{Binding CastVolumeDownCommand}" ToolTip.Tip="Cast volume down">
+          <PathIcon Width="14" Height="14" Data="{StaticResource Icon.VolumeMuted}" />
+        </Button>
+        <Button Classes="ctrl" Command="{Binding CastVolumeUpCommand}" ToolTip.Tip="Cast volume up">
+          <PathIcon Width="14" Height="14" Data="{StaticResource Icon.VolumeHigh}" />
+        </Button>
+        <Button Classes="ctrl" Command="{Binding StopCastingCommand}" ToolTip.Tip="Stop casting">
+          <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Stop}" />
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <Border
         Name="ControlBar"
         VerticalAlignment="Bottom"
         Padding="12,0,12,10"
@@ -373,7 +408,7 @@
             SeekCommitted="SeekSlider_OnSeekCommitted" />
 
         <!-- Transport row -->
-        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
               ColumnSpacing="2" Margin="2,0">
 
           <!-- Seek back -->
@@ -460,8 +495,14 @@
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
           </Button>
 
-          <!-- Mute / Unmute -->
+          <!-- Cast -->
           <Button Grid.Column="11" Classes="ctrl"
+                  Click="CastButton_Click" ToolTip.Tip="Cast">
+            <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
+          </Button>
+
+          <!-- Mute / Unmute -->
+          <Button Grid.Column="12" Classes="ctrl"
                   Command="{Binding ToggleMuteCommand}">
             <Panel>
               <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
@@ -472,25 +513,25 @@
           </Button>
 
           <!-- Volume slider -->
-          <controls:VolumeSlider Grid.Column="12" Width="92" Minimum="0" Maximum="150"
+          <controls:VolumeSlider Grid.Column="13" Width="92" Minimum="0" Maximum="150"
                                  Value="{Binding Volume}"
                                  VerticalAlignment="Center"
                                  Margin="2,0,6,0" />
 
           <!-- Screenshot -->
-          <Button Grid.Column="13" Classes="ctrl"
+          <Button Grid.Column="14" Classes="ctrl"
                   Command="{Binding TakeScreenshotCommand}">
             <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
           </Button>
 
           <!-- Bookmarks -->
-          <Button Grid.Column="14" Classes="ctrl"
+          <Button Grid.Column="15" Classes="ctrl"
                   Click="BookmarksButton_Click" ToolTip.Tip="Bookmarks (B)">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.BookmarkOutline}" />
           </Button>
 
           <!-- Fullscreen -->
-          <Button Grid.Column="15" Classes="ctrl"
+          <Button Grid.Column="16" Classes="ctrl"
                   Click="FullscreenButton_OnClick">
             <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                       Data="{StaticResource Icon.Fullscreen}" />
@@ -515,6 +556,7 @@
         <MenuItem Header="Jump to Time..." Click="JumpToTime_Click" InputGesture="Ctrl+G" />
         <MenuItem Header="Load Subtitle..." Click="LoadSubtitle_Click" InputGesture="S" />
         <MenuItem Header="Video Adjustments..." Click="VideoAdjustments_Click" />
+        <MenuItem Name="CastMenuItem" Header="Cast To" />
         <MenuItem Header="Keyboard Shortcuts" Click="KeyboardShortcuts_Click" />
         <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
         <MenuItem Header="Bookmarks…" Click="Bookmarks_Click" InputGesture="B" />

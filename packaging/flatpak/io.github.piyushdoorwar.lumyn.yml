@@ -13,6 +13,8 @@ finish-args:
   - --device=dri
   # Audio
   - --socket=pulseaudio
+  # DLNA/UPnP casting: SSDP discovery and local HTTP media streaming.
+  - --share=network
   # Filesystem — read home for media, write Pictures for screenshots
   - --filesystem=home:ro
   - --filesystem=xdg-pictures:create

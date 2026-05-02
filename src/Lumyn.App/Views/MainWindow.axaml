@@ -27,7 +27,6 @@
         Grid.Row="0"
         Background="#141414"
         IsHitTestVisible="True"
-        IsVisible="{Binding ControlsVisible}"
         MinHeight="38">
       <Grid ColumnDefinitions="Auto,*,Auto">
 
@@ -91,9 +90,9 @@
             <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowMinimize}" />
           </Button>
           <Button Classes="wchrome" Name="MaximizeButton"
-                  Click="MaximizeButton_Click" ToolTip.Tip="Maximise">
+                  Click="MaximizeButton_Click" ToolTip.Tip="Fullscreen">
             <PathIcon Name="MaximizeIcon" Width="11" Height="11"
-                      Data="{StaticResource Icon.WindowMaximize}" />
+                      Data="{StaticResource Icon.Fullscreen}" />
           </Button>
           <Button Classes="wchrome close" Name="CloseButton"
                   Click="CloseButton_Click" ToolTip.Tip="Close">

@@ -47,7 +47,15 @@ public partial class MainWindow : Window
         };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
-        PropertyChanged += (_, e) => { if (e.Property == WindowStateProperty) UpdateMaximizeIcon(); };
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == WindowStateProperty)
+            {
+                UpdateMaximizeIcon();
+                UpdateTopBarVisibility();
+            }
+        };
+        DataContextChanged += (_, _) => UpdateTopBarVisibility();
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
@@ -78,6 +86,7 @@ public partial class MainWindow : Window
             ViewModel.ControlsVisible = true;
             Cursor = Cursor.Default;
         }
+        UpdateTopBarVisibility();
 
         if (!_hideControlsTimer.IsEnabled || ViewModel.IsPlaying || WindowState == WindowState.FullScreen)
         {
@@ -100,6 +109,15 @@ public partial class MainWindow : Window
                 Cursor = new Cursor(StandardCursorType.None);
             }
         }
+        UpdateTopBarVisibility();
+    }
+
+    private void UpdateTopBarVisibility()
+    {
+        var topBar = this.FindControl<Border>("TopBar");
+        if (topBar is null) return;
+
+        topBar.IsVisible = ViewModel?.ControlsVisible == true && WindowState != WindowState.FullScreen;
     }
 
     // ── Video click surface ──────────────────────────────────────────────────
@@ -152,10 +170,7 @@ public partial class MainWindow : Window
         => WindowState = WindowState.Minimized;
 
     private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
-    {
-        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        UpdateMaximizeIcon();
-    }
+        => ToggleFullscreen();
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
         => Close();

@@ -54,7 +54,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly DlnaCastService _casting;
     private readonly DispatcherTimer _osdTimer;
     private int _stateRefreshQueued;
+    private int _castStateRefreshQueued;
     private long _lastTrackRevision = -1;
+    private long _lastCastStateRefreshMs;
 
     private string _title = "Lumyn";
     private string _timeText = "00:00 / 00:00";
@@ -70,6 +72,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isAlwaysOnTop;
     private bool _isCasting;
     private bool _isCastPlaying;
+    private TimeSpan _castPosition;
+    private TimeSpan _castDuration;
     private bool _isDiscoveringCastDevices;
     private string? _castTargetName;
     private string? _castStatusText;
@@ -126,8 +130,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         _playback.StateChanged += (_, _) => QueueRefreshState();
 
-        TogglePlayPauseCommand = new RelayCommand(_ => _playback.TogglePlayPause());
-        StopCommand            = new RelayCommand(_ => Stop());
+        TogglePlayPauseCommand = new RelayCommand(_ => { _ = TogglePlayPauseAsync(); });
+        StopCommand            = new RelayCommand(_ => { _ = StopAsync(); });
         ToggleMuteCommand      = new RelayCommand(_ => ToggleMute());
         SeekBackwardCommand    = new RelayCommand(_ => SeekRelative(-_seekStep));
         SeekForwardCommand     = new RelayCommand(_ => SeekRelative(_seekStep));
@@ -425,6 +429,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             if (SetField(ref _volume, next))
             {
                 _playback.SetVolume(next);
+                if (IsCasting)
+                    _ = _casting.SetVolumeAsync(Math.Clamp(next, 0, 100));
                 _settings.SaveSessionPreferences(next, _speed, _seekStep);
             }
         }
@@ -651,6 +657,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _playback.Pause();
             IsCasting = true;
             IsCastPlaying = true;
+            _castPosition = _playback.Position;
+            _castDuration = _playback.Duration;
             CastTargetName = device.Name;
             CastStatusText = null;
             ShowOsd($"Casting to {device.Name}");
@@ -659,6 +667,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             IsCasting = false;
             IsCastPlaying = false;
+            _castPosition = TimeSpan.Zero;
+            _castDuration = TimeSpan.Zero;
             CastTargetName = null;
             CastStatusText = $"Cast failed: {ex.Message}";
             ShowOsd(CastStatusText);
@@ -680,6 +690,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _casting.StopServer();
             IsCasting = false;
             IsCastPlaying = false;
+            _castPosition = TimeSpan.Zero;
+            _castDuration = TimeSpan.Zero;
             CastTargetName = null;
             CastStatusText = null;
             ShowOsd("Casting stopped");
@@ -695,17 +707,41 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             {
                 await _casting.PauseAsync();
                 IsCastPlaying = false;
+                IsPlaying = false;
             }
             else
             {
                 await _casting.PlayAsync();
                 IsCastPlaying = true;
+                IsPlaying = true;
             }
         }
         catch (Exception ex)
         {
             CastStatusText = $"Cast control failed: {ex.Message}";
         }
+    }
+
+    private async Task TogglePlayPauseAsync()
+    {
+        if (IsCasting)
+        {
+            await ToggleCastPlaybackAsync();
+            return;
+        }
+
+        _playback.TogglePlayPause();
+    }
+
+    private async Task StopAsync()
+    {
+        if (IsCasting)
+        {
+            await StopCastingAsync();
+            return;
+        }
+
+        Stop();
     }
 
     private async Task ChangeCastVolumeAsync(int delta)
@@ -919,6 +955,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void JumpTo(TimeSpan position)
     {
+        if (IsCasting)
+        {
+            _ = SeekCastAsync(position);
+            return;
+        }
+
         _playback.Seek(position);
     }
 
@@ -937,9 +979,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public void EndSeek()
     {
         _isSeeking = false;
-        var duration = _playback.Duration;
+        var duration = IsCasting ? _castDuration : _playback.Duration;
         if (duration > TimeSpan.Zero)
-            _playback.Seek(TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0)));
+        {
+            var target = TimeSpan.FromMilliseconds(duration.TotalMilliseconds * (_seekValue / 1000.0));
+            if (IsCasting)
+                _ = SeekCastAsync(target);
+            else
+                _playback.Seek(target);
+        }
     }
 
     public void PreviewSeek(double value)
@@ -959,7 +1007,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         Interlocked.Exchange(ref _stateRefreshQueued, 0);
 
         var state = _playback.Snapshot();
-        IsPlaying = state.IsPlaying;
+        if (IsCasting)
+            QueueCastStateRefresh();
+
+        IsPlaying = IsCasting ? IsCastPlaying : state.IsPlaying;
         IsMuted = state.IsMuted;
         Speed = state.Speed;
         IsLooping = state.IsLooping;
@@ -970,15 +1021,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(Volume));
         }
 
-        if (!_isSeeking && state.Duration > TimeSpan.Zero)
+        var displayPosition = IsCasting ? _castPosition : state.Position;
+        var displayDuration = IsCasting && _castDuration > TimeSpan.Zero ? _castDuration : state.Duration;
+
+        if (!_isSeeking && displayDuration > TimeSpan.Zero)
         {
             _seekValue = Math.Clamp(
-                state.Position.TotalMilliseconds / state.Duration.TotalMilliseconds * 1000.0,
+                displayPosition.TotalMilliseconds / displayDuration.TotalMilliseconds * 1000.0,
                 0, 1000);
             OnPropertyChanged(nameof(SeekValue));
         }
 
-        TimeText = $"{FormatTime(state.Position)} / {FormatTime(state.Duration)}";
+        TimeText = $"{FormatTime(displayPosition)} / {FormatTime(displayDuration)}";
         OnPropertyChanged(nameof(CurrentFilePath));
         OnPropertyChanged(nameof(HasMedia));
         OnPropertyChanged(nameof(IsAudioMode));
@@ -1005,6 +1059,61 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
 
         Dispatcher.UIThread.Post(RefreshState, DispatcherPriority.Background);
+    }
+
+    private void QueueCastStateRefresh()
+    {
+        var now = Environment.TickCount64;
+        if (now - _lastCastStateRefreshMs < 900)
+            return;
+        _lastCastStateRefreshMs = now;
+
+        if (Interlocked.Exchange(ref _castStateRefreshQueued, 1) == 1)
+            return;
+
+        _ = RefreshCastStateAsync();
+    }
+
+    private async Task RefreshCastStateAsync()
+    {
+        try
+        {
+            var positionTask = _casting.GetPositionInfoAsync();
+            var playingTask = _casting.GetIsPlayingAsync();
+            var position = await positionTask;
+            var playing = await playingTask;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (position is not null)
+                {
+                    _castPosition = position.Position;
+                    if (position.Duration > TimeSpan.Zero)
+                        _castDuration = position.Duration;
+                }
+
+                if (playing is not null)
+                    IsCastPlaying = playing.Value;
+
+                IsPlaying = IsCastPlaying;
+                if (!_isSeeking && _castDuration > TimeSpan.Zero)
+                {
+                    _seekValue = Math.Clamp(
+                        _castPosition.TotalMilliseconds / _castDuration.TotalMilliseconds * 1000.0,
+                        0, 1000);
+                    OnPropertyChanged(nameof(SeekValue));
+                }
+                TimeText = $"{FormatTime(_castPosition)} / {FormatTime(_castDuration)}";
+            });
+        }
+        catch
+        {
+            // Polling can fail while a renderer is buffering or switching state.
+        }
+        finally
+        {
+            Interlocked.Exchange(ref _castStateRefreshQueued, 0);
+        }
     }
 
     public void SaveResumePosition()
@@ -1055,8 +1164,41 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void SeekRelative(int seconds)
     {
+        if (IsCasting)
+        {
+            var target = _castPosition + TimeSpan.FromSeconds(seconds);
+            _ = SeekCastAsync(target < TimeSpan.Zero ? TimeSpan.Zero : target);
+            ShowOsd(seconds < 0 ? $"Rewind {Math.Abs(seconds)}s" : $"Forward {seconds}s");
+            return;
+        }
+
         _playback.SeekRelative(TimeSpan.FromSeconds(seconds));
         ShowOsd(seconds < 0 ? $"Rewind {Math.Abs(seconds)}s" : $"Forward {seconds}s");
+    }
+
+    private async Task SeekCastAsync(TimeSpan position)
+    {
+        try
+        {
+            if (_castDuration > TimeSpan.Zero && position > _castDuration)
+                position = _castDuration;
+
+            await _casting.SeekAsync(position);
+            _castPosition = position;
+            TimeText = $"{FormatTime(_castPosition)} / {FormatTime(_castDuration)}";
+            if (_castDuration > TimeSpan.Zero)
+            {
+                _seekValue = Math.Clamp(
+                    _castPosition.TotalMilliseconds / _castDuration.TotalMilliseconds * 1000.0,
+                    0, 1000);
+                OnPropertyChanged(nameof(SeekValue));
+            }
+        }
+        catch (Exception ex)
+        {
+            CastStatusText = $"Cast seek failed: {ex.Message}";
+            ShowOsd(CastStatusText);
+        }
     }
 
     private void SetSpeed(float rate)

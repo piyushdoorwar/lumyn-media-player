@@ -17,6 +17,8 @@ public sealed record DlnaCastDevice(
     Uri ControlUrl,
     Uri? RenderingControlUrl);
 
+public sealed record DlnaPositionInfo(TimeSpan Position, TimeSpan Duration);
+
 public sealed class DlnaCastService : IDisposable
 {
     private const string AvTransportService = "urn:schemas-upnp-org:service:AVTransport:1";
@@ -143,6 +145,12 @@ public sealed class DlnaCastService : IDisposable
     public Task SeekAsync(TimeSpan position, CancellationToken cancellationToken = default)
         => _activeDevice is null ? Task.CompletedTask : SeekAsync(_activeDevice, position, cancellationToken);
 
+    public Task<DlnaPositionInfo?> GetPositionInfoAsync(CancellationToken cancellationToken = default)
+        => _activeDevice is null ? Task.FromResult<DlnaPositionInfo?>(null) : GetPositionInfoAsync(_activeDevice, cancellationToken);
+
+    public Task<bool?> GetIsPlayingAsync(CancellationToken cancellationToken = default)
+        => _activeDevice is null ? Task.FromResult<bool?>(null) : GetIsPlayingAsync(_activeDevice, cancellationToken);
+
     public void StopServer()
     {
         lock (_serverLock)
@@ -184,6 +192,27 @@ public sealed class DlnaCastService : IDisposable
             <CurrentURI>{SecurityElement.Escape(mediaUri.ToString())}</CurrentURI>
             <CurrentURIMetaData>{SecurityElement.Escape(metadata)}</CurrentURIMetaData>
             """, cancellationToken);
+
+    private static async Task<DlnaPositionInfo?> GetPositionInfoAsync(DlnaCastDevice device, CancellationToken cancellationToken)
+    {
+        var response = await SoapAsync(device.ControlUrl, AvTransportService, "GetPositionInfo",
+            "<InstanceID>0</InstanceID>", cancellationToken).ConfigureAwait(false);
+        var position = ReadSoapTime(response, "RelTime");
+        var duration = ReadSoapTime(response, "TrackDuration");
+        return position is null && duration is null
+            ? null
+            : new DlnaPositionInfo(position ?? TimeSpan.Zero, duration ?? TimeSpan.Zero);
+    }
+
+    private static async Task<bool?> GetIsPlayingAsync(DlnaCastDevice device, CancellationToken cancellationToken)
+    {
+        var response = await SoapAsync(device.ControlUrl, AvTransportService, "GetTransportInfo",
+            "<InstanceID>0</InstanceID>", cancellationToken).ConfigureAwait(false);
+        var state = ReadSoapString(response, "CurrentTransportState");
+        if (string.IsNullOrWhiteSpace(state)) return null;
+        return state.Equals("PLAYING", StringComparison.OrdinalIgnoreCase) ||
+               state.Equals("TRANSITIONING", StringComparison.OrdinalIgnoreCase);
+    }
 
     private static Task SeekAsync(DlnaCastDevice device, TimeSpan position, CancellationToken cancellationToken)
         => SoapAsync(device.ControlUrl, AvTransportService, "Seek",
@@ -416,7 +445,7 @@ public sealed class DlnaCastService : IDisposable
         }
     }
 
-    private static async Task SoapAsync(Uri controlUrl, string serviceType, string action, string body, CancellationToken cancellationToken)
+    private static async Task<string> SoapAsync(Uri controlUrl, string serviceType, string action, string body, CancellationToken cancellationToken)
     {
         var envelope =
             $$"""
@@ -433,14 +462,15 @@ public sealed class DlnaCastService : IDisposable
         request.Headers.TryAddWithoutValidation("SOAPACTION", $"\"{serviceType}#{action}\"");
         request.Content = new StringContent(envelope, Encoding.UTF8, "text/xml");
         using var response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            var text = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             var detail = ExtractSoapFault(text);
             throw new InvalidOperationException(string.IsNullOrWhiteSpace(detail)
                 ? $"{action} failed: HTTP {(int)response.StatusCode} {response.ReasonPhrase}"
                 : $"{action} failed: {detail}");
         }
+        return text;
     }
 
     private static string? ExtractSoapFault(string xml)
@@ -464,6 +494,32 @@ public sealed class DlnaCastService : IDisposable
         {
             return xml.Length > 180 ? $"{xml[..180]}..." : xml;
         }
+    }
+
+    private static string? ReadSoapString(string xml, string elementName)
+    {
+        try
+        {
+            var doc = XDocument.Parse(xml);
+            return doc.Descendants()
+                .FirstOrDefault(e => e.Name.LocalName.Equals(elementName, StringComparison.OrdinalIgnoreCase))
+                ?.Value
+                ?.Trim();
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static TimeSpan? ReadSoapTime(string xml, string elementName)
+    {
+        var value = ReadSoapString(xml, elementName);
+        if (string.IsNullOrWhiteSpace(value) || value.StartsWith("NOT_IMPLEMENTED", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
     }
 
     private static Uri ResolveBaseUrl(Uri descriptionUrl, string? urlBase)
@@ -512,6 +568,9 @@ public sealed class DlnaCastService : IDisposable
             : $"""
               
                             <res protocolInfo="http-get:*:text/srt:*">{SecurityElement.Escape(subtitleUri.ToString())}</res>
+                            <res protocolInfo="http-get:*:application/x-subrip:*">{SecurityElement.Escape(subtitleUri.ToString())}</res>
+                            <upnp:subtitle>{SecurityElement.Escape(subtitleUri.ToString())}</upnp:subtitle>
+                            <sec:CaptionInfo sec:type="srt">{SecurityElement.Escape(subtitleUri.ToString())}</sec:CaptionInfo>
                             <sec:CaptionInfoEx sec:type="srt">{SecurityElement.Escape(subtitleUri.ToString())}</sec:CaptionInfoEx>
               """;
         return
@@ -541,6 +600,8 @@ public sealed class DlnaCastService : IDisposable
             ".opus" => "audio/opus",
             ".wav" => "audio/wav",
             ".m4a" or ".aac" => "audio/aac",
+            ".srt" => "application/x-subrip",
+            ".vtt" => "text/vtt",
             _ => "application/octet-stream"
         };
 

@@ -64,7 +64,9 @@ a {
 
 nav {
   display: flex;
+  flex-wrap: wrap;
   gap: clamp(12px, 3vw, 28px);
+  justify-content: flex-end;
   color: var(--soft);
   font-size: 14px;
 }
@@ -980,7 +982,8 @@ nav a:hover::after {
 
   nav {
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 12px 18px;
   }
 
   .hero {

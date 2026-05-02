@@ -1,4 +1,4 @@
-/* releases.js — powers the /releases.html page */
+/* releases.js - powers the /releases/ page */
 
 (function () {
   const REPO = "piyushdoorwar/lumyn-media-player";
@@ -131,9 +131,9 @@
       }
 
       const downloads = [
-        showLinux   ? dlBtn(linux,   "assets/ubuntu.svg")  : "",
-        showWindows ? dlBtn(windows, "assets/windows.svg") : "",
-        showMacos   ? dlBtn(macos,   "assets/apple.svg")   : "",
+        showLinux   ? dlBtn(linux,   "../assets/ubuntu.svg")  : "",
+        showWindows ? dlBtn(windows, "../assets/windows.svg") : "",
+        showMacos   ? dlBtn(macos,   "../assets/apple.svg")   : "",
       ].join("");
 
       return `<article class="release-item">

@@ -14,7 +14,7 @@ public partial class AboutDialog : Window
     private const string GitHubReleasesApi =
         "https://api.github.com/repos/piyushdoorwar/lumyn-media-player/releases/latest";
     private const string GitHubReleasesPage =
-        "https://piyushdoorwar.github.io/lumyn-media-player/releases.html";
+        "https://piyushdoorwar.github.io/lumyn-media-player/releases/";
 
     private static readonly string AppVersion = GetAppVersion();
     private string? _latestReleaseUrl;
@@ -218,7 +218,7 @@ public partial class AboutDialog : Window
         => OpenUrl("https://github.com/piyushdoorwar/lumyn-media-player");
 
     private void Releases_Click(object? sender, RoutedEventArgs e)
-        => OpenUrl("https://piyushdoorwar.github.io/lumyn-media-player/releases.html");
+        => OpenUrl("https://piyushdoorwar.github.io/lumyn-media-player/releases/");
 
     private void Issues_Click(object? sender, RoutedEventArgs e)
         => OpenUrl("https://github.com/piyushdoorwar/lumyn-media-player/issues");

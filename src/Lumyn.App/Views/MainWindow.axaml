@@ -11,6 +11,7 @@
     MinHeight="380"
     Background="#111111"
     Topmost="{Binding IsAlwaysOnTop}"
+    CanResize="True"
     SystemDecorations="BorderOnly"
     ExtendClientAreaToDecorationsHint="False">
 
@@ -18,7 +19,7 @@
     All layers stacked in a Panel. mpv renders video into an OpenGL surface
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
-  <Border CornerRadius="6" ClipToBounds="True" Background="#111111">
+  <Border Background="#111111">
   <Grid RowDefinitions="Auto,*">
 
     <!-- ── Top bar (own row – no mpv surface behind it) ─────────────────── -->
@@ -90,9 +91,9 @@
             <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowMinimize}" />
           </Button>
           <Button Classes="wchrome" Name="MaximizeButton"
-                  Click="MaximizeButton_Click" ToolTip.Tip="Fullscreen">
+                  Click="MaximizeButton_Click" ToolTip.Tip="Maximise">
             <PathIcon Name="MaximizeIcon" Width="11" Height="11"
-                      Data="{StaticResource Icon.Fullscreen}" />
+                      Data="{StaticResource Icon.WindowMaximize}" />
           </Button>
           <Button Classes="wchrome close" Name="CloseButton"
                   Click="CloseButton_Click" ToolTip.Tip="Close">

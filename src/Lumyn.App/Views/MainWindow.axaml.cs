@@ -16,6 +16,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _hideControlsTimer;
     private long _lastControlsPulseMs;
     private bool _isApplyingFullscreenState;
+    private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
 
     public MainWindow()
     {
@@ -114,8 +115,7 @@ public partial class MainWindow : Window
         var topBar = this.FindControl<Border>("TopBar");
         if (topBar is null) return;
 
-        topBar.IsVisible = WindowState != WindowState.FullScreen ||
-                           ViewModel?.ControlsVisible == true;
+        topBar.IsVisible = WindowState != WindowState.FullScreen;
     }
 
     // ── Video click surface ──────────────────────────────────────────────────
@@ -168,7 +168,11 @@ public partial class MainWindow : Window
         => WindowState = WindowState.Minimized;
 
     private void MaximizeButton_Click(object? sender, RoutedEventArgs e)
-        => ToggleFullscreen();
+    {
+        WindowState = WindowState == WindowState.Maximized
+            ? WindowState.Normal
+            : WindowState.Maximized;
+    }
 
     private void CloseButton_Click(object? sender, RoutedEventArgs e)
         => Close();
@@ -275,8 +279,8 @@ public partial class MainWindow : Window
                 ViewModel.ToggleAlwaysOnTopCommand.Execute(null);
                 e.Handled = true; break;
             case Key.Escape when WindowState == WindowState.FullScreen:
-                WindowState = WindowState.Normal;
-                ShowControls(); e.Handled = true; break;
+                BeginExitFullscreen();
+                e.Handled = true; break;
 
             // ── Dialogs / file ops ───────────────────────────────────────────
             case Key.O:
@@ -785,12 +789,54 @@ public partial class MainWindow : Window
     private void ToggleFullscreen()
     {
         if (_isApplyingFullscreenState) return;
+
+        if (WindowState == WindowState.FullScreen)
+            BeginExitFullscreen();
+        else
+            BeginEnterFullscreen();
+    }
+
+    private void BeginEnterFullscreen()
+    {
         _isApplyingFullscreenState = true;
+        _restoreWindowStateAfterFullscreen = WindowState == WindowState.Maximized
+            ? WindowState.Maximized
+            : WindowState.Normal;
 
-        WindowState = WindowState == WindowState.FullScreen
-            ? WindowState.Normal
-            : WindowState.FullScreen;
+        if (WindowState == WindowState.Maximized)
+        {
+            WindowState = WindowState.Normal;
+            Dispatcher.UIThread.Post(() =>
+            {
+                WindowState = WindowState.FullScreen;
+                CompleteFullscreenTransition();
+            }, DispatcherPriority.Background);
+            return;
+        }
 
+        WindowState = WindowState.FullScreen;
+        CompleteFullscreenTransition();
+    }
+
+    private void BeginExitFullscreen()
+    {
+        _isApplyingFullscreenState = true;
+        WindowState = _restoreWindowStateAfterFullscreen == WindowState.Maximized
+            ? WindowState.Maximized
+            : WindowState.Normal;
+        CompleteFullscreenTransition();
+    }
+
+    private void CompleteFullscreenTransition()
+    {
+        UpdateFullscreenIcon();
+        ShowControls();
+
+        Dispatcher.UIThread.Post(() => _isApplyingFullscreenState = false, DispatcherPriority.Background);
+    }
+
+    private void UpdateFullscreenIcon()
+    {
         var icon = this.FindControl<PathIcon>("FullscreenIcon");
         var iconCtrl = this.FindControl<PathIcon>("FullscreenCtrlIcon");
         var data = this.FindResource(
@@ -800,9 +846,6 @@ public partial class MainWindow : Window
             if (icon is not null) icon.Data = sg;
             if (iconCtrl is not null) iconCtrl.Data = sg;
         }
-        ShowControls();
-
-        Dispatcher.UIThread.Post(() => _isApplyingFullscreenState = false, DispatcherPriority.Background);
     }
 
     private async Task<T> RunWithPlaybackPausedAsync<T>(Func<Task<T>> action)

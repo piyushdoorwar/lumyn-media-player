@@ -57,6 +57,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _castStateRefreshQueued;
     private long _lastTrackRevision = -1;
     private long _lastCastStateRefreshMs;
+    private string? _lastNotifiedCurrentFilePath;
+    private bool _lastNotifiedHasMedia;
+    private bool _lastNotifiedIsAudioMode;
+    private bool _hasNotifiedMediaIdentity;
 
     private string _title = "Lumyn";
     private string _timeText = "00:00 / 00:00";
@@ -86,6 +90,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Subtitle overlay (Avalonia-rendered to avoid duplicate native subtitles) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
+    private int _subtitleLineIndex = -1;
     private bool _useSubtitleOverlay;
 
     // ── Subtitle appearance ───────────────────────────────────────────────────
@@ -238,9 +243,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public void RemoveRecentFile(string filePath)
     {
         _settings.RemoveRecentFile(filePath);
-        OnPropertyChanged(nameof(RecentFiles));
-        OnPropertyChanged(nameof(RecentFileItems));
-        OnPropertyChanged(nameof(HasRecentFiles));
+        NotifyRecentFilesChanged();
     }
 
     public void JumpToBookmark(TimeSpan position)
@@ -832,6 +835,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // Parse off the UI thread so large SRT files don't freeze the window.
         var lines = await Task.Run(() => Lumyn.Core.Services.SubtitleParser.Parse(path));
         _subtitleLines = lines;
+        _subtitleLineIndex = -1;
 
         // Add the subtitle to mpv so it is available in the track menu. If our
         // parser can render it, keep mpv subtitles off to avoid duplicate text.
@@ -868,6 +872,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         if (s.EmbeddedTrackId is not null)
         {
             _subtitleLines = [];
+            _subtitleLineIndex = -1;
             _useSubtitleOverlay = false;
             CurrentSubtitleText = null;
             _playback.SetSubtitleTrack(s.EmbeddedTrackId.Value);
@@ -884,6 +889,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             // Disable subtitles: clear parsed lines + reset delay
             _subtitleLines = [];
+            _subtitleLineIndex = -1;
             _useSubtitleOverlay = false;
             CurrentSubtitleText = null;
             _playback.SetSubtitleTrack(-1);
@@ -1033,19 +1039,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         TimeText = $"{FormatTime(displayPosition)} / {FormatTime(displayDuration)}";
-        OnPropertyChanged(nameof(CurrentFilePath));
-        OnPropertyChanged(nameof(HasMedia));
-        OnPropertyChanged(nameof(IsAudioMode));
-        OnPropertyChanged(nameof(RecentFiles));
-        NotifyPlaylistState();
+        NotifyMediaIdentityIfChanged();
         RefreshTracksIfNeeded();
 
         // Update Avalonia subtitle overlay text.
         if (_useSubtitleOverlay && _subtitleLines.Count > 0 && state.IsPlaying)
         {
-            var pos = state.Position;
-            var hit = _subtitleLines.FirstOrDefault(l => pos >= l.Start && pos < l.End);
-            CurrentSubtitleText = hit?.Text;
+            CurrentSubtitleText = FindSubtitleText(state.Position);
         }
         else
         {
@@ -1136,6 +1136,92 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _casting.Dispose();
         _playback.Dispose();
     }
+
+    private void NotifyMediaIdentityIfChanged()
+    {
+        var current = CurrentFilePath;
+        var hasMedia = !string.IsNullOrWhiteSpace(current);
+        var isAudioMode = _isAudioOnly && hasMedia;
+
+        if (!_hasNotifiedMediaIdentity ||
+            !string.Equals(_lastNotifiedCurrentFilePath, current, StringComparison.Ordinal))
+        {
+            _lastNotifiedCurrentFilePath = current;
+            OnPropertyChanged(nameof(CurrentFilePath));
+        }
+
+        if (!_hasNotifiedMediaIdentity || _lastNotifiedHasMedia != hasMedia)
+        {
+            _lastNotifiedHasMedia = hasMedia;
+            OnPropertyChanged(nameof(HasMedia));
+        }
+
+        if (!_hasNotifiedMediaIdentity || _lastNotifiedIsAudioMode != isAudioMode)
+        {
+            _lastNotifiedIsAudioMode = isAudioMode;
+            OnPropertyChanged(nameof(IsAudioMode));
+        }
+
+        _hasNotifiedMediaIdentity = true;
+    }
+
+    private void NotifyRecentFilesChanged()
+    {
+        OnPropertyChanged(nameof(RecentFiles));
+        OnPropertyChanged(nameof(RecentFileItems));
+        OnPropertyChanged(nameof(HasRecentFiles));
+    }
+
+    private string? FindSubtitleText(TimeSpan position)
+    {
+        var lines = _subtitleLines;
+        if (lines.Count == 0)
+            return null;
+
+        if (IsSubtitleHit(_subtitleLineIndex, position))
+            return lines[_subtitleLineIndex].Text;
+
+        var next = _subtitleLineIndex + 1;
+        if (IsSubtitleHit(next, position))
+        {
+            _subtitleLineIndex = next;
+            return lines[next].Text;
+        }
+
+        var previous = _subtitleLineIndex - 1;
+        if (IsSubtitleHit(previous, position))
+        {
+            _subtitleLineIndex = previous;
+            return lines[previous].Text;
+        }
+
+        var low = 0;
+        var high = lines.Count - 1;
+        var candidate = -1;
+
+        while (low <= high)
+        {
+            var mid = low + ((high - low) / 2);
+            if (lines[mid].Start <= position)
+            {
+                candidate = mid;
+                low = mid + 1;
+            }
+            else
+            {
+                high = mid - 1;
+            }
+        }
+
+        _subtitleLineIndex = candidate;
+        return IsSubtitleHit(candidate, position) ? lines[candidate].Text : null;
+    }
+
+    private bool IsSubtitleHit(int index, TimeSpan position)
+        => index >= 0 &&
+           index < _subtitleLines.Count &&
+           position >= _subtitleLines[index].Start &&
+           position < _subtitleLines[index].End;
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
@@ -1299,6 +1385,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             _useSubtitleOverlay = false;
             _subtitleLines = [];
+            _subtitleLineIndex = -1;
             CurrentSubtitleText = null;
         }
         CurrentSubtitleSettings = CurrentSubtitleSettings with
@@ -1328,6 +1415,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             _useSubtitleOverlay = false;
             _subtitleLines = [];
+            _subtitleLineIndex = -1;
             CurrentSubtitleText = null;
         }
         CurrentSubtitleSettings = CurrentSubtitleSettings with
@@ -1470,6 +1558,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var resume = _settings.GetResumePosition(filePath);
         await _playback.OpenAsync(filePath, resume);
         _settings.AddRecentFile(filePath);
+        NotifyRecentFilesChanged();
 
         var fileName = Path.GetFileName(filePath);
         Title = string.IsNullOrWhiteSpace(fileName) ? "Lumyn" : $"{fileName} - Lumyn";

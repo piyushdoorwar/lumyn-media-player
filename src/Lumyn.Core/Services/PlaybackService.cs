@@ -69,7 +69,7 @@ public sealed class PlaybackService : IDisposable
             SetOption("terminal", "no");
             SetOption("idle", "yes");
             SetOption("vo", "libmpv");
-            SetOption("hwdec", "no");
+            SetOption("hwdec", "auto-safe");
             SetOption("osd-level", "0");
 
             var init = MpvNative.mpv_initialize(_mpv);
@@ -122,18 +122,18 @@ public sealed class PlaybackService : IDisposable
     public event EventHandler? EndReached;
     public event EventHandler<string>? ErrorOccurred;
 
-    public Task OpenAsync(string filePath, TimeSpan resumePosition)
+    public async Task OpenAsync(string filePath, TimeSpan resumePosition)
     {
         if (_mpv == IntPtr.Zero)
         {
             ErrorOccurred?.Invoke(this, InitializationError ?? "mpv is not available.");
-            return Task.CompletedTask;
+            return;
         }
 
         if (!File.Exists(filePath))
         {
             ErrorOccurred?.Invoke(this, "The selected file does not exist.");
-            return Task.CompletedTask;
+            return;
         }
 
         lock (_stateLock)
@@ -145,7 +145,7 @@ public sealed class PlaybackService : IDisposable
             _pause = false;
         }
 
-        Command("loadfile", filePath, "replace");
+        await Task.Run(() => Command("loadfile", filePath, "replace")).ConfigureAwait(false);
 
         if (resumePosition > TimeSpan.Zero)
         {
@@ -157,7 +157,6 @@ public sealed class PlaybackService : IDisposable
         }
 
         RaiseStateChanged();
-        return Task.CompletedTask;
     }
 
     public void Stop()
@@ -344,9 +343,10 @@ public sealed class PlaybackService : IDisposable
         SetSubtitleTrack(next.Id);
     }
 
-    public void InitializeRenderer(Func<string, IntPtr> getProcAddress, Action requestRender)
+    public bool InitializeRenderer(Func<string, IntPtr> getProcAddress, Action requestRender)
     {
-        if (_mpv == IntPtr.Zero || _renderContext != IntPtr.Zero) return;
+        if (_mpv == IntPtr.Zero) return false;
+        if (_renderContext != IntPtr.Zero) return true;
 
         ResetRenderTarget();
         _getProcAddress = getProcAddress;
@@ -379,7 +379,8 @@ public sealed class PlaybackService : IDisposable
                 if (result < 0 || _renderContext == IntPtr.Zero)
                 {
                     ErrorOccurred?.Invoke(this, $"mpv OpenGL renderer failed to initialize: {result}.");
-                    return;
+                    ClearRendererCallbacks();
+                    return false;
                 }
             }
             finally
@@ -392,6 +393,7 @@ public sealed class PlaybackService : IDisposable
         _renderUpdateCallback = _ => _requestRender?.Invoke();
         MpvNative.mpv_render_context_set_update_callback(_renderContext, _renderUpdateCallback, IntPtr.Zero);
         _rendererReady = true;
+        return true;
     }
 
     public void RenderVideo(int framebuffer, int width, int height)
@@ -422,6 +424,19 @@ public sealed class PlaybackService : IDisposable
         _lastRenderFramebuffer = framebuffer;
         _lastRenderWidth = width;
         _lastRenderHeight = height;
+    }
+
+    public void ShutdownRenderer()
+    {
+        if (_renderContext != IntPtr.Zero)
+        {
+            MpvNative.mpv_render_context_free(_renderContext);
+            _renderContext = IntPtr.Zero;
+        }
+
+        _rendererReady = false;
+        ResetRenderTarget();
+        ClearRendererCallbacks();
     }
 
     public MediaState Snapshot()
@@ -769,12 +784,7 @@ public sealed class PlaybackService : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        if (_renderContext != IntPtr.Zero)
-        {
-            MpvNative.mpv_render_context_free(_renderContext);
-            _renderContext = IntPtr.Zero;
-        }
-        ResetRenderTarget();
+        ShutdownRenderer();
 
         if (_mpv != IntPtr.Zero)
             MpvNative.mpv_terminate_destroy(_mpv);
@@ -788,6 +798,14 @@ public sealed class PlaybackService : IDisposable
         _lastRenderFramebuffer = -1;
         _lastRenderWidth = 0;
         _lastRenderHeight = 0;
+    }
+
+    private void ClearRendererCallbacks()
+    {
+        _requestRender = null;
+        _getProcAddress = null;
+        _renderUpdateCallback = null;
+        _getProcAddressCallback = null;
     }
 }
 

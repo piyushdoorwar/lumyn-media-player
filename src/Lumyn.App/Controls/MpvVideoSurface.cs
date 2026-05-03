@@ -13,6 +13,7 @@ public sealed class MpvVideoSurface : OpenGlControlBase
         AvaloniaProperty.Register<MpvVideoSurface, PlaybackService?>(nameof(Playback));
 
     private bool _rendererInitialized;
+    private bool _glReady;
     private int _renderRequestQueued;
     private bool _isReadyForPlaybackOpen;
 
@@ -38,18 +39,31 @@ public sealed class MpvVideoSurface : OpenGlControlBase
         set => SetValue(PlaybackProperty, value);
     }
 
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == PlaybackProperty && _glReady && !_rendererInitialized)
+            RequestNextFrameRendering();
+    }
+
     protected override void OnOpenGlInit(GlInterface gl)
     {
         base.OnOpenGlInit(gl);
+        _glReady = true;
         TryInitializeRenderer(gl);
-        IsReadyForPlaybackOpen = true;
-        RequestNextFrameRendering();
+        IsReadyForPlaybackOpen = _rendererInitialized;
+        if (_rendererInitialized)
+            RequestNextFrameRendering();
     }
 
     protected override void OnOpenGlDeinit(GlInterface gl)
     {
         IsReadyForPlaybackOpen = false;
+        _glReady = false;
         _rendererInitialized = false;
+        Interlocked.Exchange(ref _renderRequestQueued, 0);
+        Playback?.ShutdownRenderer();
         base.OnOpenGlDeinit(gl);
     }
 
@@ -58,10 +72,12 @@ public sealed class MpvVideoSurface : OpenGlControlBase
         Interlocked.Exchange(ref _renderRequestQueued, 0);
 
         var playback = Playback;
-        if (playback is null)
+        if (!_glReady || playback is null)
             return;
 
         TryInitializeRenderer(gl);
+        if (_rendererInitialized)
+            IsReadyForPlaybackOpen = true;
 
         var scale = TopLevel.GetTopLevel(this)?.RenderScaling ?? 1.0;
         var width = Math.Max(1, (int)Math.Round(Bounds.Width * scale));
@@ -71,20 +87,28 @@ public sealed class MpvVideoSurface : OpenGlControlBase
 
     private void TryInitializeRenderer(GlInterface gl)
     {
-        if (_rendererInitialized || Playback is null)
+        if (_rendererInitialized || !_glReady || Playback is null)
             return;
 
-        Playback.InitializeRenderer(
+        _rendererInitialized = Playback.InitializeRenderer(
             proc => gl.GetProcAddress(proc),
             QueueRenderRequest);
-        _rendererInitialized = true;
     }
 
     private void QueueRenderRequest()
     {
+        if (!_glReady)
+            return;
+
         if (Interlocked.Exchange(ref _renderRequestQueued, 1) == 1)
             return;
 
-        Dispatcher.UIThread.Post(RequestNextFrameRendering, DispatcherPriority.Background);
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_glReady)
+                RequestNextFrameRendering();
+            else
+                Interlocked.Exchange(ref _renderRequestQueued, 0);
+        }, DispatcherPriority.Background);
     }
 }

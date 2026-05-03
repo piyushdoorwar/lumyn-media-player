@@ -88,11 +88,8 @@ public partial class MainWindow : Window
         }
         UpdateTopBarVisibility();
 
-        if (!_hideControlsTimer.IsEnabled || ViewModel.IsPlaying || WindowState == WindowState.FullScreen)
-        {
-            _hideControlsTimer.Stop();
-            _hideControlsTimer.Start();
-        }
+        _hideControlsTimer.Stop();
+        _hideControlsTimer.Start();
     }
 
     private void HideControls()
@@ -117,7 +114,8 @@ public partial class MainWindow : Window
         var topBar = this.FindControl<Border>("TopBar");
         if (topBar is null) return;
 
-        topBar.IsVisible = ViewModel?.ControlsVisible == true && WindowState != WindowState.FullScreen;
+        topBar.IsVisible = WindowState != WindowState.FullScreen ||
+                           ViewModel?.ControlsVisible == true;
     }
 
     // ── Video click surface ──────────────────────────────────────────────────

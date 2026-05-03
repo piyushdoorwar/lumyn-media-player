@@ -8,6 +8,8 @@ namespace Lumyn.Core.Services;
 
 public sealed class PlaybackService : IDisposable
 {
+    private const ulong MpvRenderUpdateFrame = 1UL << 0;
+
     private static readonly Dictionary<string, string> LanguageNames = new(StringComparer.OrdinalIgnoreCase)
     {
         ["ara"] = "Arabic",
@@ -49,6 +51,9 @@ public sealed class PlaybackService : IDisposable
     private MpvNative.MpvOpenGlGetProcAddress? _getProcAddressCallback;
     private Func<string, IntPtr>? _getProcAddress;
     private Action? _requestRender;
+    private int _lastRenderFramebuffer = -1;
+    private int _lastRenderWidth;
+    private int _lastRenderHeight;
 
     public PlaybackService()
     {
@@ -343,6 +348,7 @@ public sealed class PlaybackService : IDisposable
     {
         if (_mpv == IntPtr.Zero || _renderContext != IntPtr.Zero) return;
 
+        ResetRenderTarget();
         _getProcAddress = getProcAddress;
         _requestRender = requestRender;
         _getProcAddressCallback = (_, name) =>
@@ -392,6 +398,14 @@ public sealed class PlaybackService : IDisposable
     {
         if (!_rendererReady || _renderContext == IntPtr.Zero || width <= 0 || height <= 0) return;
 
+        var updateFlags = MpvNative.mpv_render_context_update(_renderContext);
+        var targetChanged = framebuffer != _lastRenderFramebuffer ||
+                            width != _lastRenderWidth ||
+                            height != _lastRenderHeight;
+
+        if ((updateFlags & MpvRenderUpdateFrame) == 0 && !targetChanged)
+            return;
+
         unsafe
         {
             var fbo = new MpvNative.MpvOpenGlFbo(framebuffer, width, height, 0);
@@ -404,6 +418,10 @@ public sealed class PlaybackService : IDisposable
             parameters[3] = new MpvNative.MpvRenderParam(MpvRenderParamType.Invalid, IntPtr.Zero);
             MpvNative.mpv_render_context_render(_renderContext, parameters);
         }
+
+        _lastRenderFramebuffer = framebuffer;
+        _lastRenderWidth = width;
+        _lastRenderHeight = height;
     }
 
     public MediaState Snapshot()
@@ -756,12 +774,20 @@ public sealed class PlaybackService : IDisposable
             MpvNative.mpv_render_context_free(_renderContext);
             _renderContext = IntPtr.Zero;
         }
+        ResetRenderTarget();
 
         if (_mpv != IntPtr.Zero)
             MpvNative.mpv_terminate_destroy(_mpv);
 
         if (_eventThread is { IsAlive: true })
             _eventThread.Join(TimeSpan.FromMilliseconds(500));
+    }
+
+    private void ResetRenderTarget()
+    {
+        _lastRenderFramebuffer = -1;
+        _lastRenderWidth = 0;
+        _lastRenderHeight = 0;
     }
 }
 
@@ -938,6 +964,9 @@ internal static partial class MpvNative
         IntPtr ctx,
         MpvRenderUpdateCallback callback,
         IntPtr callbackContext);
+
+    [LibraryImport(Library)]
+    public static partial ulong mpv_render_context_update(IntPtr ctx);
 
     [LibraryImport(Library)]
     public static unsafe partial int mpv_render_context_render(IntPtr ctx, MpvRenderParam* parameters);

@@ -25,7 +25,10 @@ public sealed class ChromecastCastService : IDisposable
     private Uri? _servedFileUri;
     private Uri? _servedSubtitleUri;
     private bool _needsTranscoding;
+    private TimeSpan _transcodingOffset;
     private Process? _ffmpegProcess;
+    private MediaInformation? _currentMediaInfo;
+    private int[] _currentActiveTrackIds = [];
 
     private ISender? _sender;
     private IMediaChannel? _mediaChannel;
@@ -103,9 +106,17 @@ public sealed class ChromecastCastService : IDisposable
         if (_needsTranscoding)
             mediaInfo.StreamType = StreamType.Live;
 
+        // For transcoded content, encode the start position into the FFmpeg offset;
+        // the seek is handled by restarting FFmpeg at that position rather than by the Cast protocol.
+        if (_needsTranscoding)
+            _transcodingOffset = startPosition;
+
+        _currentMediaInfo = mediaInfo;
+        _currentActiveTrackIds = activeTrackIds;
+
         await mediaChannel.LoadAsync(mediaInfo, true, activeTrackIds);
 
-        if (startPosition > TimeSpan.Zero)
+        if (!_needsTranscoding && startPosition > TimeSpan.Zero)
         {
             try { await mediaChannel.SeekAsync(startPosition.TotalSeconds); }
             catch { /* not all receivers support pre-seek */ }
@@ -146,6 +157,18 @@ public sealed class ChromecastCastService : IDisposable
     public async Task SeekAsync(TimeSpan position, CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
+
+        if (_needsTranscoding)
+        {
+            // Seeking a live-transcoded stream requires restarting FFmpeg at the new
+            // offset and telling Chromecast to reload (it can't seek a live stream in-place).
+            _transcodingOffset = position < TimeSpan.Zero ? TimeSpan.Zero : position;
+            try { _ffmpegProcess?.Kill(entireProcessTree: true); } catch { }
+            if (_currentMediaInfo is not null)
+                try { await _mediaChannel.LoadAsync(_currentMediaInfo, true, _currentActiveTrackIds); } catch { }
+            return;
+        }
+
         try { await _mediaChannel.SeekAsync(position.TotalSeconds); } catch { }
     }
 
@@ -156,7 +179,9 @@ public sealed class ChromecastCastService : IDisposable
         {
             var status = await _mediaChannel.GetStatusAsync();
             if (status is null) return null;
-            var position = TimeSpan.FromSeconds(status.CurrentTime);
+            // For transcoded content the Chromecast stream always starts at 0; add the seek
+            // offset so the UI shows the true position within the original file.
+            var position = _transcodingOffset + TimeSpan.FromSeconds(status.CurrentTime);
             var duration = status.Media?.Duration is double d and > 0
                 ? TimeSpan.FromSeconds(d)
                 : TimeSpan.Zero;
@@ -259,6 +284,9 @@ public sealed class ChromecastCastService : IDisposable
         _servedFileUri = null;
         _servedSubtitleUri = null;
         _needsTranscoding = false;
+        _transcodingOffset = TimeSpan.Zero;
+        _currentMediaInfo = null;
+        _currentActiveTrackIds = [];
         _serverCts?.Cancel();
         _listener?.Stop();
         _listener = null;
@@ -378,10 +406,15 @@ public sealed class ChromecastCastService : IDisposable
             "\r\n";
         await network.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken).ConfigureAwait(false);
 
+        var offset = _transcodingOffset;
+        var seekArg = offset > TimeSpan.Zero
+            ? $"-ss {offset.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)} "
+            : string.Empty;
+
         var psi = new ProcessStartInfo
         {
             FileName = "ffmpeg",
-            Arguments = $"-hide_banner -loglevel error -i \"{filePath}\" " +
+            Arguments = $"-hide_banner -loglevel error {seekArg}-i \"{filePath}\" " +
                         "-c:v copy -c:a aac -b:a 192k " +
                         "-movflags frag_keyframe+empty_moov+default_base_moof " +
                         "-f mp4 pipe:1",

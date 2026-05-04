@@ -14,11 +14,8 @@ public partial class AboutDialog : Window
 {
     private const string GitHubReleasesApi =
         "https://api.github.com/repos/piyushdoorwar/lumyn-media-player/releases/latest";
-    private const string GitHubReleasesPage =
-        "https://piyushdoorwar.github.io/lumyn-media-player/releases/";
 
     private static readonly string AppVersion = GetAppVersion();
-    private string? _latestReleaseUrl;
 
     public AboutDialog()
     {
@@ -80,7 +77,6 @@ public partial class AboutDialog : Window
     {
         var btn = this.FindControl<Button>("CheckUpdatesButton");
         var statusText = this.FindControl<TextBlock>("UpdateStatusText");
-        var openBtn = this.FindControl<Button>("OpenReleasesButton");
 
         if (btn is not null) { btn.IsEnabled = false; btn.Content = "Checking…"; }
         if (statusText is not null) statusText.Text = "";
@@ -146,9 +142,6 @@ public partial class AboutDialog : Window
 
             var tagName = root.GetProperty("tag_name").GetString() ?? "";
             var latestVersion = tagName.TrimStart('v');
-            _latestReleaseUrl = root.TryGetProperty("html_url", out var urlProp)
-                ? urlProp.GetString()
-                : GitHubReleasesPage;
 
             var isNewer = IsNewerVersion(latestVersion, AppVersion);
 
@@ -162,10 +155,6 @@ public partial class AboutDialog : Window
                     statusText.Text = isNewer
                         ? $"v{latestVersion} is available!"
                         : "You're up to date.";
-                }
-                if (openBtn is not null)
-                {
-                    openBtn.IsVisible = isNewer;
                 }
                 if (btn is not null)
                 {
@@ -217,17 +206,11 @@ public partial class AboutDialog : Window
 
     // ── Button handlers ──────────────────────────────────────────────────────
 
-    private void OpenReleases_Click(object? sender, RoutedEventArgs e)
-        => OpenUrl(_latestReleaseUrl ?? GitHubReleasesPage);
-
     private void GitHub_Click(object? sender, RoutedEventArgs e)
         => OpenUrl("https://github.com/piyushdoorwar/lumyn-media-player");
 
     private void Releases_Click(object? sender, RoutedEventArgs e)
         => OpenUrl("https://piyushdoorwar.github.io/lumyn-media-player/releases/");
-
-    private void Issues_Click(object? sender, RoutedEventArgs e)
-        => OpenUrl("https://github.com/piyushdoorwar/lumyn-media-player/issues");
 
     private static void OpenUrl(string url)
     {

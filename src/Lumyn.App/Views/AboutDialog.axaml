@@ -61,16 +61,6 @@
               BorderBrush="#3A3A3A" BorderThickness="1"
               Padding="0,8" CornerRadius="4"
               Content="Check for Updates" />
-
-      <Button Name="OpenReleasesButton"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center"
-              Click="OpenReleases_Click"
-              IsVisible="False"
-              Background="#1E3A28" Foreground="#3A9B4B"
-              BorderBrush="#2A5438" BorderThickness="1"
-              Padding="0,8" CornerRadius="4"
-              Content="View Latest Release ↗" />
     </StackPanel>
 
     <!-- Divider -->
@@ -81,8 +71,6 @@
       <Button Classes="link" Content="GitHub" Click="GitHub_Click" />
       <TextBlock Text="·" Foreground="#3A3A3A" VerticalAlignment="Center" />
       <Button Classes="link" Content="Releases" Click="Releases_Click" />
-      <TextBlock Text="·" Foreground="#3A3A3A" VerticalAlignment="Center" />
-      <Button Classes="link" Content="Report an Issue" Click="Issues_Click" />
     </StackPanel>
 
     <!-- License note -->

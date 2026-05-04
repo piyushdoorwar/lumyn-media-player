@@ -8,6 +8,7 @@
   let allReleases = [];   // all non-draft releases fetched so far
   let currentOS  = "all";
   let currentPage = 1;
+  let stableOnly  = true;
 
   // ── DOM refs ───────────────────────────────────────────────────────────────
   const loadingEl = document.getElementById("releases-loading");
@@ -18,7 +19,8 @@
   const prevBtn   = document.getElementById("page-prev");
   const nextBtn   = document.getElementById("page-next");
   const pageLabel = document.getElementById("page-label");
-  const osTabs    = document.querySelectorAll(".os-tab");
+  const osTabs          = document.querySelectorAll(".os-tab");
+  const stableToggle    = document.getElementById("stableOnlyToggle");
 
   // ── Fetch all releases from GitHub (traverse pages) ───────────────────────
   async function fetchAllReleases() {
@@ -93,7 +95,7 @@
 
   // ── Render ─────────────────────────────────────────────────────────────────
   function renderPage() {
-    const filtered = allReleases.filter(r => hasOsAsset(r, currentOS));
+    const filtered = allReleases.filter(r => hasOsAsset(r, currentOS) && (!stableOnly || !r.prerelease));
     const latestStable = filtered.find(r => !r.prerelease);
 
     if (filtered.length === 0) {
@@ -181,6 +183,12 @@
 
   prevBtn.addEventListener("click", () => { if (currentPage > 1) { currentPage--; renderPage(); window.scrollTo(0, 0); } });
   nextBtn.addEventListener("click", () => { currentPage++; renderPage(); window.scrollTo(0, 0); });
+
+  stableToggle.addEventListener("change", () => {
+    stableOnly = stableToggle.checked;
+    currentPage = 1;
+    renderPage();
+  });
 
   // ── Init ───────────────────────────────────────────────────────────────────
   (async function init() {

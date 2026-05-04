@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.version }}
-      prerelease: ${{ steps.ver.outputs.prerelease }}
     steps:
       - name: Extract version
         id: ver
@@ -32,12 +31,6 @@ jobs:
             VERSION="${GITHUB_REF_NAME#v}"
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          # A hyphen in the version signals a pre-release (e.g. 1.2.3-beta.1, 2.0.0-rc.1)
-          if [[ "${VERSION}" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
 
   # ── Platform builds ───────────────────────────────────────────────────────
   linux-deb:
@@ -145,5 +138,4 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: "Lumyn ${{ needs.prepare.outputs.version }}"
-          prerelease: ${{ needs.prepare.outputs.prerelease }}
           files: release-artifacts/**/*

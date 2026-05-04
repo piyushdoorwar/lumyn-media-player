@@ -493,7 +493,7 @@ All jobs install .NET 10.0 SDK.
 
 - **Version source**: Git tag. Push a tag like `v1.2.3` or `v2.0.0-beta.1` → `release.yml` fires automatically.
 - **Tag format**: `v{MAJOR}.{MINOR}.{PATCH}` for production, `v{MAJOR}.{MINOR}.{PATCH}-{label}` for pre-release (e.g. `v1.2.0-beta.1`, `v2.0.0-rc.1`).
-- **Pre-release detection**: Any tag containing a `-` after stripping `v` is marked as a GitHub pre-release automatically.
+- **Pre-release vs production**: Controlled entirely in the GitHub UI — the workflow does **not** set the `prerelease` flag. Push the tag, then mark the release as pre-release or production in GitHub manually.
 - **How the version flows**:
   1. `release.yml` extracts the version from the tag (`v1.2.3` → `1.2.3`) in a `prepare` job
   2. All build jobs receive it as the `VERSION` env var
@@ -521,6 +521,20 @@ All jobs install .NET 10.0 SDK.
 - Deployed automatically to GitHub Pages via `static.yml` on every push to `main`
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
 - Contains: landing page, download links, documentation
+
+### Releases page (`/site/releases/`)
+
+- `index.html` — static markup; OS filter tabs + stable-only toggle
+- `releases.js` — fetches all non-draft releases from GitHub API, renders paginated list
+
+**Filters:**
+- **OS tabs** — All / Linux / Windows / macOS (filters by asset type)
+- **Stable only toggle** — pill toggle, checked by default; hides pre-releases when on; unchecking reveals pre-releases (shown with `badge-pre` badge)
+
+**JS state variables in `releases.js`:**
+- `currentOS` — active OS tab value (`"all"`, `"linux"`, `"windows"`, `"macos"`)
+- `stableOnly` — boolean, `true` by default; toggled by `#stableOnlyToggle` checkbox
+- `currentPage` — current pagination page (resets to 1 on any filter change)
 
 ---
 

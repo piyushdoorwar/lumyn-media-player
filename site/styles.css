@@ -569,6 +569,88 @@ footer a:hover,
   filter: brightness(0) invert(1);
 }
 
+.releases-filters {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.releases-filters-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.stable-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stable-toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: background 0.18s, border-color 0.18s;
+  flex-shrink: 0;
+}
+
+.stable-toggle input:checked ~ .toggle-track {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.18s, background 0.18s;
+}
+
+.stable-toggle input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.stable-toggle:hover .toggle-track {
+  border-color: var(--button-border);
+}
+
+.stable-toggle input:focus-visible ~ .toggle-track {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.stable-toggle input:checked ~ .toggle-label {
+  color: var(--text);
+}
+
 .release-list {
   display: flex;
   flex-direction: column;

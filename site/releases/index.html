@@ -28,21 +28,29 @@
         <div>
           <p class="eyebrow">All versions</p>
           <h1 class="releases-title">Releases</h1>
-          <p class="releases-subtitle">Download any previous release. Stable builds are listed first.</p>
+          <p class="releases-subtitle">Download any previous release. Stable builds are listed by default.</p>
         </div>
 
-        <!-- OS filter tabs -->
-        <div class="os-tabs" role="tablist" aria-label="Filter by operating system">
-          <button class="os-tab active" role="tab" aria-selected="true"  data-os="all"     aria-controls="release-list">All</button>
-          <button class="os-tab"        role="tab" aria-selected="false" data-os="linux"   aria-controls="release-list">
-            <img src="../assets/ubuntu.svg" alt="" /> Linux
-          </button>
-          <button class="os-tab"        role="tab" aria-selected="false" data-os="windows" aria-controls="release-list">
-            <img src="../assets/windows.svg" alt="" /> Windows
-          </button>
-          <button class="os-tab"        role="tab" aria-selected="false" data-os="macos"   aria-controls="release-list">
-            <img src="../assets/apple.svg" alt="" /> macOS
-          </button>
+        <!-- OS filter tabs + stable toggle -->
+        <div class="releases-filters">
+          <div class="os-tabs" role="tablist" aria-label="Filter by operating system">
+            <button class="os-tab active" role="tab" aria-selected="true"  data-os="all"     aria-controls="release-list">All</button>
+            <button class="os-tab"        role="tab" aria-selected="false" data-os="linux"   aria-controls="release-list">
+              <img src="../assets/ubuntu.svg" alt="" /> Linux
+            </button>
+            <button class="os-tab"        role="tab" aria-selected="false" data-os="windows" aria-controls="release-list">
+              <img src="../assets/windows.svg" alt="" /> Windows
+            </button>
+            <button class="os-tab"        role="tab" aria-selected="false" data-os="macos"   aria-controls="release-list">
+              <img src="../assets/apple.svg" alt="" /> macOS
+            </button>
+          </div>
+          <span class="releases-filters-sep" aria-hidden="true"></span>
+          <label class="stable-toggle" for="stableOnlyToggle">
+            <input type="checkbox" id="stableOnlyToggle" checked />
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+            <span class="toggle-label">Stable only</span>
+          </label>
         </div>
       </div>
 

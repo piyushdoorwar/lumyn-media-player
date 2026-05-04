@@ -95,8 +95,10 @@ public partial class CastDialog : Window
     {
         var refresh = this.FindControl<Button>("RefreshButton");
         var cast = this.FindControl<Button>("CastButton");
+        var list = this.FindControl<ListBox>("DevicesList");
         if (refresh is not null) refresh.IsEnabled = !busy;
         if (cast is not null) cast.IsEnabled = !busy && _selectedDevice is not null && _viewModel?.HasMedia == true;
+        if (list is not null) list.IsEnabled = !busy;
         SetFooter(message);
     }
 

@@ -284,6 +284,24 @@ public sealed class PlaybackService : IDisposable
     public void LoadSubtitleFile(string path)
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+
+        // Remove all previously added external subtitle tracks so stale mpv-rendered
+        // lines from the old track cannot appear frozen on the video surface.
+        var count = GetInt64("track-list/count");
+        var toRemove = new List<int>();
+        for (var i = 0; i < count; i++)
+        {
+            var prefix = $"track-list/{i}";
+            if (!string.Equals(GetString($"{prefix}/type"), "sub", StringComparison.OrdinalIgnoreCase))
+                continue;
+            if (!GetFlag($"{prefix}/external"))
+                continue;
+            var id = (int)GetInt64($"{prefix}/id", -1);
+            if (id >= 0) toRemove.Add(id);
+        }
+        foreach (var id in toRemove)
+            Command("sub-remove", id.ToString(CultureInfo.InvariantCulture));
+
         Command("sub-add", path, "cached");
         MarkTracksChanged();
     }

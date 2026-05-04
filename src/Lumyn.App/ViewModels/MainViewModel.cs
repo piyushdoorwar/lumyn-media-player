@@ -1550,6 +1550,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         ErrorMessage = null;
 
+        // Clear subtitle overlay state immediately so the previous file's lines
+        // cannot be shown against the new file's playback position.
+        _subtitleLines = [];
+        _subtitleLineIndex = -1;
+        _useSubtitleOverlay = false;
+        CurrentSubtitleText = null;
+
         var ext = Path.GetExtension(filePath);
         var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
         IsAudioOnly = audioOnly;

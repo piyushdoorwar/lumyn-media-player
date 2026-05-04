@@ -67,6 +67,16 @@ public sealed class ChromecastCastService : IDisposable
 
         await sender.ConnectAsync(device.Receiver);
 
+        // Stop any currently running Cast app on the receiver before launching a new
+        // session. This guarantees a clean slate so subtitle tracks from a previous
+        // cast do not linger in the session state on the TV.
+        try
+        {
+            var receiverChannel = sender.GetChannel<IReceiverChannel>();
+            await receiverChannel.StopAsync();
+        }
+        catch { /* no app running yet, or stop not supported — safe to ignore */ }
+
         var mediaChannel = sender.GetChannel<IMediaChannel>();
         await sender.LaunchAsync(mediaChannel);
         _mediaChannel = mediaChannel;

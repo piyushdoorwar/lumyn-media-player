@@ -212,7 +212,8 @@
 
     <!-- ── Start / Empty screen ───────────────────────────────────────────── -->
     <Grid IsVisible="{Binding !HasMedia}"
-          IsHitTestVisible="{Binding !HasMedia}">
+          IsHitTestVisible="{Binding !HasMedia}"
+          Background="#111111">
 
       <!-- No recent files: simple logo placeholder -->
       <StackPanel
@@ -371,12 +372,6 @@
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Pause}"
                       IsVisible="{Binding IsCastPlaying}" />
           </Panel>
-        </Button>
-        <Button Classes="ctrl" Command="{Binding CastVolumeDownCommand}" ToolTip.Tip="Cast volume down">
-          <PathIcon Width="14" Height="14" Data="{StaticResource Icon.VolumeMuted}" />
-        </Button>
-        <Button Classes="ctrl" Command="{Binding CastVolumeUpCommand}" ToolTip.Tip="Cast volume up">
-          <PathIcon Width="14" Height="14" Data="{StaticResource Icon.VolumeHigh}" />
         </Button>
         <Button Classes="ctrl" Command="{Binding StopCastingCommand}" ToolTip.Tip="Stop casting">
           <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Stop}" />

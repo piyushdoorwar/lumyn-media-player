@@ -81,7 +81,7 @@ jobs:
           dotnet-version: "10.0.x"
 
       - name: Install native packaging inputs
-        run: brew install mpv
+        run: brew install mpv ffmpeg
 
       - name: Build app DMG
         run: RID=${{ matrix.rid }} ./scripts/build-macos.sh

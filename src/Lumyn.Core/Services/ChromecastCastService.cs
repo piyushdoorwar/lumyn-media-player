@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -23,6 +24,8 @@ public sealed class ChromecastCastService : IDisposable
     private string? _servedSubtitleVttContent;
     private Uri? _servedFileUri;
     private Uri? _servedSubtitleUri;
+    private bool _needsTranscoding;
+    private Process? _ffmpegProcess;
 
     private ISender? _sender;
     private IMediaChannel? _mediaChannel;
@@ -94,9 +97,11 @@ public sealed class ChromecastCastService : IDisposable
         var mediaInfo = new MediaInformation
         {
             ContentId = mediaUri.ToString(),
-            ContentType = GetMimeType(filePath),
+            ContentType = _needsTranscoding ? "video/mp4" : GetMimeType(filePath),
             Tracks = tracks
         };
+        if (_needsTranscoding)
+            mediaInfo.StreamType = StreamType.Live;
 
         await mediaChannel.LoadAsync(mediaInfo, true, activeTrackIds);
 
@@ -178,16 +183,7 @@ public sealed class ChromecastCastService : IDisposable
         lock (_serverLock)
         {
             _activeDevice = null;
-            _servedFilePath = null;
-            _servedSubtitlePath = null;
-            _servedSubtitleVttContent = null;
-            _servedFileUri = null;
-            _servedSubtitleUri = null;
-            _serverCts?.Cancel();
-            _listener?.Stop();
-            _listener = null;
-            _serverCts?.Dispose();
-            _serverCts = null;
+            StopServerInternal();
         }
         _ = DisconnectSenderAsync();
     }
@@ -249,6 +245,7 @@ public sealed class ChromecastCastService : IDisposable
             _servedSubtitleVttContent = vttContent;
             _servedFileUri = mediaUri;
             _servedSubtitleUri = subtitleUri;
+            _needsTranscoding = NeedsTranscoding(filePath);
             _ = Task.Run(() => ServerLoopAsync(_listener, _serverCts.Token));
             return (mediaUri, subtitleUri);
         }
@@ -261,11 +258,15 @@ public sealed class ChromecastCastService : IDisposable
         _servedSubtitleVttContent = null;
         _servedFileUri = null;
         _servedSubtitleUri = null;
+        _needsTranscoding = false;
         _serverCts?.Cancel();
         _listener?.Stop();
         _listener = null;
         _serverCts?.Dispose();
         _serverCts = null;
+        try { _ffmpegProcess?.Kill(entireProcessTree: true); } catch { }
+        _ffmpegProcess?.Dispose();
+        _ffmpegProcess = null;
     }
 
     private async Task ServerLoopAsync(TcpListener listener, CancellationToken cancellationToken)
@@ -317,6 +318,15 @@ public sealed class ChromecastCastService : IDisposable
             return;
         }
 
+        if (_needsTranscoding)
+        {
+            if (!string.Equals(request.Value.Method, "HEAD", StringComparison.OrdinalIgnoreCase))
+                await ServeFfmpegAsync(path, network, cancellationToken).ConfigureAwait(false);
+            else
+                await WriteTranscodingHeadAsync(network, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
         try
         {
             var info = new FileInfo(path);
@@ -357,6 +367,70 @@ public sealed class ChromecastCastService : IDisposable
         }
         catch { /* client disconnected early — normal for range/probe requests */ }
     }
+
+    private async Task ServeFfmpegAsync(string filePath, NetworkStream network, CancellationToken cancellationToken)
+    {
+        const string header =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: video/mp4\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "Connection: close\r\n" +
+            "\r\n";
+        await network.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken).ConfigureAwait(false);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "ffmpeg",
+            Arguments = $"-hide_banner -loglevel error -i \"{filePath}\" " +
+                        "-c:v copy -c:a aac -b:a 192k " +
+                        "-movflags frag_keyframe+empty_moov+default_base_moof " +
+                        "-f mp4 pipe:1",
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+
+        var process = new Process { StartInfo = psi };
+        _ffmpegProcess = process;
+
+        try
+        {
+            if (!process.Start())
+                return;
+            var buffer = new byte[128 * 1024];
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                var read = await process.StandardOutput.BaseStream
+                    .ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+                if (read == 0) break;
+                await network.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
+            }
+        }
+        catch { /* client disconnected, cancelled, or ffmpeg not found */ }
+        finally
+        {
+            try
+            {
+                if (!process.HasExited)
+                    process.Kill(entireProcessTree: true);
+            }
+            catch { }
+        }
+    }
+
+    private static async Task WriteTranscodingHeadAsync(NetworkStream network, CancellationToken cancellationToken)
+    {
+        const string header =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: video/mp4\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "Connection: close\r\n" +
+            "\r\n";
+        await network.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken).ConfigureAwait(false);
+    }
+
+    private static bool NeedsTranscoding(string path)
+        => Path.GetExtension(path).ToLowerInvariant() is ".mkv" or ".avi" or ".wmv" or ".mov" or ".flv" or ".ts" or ".m2ts";
 
     private static async Task<(string Method, string Path, Dictionary<string, string> Headers)?> ReadHttpRequestAsync(
         NetworkStream stream, CancellationToken cancellationToken)

@@ -278,7 +278,38 @@ Write-Host "To unregister: .\Register-FileAssociations.ps1 -Unregister"
     Write-Host "Written: $scriptPath"
 }
 
-function Copy-Notices {
+function Get-FfmpegExe {
+    param(
+        [string]$DestinationDir
+    )
+
+    # If a pre-built ffmpeg.exe is already staged (e.g. from a CI cache or manual setup)
+    $staged = Join-Path $DestinationDir "ffmpeg.exe"
+    if (Test-Path $staged) {
+        Write-Host "Using staged ffmpeg.exe"
+        return
+    }
+
+    Write-Host "Downloading ffmpeg for Windows..."
+    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-essentials.zip"
+    $extractDir = Join-Path "artifacts/downloads" "ffmpeg-win-x64"
+    Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
+
+    $zipPath = Join-Path $extractDir "ffmpeg.zip"
+    Invoke-WebRequest -Uri $ffmpegUrl -OutFile $zipPath -Headers @{ "User-Agent" = "Lumyn-Packager" }
+    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+
+    $ffmpegExe = Get-ChildItem -Path $extractDir -Recurse -File -Filter "ffmpeg.exe" | Select-Object -First 1
+    if ($null -eq $ffmpegExe) {
+        throw "ffmpeg.exe not found in the downloaded archive."
+    }
+
+    Copy-Item $ffmpegExe.FullName (Join-Path $DestinationDir "ffmpeg.exe") -Force
+    Write-Host "Copied: ffmpeg.exe"
+}
+
+
     param(
         [string]$MpvSourceDir,
         [string]$DestinationDir
@@ -312,6 +343,7 @@ Remove-Item -Recurse -Force $packageDir -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $packageRoot, $packageOutDir | Out-Null
 Copy-Item (Join-Path $publishDir "*") $packageRoot -Recurse -Force
 Copy-MpvRuntime -SourceDir $mpvDir -DestinationDir $packageRoot
+Get-FfmpegExe -DestinationDir $packageRoot
 Copy-Notices -MpvSourceDir $mpvDir -DestinationDir $packageRoot
 
 # ── Compile Windows installer via Inno Setup ──────────────────────────────

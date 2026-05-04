@@ -747,10 +747,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private async Task StopAsync()
     {
         if (IsCasting)
-        {
             await StopCastingAsync();
-            return;
-        }
 
         Stop();
     }

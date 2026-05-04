@@ -28,6 +28,35 @@ esac
 
 DMG_FILE="${PACKAGE_OUT_DIR}/lumyn_${VERSION}_macos-${MAC_ARCH}.dmg"
 
+find_ffmpeg() {
+  if [[ -n "${FFMPEG_BIN_PATH:-}" ]]; then
+    if [[ -f "${FFMPEG_BIN_PATH}" ]]; then
+      printf '%s\n' "${FFMPEG_BIN_PATH}"
+      return
+    fi
+    echo "FFMPEG_BIN_PATH does not point to a file: ${FFMPEG_BIN_PATH}" >&2
+    exit 1
+  fi
+
+  local brew_prefix=""
+  if command -v brew >/dev/null 2>&1; then
+    brew_prefix="$(brew --prefix 2>/dev/null || true)"
+  fi
+
+  for candidate in \
+    "${brew_prefix}/bin/ffmpeg" \
+    /opt/homebrew/bin/ffmpeg \
+    /usr/local/bin/ffmpeg; do
+    if [[ -f "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return
+    fi
+  done
+
+  echo "ffmpeg was not found. Install with: brew install ffmpeg" >&2
+  exit 1
+}
+
 find_libmpv() {
   if [[ -n "${MPV_LIB_PATH:-}" ]]; then
     if [[ -f "${MPV_LIB_PATH}" ]]; then
@@ -167,12 +196,24 @@ dotnet publish "${APP_PROJECT}" -c "${CONFIGURATION}" -r "${RID}" --self-contain
   -p:Version="${VERSION}" -p:InformationalVersion="${VERSION}"
 
 MPV_LIB="$(find_libmpv)"
+FFMPEG_BIN="$(find_ffmpeg)"
 
 rm -rf "${PACKAGE_DIR}"
 mkdir -p "${MACOS_DIR}" "${RESOURCES_DIR}" "${PACKAGE_OUT_DIR}"
 cp -R "${PUBLISH_DIR}/." "${MACOS_DIR}/"
 copy_dylib_closure "${MPV_LIB}"
+copy_dylib_closure "${FFMPEG_BIN}"
 fix_install_names
+
+# Copy the ffmpeg binary and fix its library references to use @loader_path
+cp -pL "${FFMPEG_BIN}" "${MACOS_DIR}/ffmpeg"
+chmod 755 "${MACOS_DIR}/ffmpeg"
+while IFS= read -r dep; do
+  dep_base="$(basename "${dep}")"
+  if [[ -f "${MACOS_DIR}/${dep_base}" && "${dep}" != "@loader_path/${dep_base}" ]]; then
+    install_name_tool -change "${dep}" "@loader_path/${dep_base}" "${MACOS_DIR}/ffmpeg" || true
+  fi
+done < <(otool -L "${MACOS_DIR}/ffmpeg" | tail -n +2 | awk '{ print $1 }')
 cp "src/Lumyn.App/Assets/Icons/lumyn.svg" "${RESOURCES_DIR}/lumyn.svg"
 cp "packaging/macos/lumyn.icns" "${RESOURCES_DIR}/lumyn.icns"
 mkdir -p "${RESOURCES_DIR}/licenses"

@@ -103,7 +103,7 @@ lumyn-media-player/
 │       └── Services/
 │           ├── PlaybackService.cs        # mpv wrapper, 995 lines — main engine
 │           ├── SettingsService.cs        # JSON persistence, 257 lines
-│           ├── DlnaCastService.cs        # DLNA/UPnP casting + HTTP file server
+│           ├── ChromecastCastService.cs  # Chromecast (Google Cast v2) discovery, HTTP file server, cast control
 │           ├── SubtitleParser.cs         # SRT/ASS/SSA/VTT parser
 │           └── SubtitleSearchService.cs  # Online subtitle search
 │
@@ -141,7 +141,10 @@ Avalonia.Themes.Fluent  11.3.14
 Avalonia.Fonts.Inter    11.3.14
 ```
 
-`Lumyn.Core` has **no external NuGet dependencies** — pure C#.
+`Lumyn.Core` NuGet dependencies:
+```
+GoogleCast           1.7.0   (Google Cast v2 protocol — includes Zeroconf for mDNS and protobuf-net)
+```
 
 ---
 
@@ -180,10 +183,13 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 │  ├─ Resume positions, bookmarks, subtitle config    │
 │  └─ File paths hashed via SHA256 (privacy)          │
 │                                                     │
-│  DlnaCastService                                    │
-│  ├─ SSDP discovery of UPnP renderers                │
-│  ├─ HTTP server to serve local files to cast device │
-│  └─ Playback control over network (AVTransport)     │
+│  ChromecastCastService                                    │
+│  ├─ mDNS DNS-SD discovery of Chromecast devices          │
+│  ├─ Google Cast v2 protocol (TLS + protobuf, via         │
+│  │   GoogleCast 1.7.0 NuGet package + Zeroconf)          │
+│  ├─ HTTP server to serve local files to cast device      │
+│  ├─ SRT/VTT → WebVTT conversion for subtitle tracks      │
+│  └─ Playback control + status polling over Cast protocol │
 │                                                     │
 │  SubtitleParser (static)                            │
 │  └─ SRT / ASS / SSA parsing + HTML tag stripping    │
@@ -203,7 +209,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 ### Startup Sequence
 
 1. `Program.cs` → sets X11 options (disables IBus IME for Ubuntu 26.04 compat)
-2. `App.axaml.cs` → creates `PlaybackService`, `SettingsService`, `DlnaCastService`
+2. `App.axaml.cs` → creates `PlaybackService`, `SettingsService`, `ChromecastCastService`
 3. Creates `MainViewModel` injecting all services
 4. Creates `MainWindow` with `ViewModel` as `DataContext`
 5. Checks for command-line file argument → calls `OpenFileWhenReadyAsync()`
@@ -235,7 +241,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.Core/Services/SettingsService.cs` | 257 | JSON persistence: resume positions, bookmarks, subtitle settings, recent files |
 | `src/Lumyn.App/ViewModels/MainViewModel.cs` | 500+ | MVVM hub: commands, UI state, playlist, subtitle overlay, cast UI |
 | `src/Lumyn.App/Views/MainWindow.axaml` | 739 | Full UI layout — video surface, controls, overlays |
-| `src/Lumyn.Core/Services/DlnaCastService.cs` | 200+ | DLNA discovery, HTTP server, cast control |
+| `src/Lumyn.Core/Services/ChromecastCastService.cs` | 200+ | Chromecast discovery (mDNS), HTTP server, cast control, SRT→VTT |
 | `src/Lumyn.Core/Services/SubtitleParser.cs` | 150+ | SRT/ASS/SSA parsing |
 | `src/Lumyn.App/Controls/MpvVideoSurface.cs` | — | Avalonia OpenGL surface for mpv rendering |
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
@@ -290,10 +296,12 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Subtitle settings persisted per file
 
 ### Casting
-- DLNA/UPnP device discovery (SSDP)
-- Cast to networked renderers
+- Chromecast (Google Cast v2) device discovery via mDNS (`_googlecast._tcp`)
+- Cast to Chromecast devices
 - Built-in HTTP server to serve local files to cast devices
-- Playback control (play, pause, seek) over network
+- SRT/VTT subtitle files converted to WebVTT and passed as `tracks[]` in Cast load request
+- Playback control (play, pause, seek, volume) over Google Cast protocol
+- Best-effort format support: Chromecast natively plays MP4/WebM (H.264/VP8/VP9), MP3/AAC/FLAC/Opus/WAV
 
 ### Screen Sleep Inhibition
 - `ScreenInhibitor` service (`Lumyn.Core/Services/ScreenInhibitor.cs`) prevents screen dim, lock, and system sleep while media is playing
@@ -410,7 +418,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 | `SubtitleSearchDialog` | Online subtitle search |
 | `SubtitleSettingsDialog` | Font, size, color, delay |
 | `VideoAdjustmentsDialog` | Brightness/contrast/saturation/rotation/zoom/aspect |
-| `CastDialog` | DLNA device selection |
+| `CastDialog` | Chromecast device selection |
 | `BookmarksDialog` | Manage chapter bookmarks per file |
 
 ---
@@ -599,3 +607,4 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Video rendering optimization (`6d349ee`) |
 | 2026-05 | Fix unnecessary wakeups/render pressure over time (`4f41a0f`) |
 | 2026-05 | Media controls via DLNA cast (`a750c3b`) |
+| 2026-05 | Switch cast from DLNA/UPnP to Google Cast (Chromecast) — `DlnaCastService` replaced by `ChromecastCastService` using `GoogleCast` NuGet (mDNS discovery, Cast v2 protocol, SRT→WebVTT subtitle tracks). Format support is best-effort (no transcoding). |

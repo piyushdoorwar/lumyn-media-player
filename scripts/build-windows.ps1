@@ -11,21 +11,7 @@ $ErrorActionPreference = "Stop"
 if ([string]::IsNullOrWhiteSpace($Configuration)) { $Configuration = "Release" }
 if ([string]::IsNullOrWhiteSpace($Rid)) { $Rid = "win-x64" }
 if ([string]::IsNullOrWhiteSpace($Version)) {
-    $versionFile = Join-Path (Resolve-Path (Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) "..")) "VERSION"
-    $baseVersion = $env:BASE_VERSION
-    if ([string]::IsNullOrWhiteSpace($baseVersion)) {
-        $baseVersion = (Get-Content $versionFile -Raw).Trim()
-    }
-
-    $buildNumber = $env:BUILD_NUMBER
-    if ([string]::IsNullOrWhiteSpace($buildNumber)) {
-        $buildNumber = $env:GITHUB_RUN_NUMBER
-    }
-    if ([string]::IsNullOrWhiteSpace($buildNumber)) {
-        $buildNumber = "0"
-    }
-
-    $Version = "$baseVersion.$buildNumber"
+    $Version = "0.0.0-dev"
 }
 
 if ($Rid -ne "win-x64") {
@@ -317,7 +303,8 @@ function Copy-Notices {
 
 dotnet restore Lumyn.sln
 dotnet build Lumyn.sln -c $Configuration --no-restore
-dotnet publish $appProject -c $Configuration -r $Rid --self-contained true -o $publishDir
+dotnet publish $appProject -c $Configuration -r $Rid --self-contained true -o $publishDir `
+    -p:Version=$Version -p:InformationalVersion=$Version
 
 $mpvDir = Resolve-MpvDirectory -ProvidedDir $MpvBinDir -ArchiveUrl $MpvArchiveUrl
 

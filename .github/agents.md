@@ -491,10 +491,26 @@ All jobs install .NET 10.0 SDK.
 
 ## 12. Versioning & Release
 
-- **Base version**: stored in `VERSION` file at repo root (currently `1.0`)
-- **Full version**: `{base}.{github_run_number}` — e.g., `1.0.42`
-- **Release**: push a `v*` tag → `release.yml` builds all platforms and creates a GitHub Release with all installers attached
-- **Artifact names**: e.g., `lumyn_1.0.42_amd64.deb`, `lumyn_1.0.42_win-x64_setup.exe`, `Lumyn.dmg`
+- **Version source**: Git tag. Push a tag like `v1.2.3` or `v2.0.0-beta.1` → `release.yml` fires automatically.
+- **Tag format**: `v{MAJOR}.{MINOR}.{PATCH}` for production, `v{MAJOR}.{MINOR}.{PATCH}-{label}` for pre-release (e.g. `v1.2.0-beta.1`, `v2.0.0-rc.1`).
+- **Pre-release detection**: Any tag containing a `-` after stripping `v` is marked as a GitHub pre-release automatically.
+- **How the version flows**:
+  1. `release.yml` extracts the version from the tag (`v1.2.3` → `1.2.3`) in a `prepare` job
+  2. All build jobs receive it as the `VERSION` env var
+  3. Each build script passes it to `dotnet publish` via `-p:Version=... -p:InformationalVersion=...`
+  4. The version is baked into the assembly `AssemblyInformationalVersionAttribute`
+  5. `AboutDialog.axaml.cs` reads it from the attribute at runtime
+- **Local dev builds**: Show `0.0.0-dev` — set as default `<InformationalVersion>` in `Lumyn.App.csproj`
+- **CI builds** (`build-artifacts.yml` on push to main): Use `VERSION=0.0.0-dev` — for build validation only, not releases
+- **Manual trigger**: `release.yml` supports `workflow_dispatch` with an explicit version input for testing
+- **VERSION file**: Deleted — no longer needed
+- **Artifact names**: e.g., `lumyn_1.2.3_amd64.deb`, `lumyn_1.2.3_win-x64_setup.exe`, `lumyn_1.2.3_macos-arm64.dmg`
+
+### Release checklist
+
+1. Merge everything to `main`
+2. Push a tag: `git tag v1.2.3 && git push origin v1.2.3`
+3. `release.yml` fires — builds all platforms, creates GitHub Release with correct version in binary and package filenames
 
 ---
 
@@ -562,6 +578,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Git tag–based versioning — `VERSION` file removed, version now sourced from git tag (`v1.2.3`), baked into assembly via `-p:InformationalVersion`, read from `AssemblyInformationalVersionAttribute` at runtime. Pre-release tags (containing `-`) auto-marked on GitHub. Local dev shows `0.0.0-dev`. |
 | 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`, macOS: `IOPMAssertion`, Linux: `org.freedesktop.ScreenSaver.Inhibit` via `gdbus`. Driven by `IsPlaying` setter in `MainViewModel`. |
 | 2026-05 | Full-screen / maximize conflict fix (`386f746`) |
 | 2026-05 | Top bar visibility fix in non-fullscreen mode (`e214ef9`) |

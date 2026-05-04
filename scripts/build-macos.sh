@@ -15,9 +15,7 @@ CONTENTS_DIR="${APP_ROOT}/Contents"
 MACOS_DIR="${CONTENTS_DIR}/MacOS"
 RESOURCES_DIR="${CONTENTS_DIR}/Resources"
 PACKAGE_OUT_DIR="artifacts/packages"
-BASE_VERSION="${BASE_VERSION:-$(tr -d '[:space:]' < VERSION)}"
-BUILD_NUMBER="${BUILD_NUMBER:-${GITHUB_RUN_NUMBER:-0}}"
-VERSION="${VERSION:-${BASE_VERSION}.${BUILD_NUMBER}}"
+VERSION="${VERSION:-0.0.0-dev}"
 
 case "${RID}" in
   osx-arm64) MAC_ARCH="arm64" ;;
@@ -165,7 +163,8 @@ fix_install_names() {
 
 dotnet restore Lumyn.sln
 dotnet build Lumyn.sln -c "${CONFIGURATION}" --no-restore
-dotnet publish "${APP_PROJECT}" -c "${CONFIGURATION}" -r "${RID}" --self-contained true -o "${PUBLISH_DIR}"
+dotnet publish "${APP_PROJECT}" -c "${CONFIGURATION}" -r "${RID}" --self-contained true -o "${PUBLISH_DIR}" \
+  -p:Version="${VERSION}" -p:InformationalVersion="${VERSION}"
 
 MPV_LIB="$(find_libmpv)"
 

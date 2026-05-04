@@ -1,5 +1,6 @@
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using Avalonia.Controls;
@@ -39,15 +40,16 @@ public partial class AboutDialog : Window
 
     private static string GetAppVersion()
     {
-        // Look for VERSION file next to the executable.
-        var exeDir = AppContext.BaseDirectory;
-        var versionFile = Path.Combine(exeDir, "VERSION");
-        if (File.Exists(versionFile))
-        {
-            var v = File.ReadAllText(versionFile).Trim();
-            if (!string.IsNullOrWhiteSpace(v)) return v;
-        }
-        return typeof(AboutDialog).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+        // Read the version baked into the assembly at build time via -p:InformationalVersion.
+        // Strips any +commitsha suffix the SDK may append automatically.
+        var informational = typeof(AboutDialog).Assembly
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()
+            ?.InformationalVersion;
+
+        if (!string.IsNullOrWhiteSpace(informational))
+            return informational.Split('+')[0];
+
+        return typeof(AboutDialog).Assembly.GetName().Version?.ToString(3) ?? "0.0.0-dev";
     }
 
     private static string GetOsName()
@@ -202,6 +204,10 @@ public partial class AboutDialog : Window
 
     private static string NormaliseVersion(string v)
     {
+        // Strip pre-release suffix so Version.Parse doesn't choke on "1.0.0-beta.1".
+        var dashIdx = v.IndexOf('-');
+        if (dashIdx >= 0) v = v[..dashIdx];
+
         // Ensure at least Major.Minor.Patch so Version.Parse doesn't fail.
         var parts = v.Split('.');
         while (parts.Length < 3)

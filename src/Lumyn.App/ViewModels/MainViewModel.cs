@@ -53,6 +53,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly SettingsService _settings;
     private readonly DlnaCastService _casting;
     private readonly DispatcherTimer _osdTimer;
+    private readonly ScreenInhibitor _screenInhibitor = new();
     private int _stateRefreshQueued;
     private int _castStateRefreshQueued;
     private long _lastTrackRevision = -1;
@@ -442,7 +443,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsPlaying
     {
         get => _isPlaying;
-        private set => SetField(ref _isPlaying, value);
+        private set
+        {
+            if (SetField(ref _isPlaying, value))
+            {
+                if (value) _screenInhibitor.Inhibit();
+                else       _screenInhibitor.Uninhibit();
+            }
+        }
     }
 
     public bool IsMuted
@@ -1133,6 +1141,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SaveResumePosition();
         _osdTimer.Stop();
         _coverArtBitmap?.Dispose();
+        _screenInhibitor.Dispose();
         _casting.Dispose();
         _playback.Dispose();
     }

@@ -291,7 +291,7 @@ function Get-FfmpegExe {
     }
 
     Write-Host "Downloading ffmpeg for Windows..."
-    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-essentials.zip"
+    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
     $extractDir = Join-Path "artifacts/downloads" "ffmpeg-win-x64"
     Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $extractDir | Out-Null

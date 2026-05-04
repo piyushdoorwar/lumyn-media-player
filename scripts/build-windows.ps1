@@ -309,7 +309,7 @@ function Get-FfmpegExe {
     Write-Host "Copied: ffmpeg.exe"
 }
 
-
+function Copy-Notices {
     param(
         [string]$MpvSourceDir,
         [string]$DestinationDir

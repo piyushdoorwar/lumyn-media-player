@@ -20,7 +20,7 @@ public sealed partial class App : Application
         {
             var playback = new PlaybackService();
             var settings = new SettingsService();
-            var casting = new DlnaCastService();
+            var casting = new ChromecastCastService();
             var vm = new MainViewModel(playback, settings, casting);
 
             var window = new MainWindow { DataContext = vm };

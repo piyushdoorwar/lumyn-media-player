@@ -53,7 +53,7 @@
                    SelectionChanged="DevicesList_SelectionChanged"
                    DoubleTapped="DevicesList_DoubleTapped">
             <ListBox.ItemTemplate>
-              <DataTemplate x:DataType="core:DlnaCastDevice">
+              <DataTemplate x:DataType="core:ChromecastDevice">
                 <Grid ColumnDefinitions="Auto,*,Auto" Margin="7,7">
                   <PathIcon Grid.Column="0"
                             Width="17"

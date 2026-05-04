@@ -10,7 +10,7 @@ namespace Lumyn.App.Views;
 public partial class CastDialog : Window
 {
     private readonly MainViewModel? _viewModel;
-    private DlnaCastDevice? _selectedDevice;
+    private ChromecastDevice? _selectedDevice;
 
     public CastDialog()
     {
@@ -65,7 +65,7 @@ public partial class CastDialog : Window
 
     private void DevicesList_SelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        _selectedDevice = (sender as ListBox)?.SelectedItem as DlnaCastDevice;
+        _selectedDevice = (sender as ListBox)?.SelectedItem as ChromecastDevice;
         UpdateButtons();
     }
 

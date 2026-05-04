@@ -7,5 +7,6 @@
     <PackageVersion Include="Avalonia.Desktop" Version="11.3.14" />
     <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.14" />
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.14" />
+    <PackageVersion Include="GoogleCast" Version="1.7.0" />
   </ItemGroup>
 </Project>

@@ -51,7 +51,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
-    private readonly DlnaCastService _casting;
+    private readonly ChromecastCastService _casting;
     private readonly DispatcherTimer _osdTimer;
     private readonly ScreenInhibitor _screenInhibitor = new();
     private int _stateRefreshQueued;
@@ -113,11 +113,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _playlistIndex = -1;
     private bool _isPlaylistVisible;
 
-    public MainViewModel(PlaybackService playback, SettingsService settings, DlnaCastService? casting = null)
+    public MainViewModel(PlaybackService playback, SettingsService settings, ChromecastCastService? casting = null)
     {
         _playback = playback;
         _settings = settings;
-        _casting = casting ?? new DlnaCastService();
+        _casting = casting ?? new ChromecastCastService();
 
         // Restore persisted session preferences
         _volume   = _settings.LastVolume;
@@ -194,7 +194,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public PlaybackService Playback => _playback;
     public string? CurrentFilePath => _playback.CurrentFilePath;
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
-    public ObservableCollection<DlnaCastDevice> CastDevices { get; } = [];
+    public ObservableCollection<ChromecastDevice> CastDevices { get; } = [];
 
     public bool HasRecentFiles => _settings.RecentFiles.Count > 0;
 
@@ -652,7 +652,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public async Task CastToDeviceAsync(DlnaCastDevice device)
+    public async Task CastToDeviceAsync(ChromecastDevice device)
     {
         if (string.IsNullOrWhiteSpace(CurrentFilePath) || !File.Exists(CurrentFilePath))
         {

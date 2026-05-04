@@ -9,7 +9,7 @@ namespace Lumyn.Core.Services;
 ///
 /// - Windows : SetThreadExecutionState (kernel32)
 /// - macOS   : IOPMAssertion (IOKit framework)
-/// - Linux   : org.freedesktop.ScreenSaver.Inhibit via gdbus (D-Bus session bus)
+/// - Linux   : org.freedesktop.ScreenSaver.Inhibit via dbus-send (D-Bus session bus)
 /// </summary>
 public sealed partial class ScreenInhibitor : IDisposable
 {
@@ -102,20 +102,24 @@ public sealed partial class ScreenInhibitor : IDisposable
         _macAssertionId = 0;
     }
 
-    // ── Linux (org.freedesktop.ScreenSaver via gdbus) ─────────────────────────
+    // ── Linux (org.freedesktop.ScreenSaver via dbus-send) ────────────────────
+    // dbus-send uses type:value tokens (no spaces), avoiding argv-splitting issues.
 
     private void InhibitLinux()
     {
-        // gdbus call --session --dest org.freedesktop.ScreenSaver
-        //   --object-path /org/freedesktop/ScreenSaver
-        //   --method org.freedesktop.ScreenSaver.Inhibit "Lumyn" "Playing media"
-        // Output: (uint32 <cookie>,)
-        var output = RunProcess("gdbus",
-            "call --session " +
-            "--dest org.freedesktop.ScreenSaver " +
-            "--object-path /org/freedesktop/ScreenSaver " +
-            "--method org.freedesktop.ScreenSaver.Inhibit " +
-            "\"Lumyn\" \"Playing media\"");
+        // dbus-send --session --print-reply \
+        //   --dest=org.freedesktop.ScreenSaver /org/freedesktop/ScreenSaver \
+        //   org.freedesktop.ScreenSaver.Inhibit string:Lumyn string:"Playing media"
+        // Output: ... uint32 <cookie>
+        var output = RunProcess("dbus-send",
+        [
+            "--session", "--print-reply",
+            "--dest=org.freedesktop.ScreenSaver",
+            "/org/freedesktop/ScreenSaver",
+            "org.freedesktop.ScreenSaver.Inhibit",
+            "string:Lumyn",
+            "string:Playing media"
+        ]);
 
         if (output is null) return;
 
@@ -128,26 +132,32 @@ public sealed partial class ScreenInhibitor : IDisposable
     {
         if (_linuxCookie == 0) return;
 
-        RunProcess("gdbus",
-            "call --session " +
-            "--dest org.freedesktop.ScreenSaver " +
-            "--object-path /org/freedesktop/ScreenSaver " +
-            "--method org.freedesktop.ScreenSaver.UnInhibit " +
-            $"uint32:{_linuxCookie}");
+        RunProcess("dbus-send",
+        [
+            "--session",
+            "--dest=org.freedesktop.ScreenSaver",
+            "/org/freedesktop/ScreenSaver",
+            "org.freedesktop.ScreenSaver.UnInhibit",
+            $"uint32:{_linuxCookie}"   // single token, no spaces
+        ]);
 
         _linuxCookie = 0;
     }
 
-    private static string? RunProcess(string exe, string args)
+    private static string? RunProcess(string exe, string[] args)
     {
         try
         {
-            using var proc = Process.Start(new ProcessStartInfo(exe, args)
+            var psi = new ProcessStartInfo(exe)
             {
                 RedirectStandardOutput = true,
                 UseShellExecute        = false,
                 CreateNoWindow         = true
-            });
+            };
+            foreach (var arg in args)
+                psi.ArgumentList.Add(arg);
+
+            using var proc = Process.Start(psi);
             return proc?.StandardOutput.ReadToEnd();
         }
         catch { return null; }

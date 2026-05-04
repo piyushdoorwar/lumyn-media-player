@@ -300,7 +300,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Driven automatically by `IsPlaying` property setter in `MainViewModel`
 - Windows: `SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED)` via kernel32 P/Invoke
 - macOS: `IOPMAssertionCreateWithName("PreventUserIdleDisplaySleep")` via IOKit P/Invoke
-- Linux: `org.freedesktop.ScreenSaver.Inhibit` on D-Bus session bus via `gdbus` subprocess (cookie-based; works on GNOME, KDE, and freedesktop-compliant desktops)
+- Linux: `org.freedesktop.ScreenSaver.Inhibit` on D-Bus session bus via `dbus-send` subprocess (cookie-based; works on GNOME, KDE, and freedesktop-compliant desktops)
 - Inhibition released on pause, stop, end-of-file, or app close
 
 ### UI & Platform
@@ -579,7 +579,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | Date | Change |
 |---|---|
 | 2026-05 | Git tag–based versioning — `VERSION` file removed, version now sourced from git tag (`v1.2.3`), baked into assembly via `-p:InformationalVersion`, read from `AssemblyInformationalVersionAttribute` at runtime. Pre-release tags (containing `-`) auto-marked on GitHub. Local dev shows `0.0.0-dev`. |
-| 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`, macOS: `IOPMAssertion`, Linux: `org.freedesktop.ScreenSaver.Inhibit` via `gdbus`. Driven by `IsPlaying` setter in `MainViewModel`. |
+| 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`, macOS: `IOPMAssertion`, Linux: `org.freedesktop.ScreenSaver.Inhibit` via `dbus-send` (uses `ArgumentList` to avoid argv-splitting issues with typed values). Driven by `IsPlaying` setter in `MainViewModel`. |
 | 2026-05 | Full-screen / maximize conflict fix (`386f746`) |
 | 2026-05 | Top bar visibility fix in non-fullscreen mode (`e214ef9`) |
 | 2026-05 | Video rendering optimization (`6d349ee`) |

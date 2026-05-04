@@ -113,7 +113,10 @@ public sealed class ChromecastCastService : IDisposable
             ContentType = _needsTranscoding ? "video/mp4" : GetMimeType(filePath),
             Tracks = tracks
         };
-        if (_needsTranscoding)
+        // Only mark as Live when transcoding AND there are no subtitle tracks.
+        // The Chromecast Default Media Receiver silently ignores text track
+        // activation on Live streams, so prefer not setting it when subs are present.
+        if (_needsTranscoding && subtitleUri is null)
             mediaInfo.StreamType = StreamType.Live;
 
         // For transcoded content, encode the start position into the FFmpeg offset;

@@ -38,12 +38,24 @@
               BorderThickness="1"
               CornerRadius="5">
         <Grid RowDefinitions="Auto,*">
-          <TextBlock Grid.Row="0"
-                     Name="DevicesStatusText"
-                     Text="Searching for devices..."
-                     Foreground="#807C79"
-                     FontSize="12"
-                     Margin="12,10,12,8" />
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="12,10,12,8">
+            <ProgressBar Grid.Column="0"
+                         Name="SearchSpinner"
+                         Classes="circular"
+                         IsIndeterminate="True"
+                         IsVisible="False"
+                         Foreground="#4CAF50"
+                         Width="14"
+                         Height="14"
+                         VerticalAlignment="Center"
+                         Margin="0,0,7,0" />
+            <TextBlock Grid.Column="1"
+                       Name="DevicesStatusText"
+                       Text="Searching for devices..."
+                       Foreground="#807C79"
+                       FontSize="12"
+                       VerticalAlignment="Center" />
+          </Grid>
           <ListBox Grid.Row="1"
                    Name="DevicesList"
                    ItemsSource="{Binding CastDevices}"

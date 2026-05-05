@@ -660,6 +660,14 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             return;
         }
 
+        if (ChromecastCastService.IsUnsupportedFormat(CurrentFilePath))
+        {
+            var ext = Path.GetExtension(CurrentFilePath).ToUpperInvariant().TrimStart('.');
+            CastStatusText = $"{ext} is not supported for casting. Convert to MP4 first.";
+            ShowOsd(CastStatusText);
+            return;
+        }
+
         try
         {
             CastStatusText = $"Connecting to {device.Name}...";

@@ -55,8 +55,16 @@ public partial class CastDialog : Window
             return;
         }
 
+        if (_viewModel.CurrentFilePath is { } fp && ChromecastCastService.IsUnsupportedFormat(fp))
+        {
+            var ext = System.IO.Path.GetExtension(fp).ToUpperInvariant().TrimStart('.');
+            SetFooter($"{ext} is not supported for casting. Convert to MP4 first.");
+            return;
+        }
+
         SetBusy(true, $"Connecting to {_selectedDevice.Name}...");
         await _viewModel.CastToDeviceAsync(_selectedDevice);
+
         SetBusy(false, _viewModel.IsCasting
             ? $"Casting to {_selectedDevice.Name}."
             : _viewModel.CastStatusText ?? "Cast failed.");
@@ -124,13 +132,19 @@ public partial class CastDialog : Window
         if (state is not null)
             state.Text = _viewModel?.IsCasting == true ? _viewModel.CastStatusText ?? "Casting" : "Not casting";
 
+        var filePath = _viewModel?.CurrentFilePath;
+        var unsupported = filePath is not null && ChromecastCastService.IsUnsupportedFormat(filePath);
+        var ext = unsupported ? System.IO.Path.GetExtension(filePath!).ToUpperInvariant().TrimStart('.') : null;
+
         if (detail is not null)
         {
             detail.Text = _viewModel?.IsCasting == true
                 ? "Choose another destination to switch, or disconnect the current session."
-                : _viewModel?.HasMedia == true
-                    ? "Choose a destination to cast the current media."
-                    : "Open a media file, then choose a device to start casting.";
+                : unsupported
+                    ? $"{ext} files are not supported for casting. Only MP4, WebM, and audio formats are supported."
+                    : _viewModel?.HasMedia == true
+                        ? "Choose a destination to cast the current media."
+                        : "Open a media file, then choose a device to start casting.";
         }
 
         if (disconnect is not null)
@@ -142,7 +156,9 @@ public partial class CastDialog : Window
     private void UpdateButtons()
     {
         var cast = this.FindControl<Button>("CastButton");
-        if (cast is not null)
-            cast.IsEnabled = _selectedDevice is not null && _viewModel?.HasMedia == true;
+        if (cast is null) return;
+        var filePath = _viewModel?.CurrentFilePath;
+        var unsupported = filePath is not null && ChromecastCastService.IsUnsupportedFormat(filePath);
+        cast.IsEnabled = !unsupported && _selectedDevice is not null && _viewModel?.HasMedia == true;
     }
 }

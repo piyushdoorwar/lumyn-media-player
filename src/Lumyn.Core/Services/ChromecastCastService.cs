@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -24,11 +23,6 @@ public sealed class ChromecastCastService : IDisposable
     private string? _servedSubtitleVttContent;
     private Uri? _servedFileUri;
     private Uri? _servedSubtitleUri;
-    private bool _needsTranscoding;
-    private TimeSpan _transcodingOffset;
-    private Process? _ffmpegProcess;
-    private MediaInformation? _currentMediaInfo;
-    private int[] _currentActiveTrackIds = [];
 
     private ISender? _sender;
     private IMediaChannel? _mediaChannel;
@@ -110,26 +104,13 @@ public sealed class ChromecastCastService : IDisposable
         var mediaInfo = new MediaInformation
         {
             ContentId = mediaUri.ToString(),
-            ContentType = _needsTranscoding ? "video/mp4" : GetMimeType(filePath),
+            ContentType = GetMimeType(filePath),
             Tracks = tracks
         };
-        // Only mark as Live when transcoding AND there are no subtitle tracks.
-        // The Chromecast Default Media Receiver silently ignores text track
-        // activation on Live streams, so prefer not setting it when subs are present.
-        if (_needsTranscoding && subtitleUri is null)
-            mediaInfo.StreamType = StreamType.Live;
-
-        // For transcoded content, encode the start position into the FFmpeg offset;
-        // the seek is handled by restarting FFmpeg at that position rather than by the Cast protocol.
-        if (_needsTranscoding)
-            _transcodingOffset = startPosition;
-
-        _currentMediaInfo = mediaInfo;
-        _currentActiveTrackIds = activeTrackIds;
 
         await mediaChannel.LoadAsync(mediaInfo, true, activeTrackIds);
 
-        if (!_needsTranscoding && startPosition > TimeSpan.Zero)
+        if (startPosition > TimeSpan.Zero)
         {
             try { await mediaChannel.SeekAsync(startPosition.TotalSeconds); }
             catch { /* not all receivers support pre-seek */ }
@@ -170,18 +151,6 @@ public sealed class ChromecastCastService : IDisposable
     public async Task SeekAsync(TimeSpan position, CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
-
-        if (_needsTranscoding)
-        {
-            // Seeking a live-transcoded stream requires restarting FFmpeg at the new
-            // offset and telling Chromecast to reload (it can't seek a live stream in-place).
-            _transcodingOffset = position < TimeSpan.Zero ? TimeSpan.Zero : position;
-            try { _ffmpegProcess?.Kill(entireProcessTree: true); } catch { }
-            if (_currentMediaInfo is not null)
-                try { await _mediaChannel.LoadAsync(_currentMediaInfo, true, _currentActiveTrackIds); } catch { }
-            return;
-        }
-
         try { await _mediaChannel.SeekAsync(position.TotalSeconds); } catch { }
     }
 
@@ -192,9 +161,7 @@ public sealed class ChromecastCastService : IDisposable
         {
             var status = await _mediaChannel.GetStatusAsync();
             if (status is null) return null;
-            // For transcoded content the Chromecast stream always starts at 0; add the seek
-            // offset so the UI shows the true position within the original file.
-            var position = _transcodingOffset + TimeSpan.FromSeconds(status.CurrentTime);
+            var position = TimeSpan.FromSeconds(status.CurrentTime);
             var duration = status.Media?.Duration is double d and > 0
                 ? TimeSpan.FromSeconds(d)
                 : TimeSpan.Zero;
@@ -283,7 +250,6 @@ public sealed class ChromecastCastService : IDisposable
             _servedSubtitleVttContent = vttContent;
             _servedFileUri = mediaUri;
             _servedSubtitleUri = subtitleUri;
-            _needsTranscoding = NeedsTranscoding(filePath);
             _ = Task.Run(() => ServerLoopAsync(_listener, _serverCts.Token));
             return (mediaUri, subtitleUri);
         }
@@ -296,18 +262,11 @@ public sealed class ChromecastCastService : IDisposable
         _servedSubtitleVttContent = null;
         _servedFileUri = null;
         _servedSubtitleUri = null;
-        _needsTranscoding = false;
-        _transcodingOffset = TimeSpan.Zero;
-        _currentMediaInfo = null;
-        _currentActiveTrackIds = [];
         _serverCts?.Cancel();
         _listener?.Stop();
         _listener = null;
         _serverCts?.Dispose();
         _serverCts = null;
-        try { _ffmpegProcess?.Kill(entireProcessTree: true); } catch { }
-        _ffmpegProcess?.Dispose();
-        _ffmpegProcess = null;
     }
 
     private async Task ServerLoopAsync(TcpListener listener, CancellationToken cancellationToken)
@@ -359,15 +318,6 @@ public sealed class ChromecastCastService : IDisposable
             return;
         }
 
-        if (_needsTranscoding)
-        {
-            if (!string.Equals(request.Value.Method, "HEAD", StringComparison.OrdinalIgnoreCase))
-                await ServeFfmpegAsync(path, network, cancellationToken).ConfigureAwait(false);
-            else
-                await WriteTranscodingHeadAsync(network, cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
         try
         {
             var info = new FileInfo(path);
@@ -409,73 +359,11 @@ public sealed class ChromecastCastService : IDisposable
         catch { /* client disconnected early — normal for range/probe requests */ }
     }
 
-    private async Task ServeFfmpegAsync(string filePath, NetworkStream network, CancellationToken cancellationToken)
-    {
-        const string header =
-            "HTTP/1.1 200 OK\r\n" +
-            "Content-Type: video/mp4\r\n" +
-            "Access-Control-Allow-Origin: *\r\n" +
-            "Connection: close\r\n" +
-            "\r\n";
-        await network.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken).ConfigureAwait(false);
-
-        var offset = _transcodingOffset;
-        var seekArg = offset > TimeSpan.Zero
-            ? $"-ss {offset.TotalSeconds.ToString("F3", CultureInfo.InvariantCulture)} "
-            : string.Empty;
-
-        var psi = new ProcessStartInfo
-        {
-            FileName = "ffmpeg",
-            Arguments = $"-hide_banner -loglevel error {seekArg}-i \"{filePath}\" " +
-                        "-c:v copy -c:a aac -b:a 192k " +
-                        "-movflags frag_keyframe+empty_moov+default_base_moof " +
-                        "-f mp4 pipe:1",
-            RedirectStandardOutput = true,
-            UseShellExecute = false,
-            CreateNoWindow = true,
-        };
-
-        var process = new Process { StartInfo = psi };
-        _ffmpegProcess = process;
-
-        try
-        {
-            if (!process.Start())
-                return;
-            var buffer = new byte[128 * 1024];
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                var read = await process.StandardOutput.BaseStream
-                    .ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-                if (read == 0) break;
-                await network.WriteAsync(buffer.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
-            }
-        }
-        catch { /* client disconnected, cancelled, or ffmpeg not found */ }
-        finally
-        {
-            try
-            {
-                if (!process.HasExited)
-                    process.Kill(entireProcessTree: true);
-            }
-            catch { }
-        }
-    }
-
-    private static async Task WriteTranscodingHeadAsync(NetworkStream network, CancellationToken cancellationToken)
-    {
-        const string header =
-            "HTTP/1.1 200 OK\r\n" +
-            "Content-Type: video/mp4\r\n" +
-            "Access-Control-Allow-Origin: *\r\n" +
-            "Connection: close\r\n" +
-            "\r\n";
-        await network.WriteAsync(Encoding.ASCII.GetBytes(header), cancellationToken).ConfigureAwait(false);
-    }
-
-    private static bool NeedsTranscoding(string path)
+    /// <summary>
+    /// Returns <c>true</c> for container formats the Chromecast cannot play natively.
+    /// Used by the UI to show an "unsupported format" warning before attempting a cast.
+    /// </summary>
+    public static bool IsUnsupportedFormat(string path)
         => Path.GetExtension(path).ToLowerInvariant() is ".mkv" or ".avi" or ".wmv" or ".mov" or ".flv" or ".ts" or ".m2ts";
 
     private static async Task<(string Method, string Path, Dictionary<string, string> Headers)?> ReadHttpRequestAsync(

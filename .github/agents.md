@@ -298,10 +298,11 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 ### Casting
 - Chromecast (Google Cast v2) device discovery via mDNS (`_googlecast._tcp`)
 - Cast to Chromecast devices
-- Built-in HTTP server to serve local files to cast devices
+- Built-in HTTP server to serve local files to cast devices (byte-range support for seeking)
 - SRT/VTT subtitle files converted to WebVTT and passed as `tracks[]` in Cast load request
 - Playback control (play, pause, seek, volume) over Google Cast protocol
-- Best-effort format support: Chromecast natively plays MP4/WebM (H.264/VP8/VP9), MP3/AAC/FLAC/Opus/WAV
+- **Supported formats**: MP4 (`video/mp4`), WebM (`video/webm`), and audio formats (MP3/AAC/FLAC/Opus/WAV)
+- **Unsupported formats**: MKV, AVI, WMV, MOV, FLV, TS, M2TS — Chromecast cannot natively play these containers. The Cast dialog shows a clear "not supported" message and disables the Cast button when such a file is loaded. No transcoding is performed.
 
 ### Screen Sleep Inhibition
 - `ScreenInhibitor` service (`Lumyn.Core/Services/ScreenInhibitor.cs`) prevents screen dim, lock, and system sleep while media is playing
@@ -608,3 +609,4 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Fix unnecessary wakeups/render pressure over time (`4f41a0f`) |
 | 2026-05 | Media controls via DLNA cast (`a750c3b`) |
 | 2026-05 | Switch cast from DLNA/UPnP to Google Cast (Chromecast) — `DlnaCastService` replaced by `ChromecastCastService` using `GoogleCast` NuGet (mDNS discovery, Cast v2 protocol, SRT→WebVTT subtitle tracks). Format support is best-effort (no transcoding). |
+| 2026-05 | Casting: removed experimental remux-to-temp-file approach (too slow/unreliable). Unsupported formats (MKV, AVI, etc.) now show a clear "not supported" message in the Cast dialog and disable the Cast button. MP4/WebM + subtitle casting fully working. |

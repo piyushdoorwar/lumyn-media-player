@@ -12,7 +12,7 @@ This document explains how the Debian repository is set up and maintained for Lu
 
 2. **User Installation**: Users can add the repository:
    ```bash
-   echo "deb https://piyushdoorwar.github.io/lumyn-media-player/debian stable main" | sudo tee /etc/apt/sources.list.d/lumyn.list
+   echo "deb https://piyushdoorwar.github.io/lumyn-media-player/site/debian stable main" | sudo tee /etc/apt/sources.list.d/lumyn.list
    sudo apt update
    sudo apt install lumyn
    ```

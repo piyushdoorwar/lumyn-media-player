@@ -39,6 +39,30 @@ sudo apt update
 sudo apt install dotnet-sdk-10.0 libmpv-dev
 ```
 
+## Installation
+
+### Linux (Ubuntu/Debian)
+
+**Via Debian Repository** (recommended):
+```bash
+echo "deb https://piyushdoorwar.github.io/lumyn-media-player/debian stable main" | sudo tee /etc/apt/sources.list.d/lumyn.list
+sudo apt update
+sudo apt install lumyn
+```
+
+**Direct `.deb` file**:
+```bash
+sudo apt install https://github.com/piyushdoorwar/lumyn-media-player/releases/download/v1.0.0/lumyn_1.0.0_amd64.deb
+```
+
+### Windows
+
+Download and run the `.exe` installer from [releases](https://github.com/piyushdoorwar/lumyn-media-player/releases/latest).
+
+### macOS
+
+Download the `.dmg` from [releases](https://github.com/piyushdoorwar/lumyn-media-player/releases/latest), open it, and drag Lumyn to your Applications folder.
+
 ## Download
 
 Download the latest release from:

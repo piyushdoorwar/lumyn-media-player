@@ -1170,3 +1170,459 @@ nav a:hover::after {
   text-align: center;
   letter-spacing: 0.02em;
 }
+
+/* ── Download & Installation ───────────────────────────────────────────── */
+
+.download-container {
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.download-desc {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.download-note {
+  margin: 12px 0 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.platform-download {
+  gap: 10px;
+}
+
+.platform-download img,
+.email-link img {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  filter: brightness(0) invert(1);
+}
+
+.email-link {
+  gap: 10px;
+}
+
+.install-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 620px;
+}
+
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-button:hover {
+  color: var(--text);
+  border-bottom-color: var(--button-border);
+}
+
+.tab-button.active {
+  color: var(--text);
+  border-bottom-color: var(--green-bright);
+}
+
+.tab-content {
+  display: none;
+  animation: fadeIn 0.2s ease-in-out;
+  width: 100%;
+  min-width: 0;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.debian-install {
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 100%;
+}
+
+.install-desc {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.install-code-wrapper {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.install-code {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.6;
+  padding-right: 44px;
+}
+
+.install-code code {
+  color: #a8d3a8;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: var(--button);
+  border: 1px solid var(--button-border);
+  border-radius: 4px;
+  color: var(--soft);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.copy-button:hover {
+  color: var(--text);
+  border-color: var(--green-bright);
+  background: rgba(73, 179, 92, 0.1);
+}
+
+.copy-button:active {
+  transform: scale(0.95);
+}
+
+.copy-button.copied {
+  color: #a8d3a8;
+  border-color: #5db85d;
+}
+
+.install-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+code {
+  color: var(--soft);
+  font-family: "Ubuntu Mono", "Cascadia Code", monospace;
+}
+
+/* ── Releases page ──────────────────────────────────────────────────────── */
+
+.releases-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.os-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.os-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.os-tab img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(0.6);
+}
+
+.os-tab:hover {
+  color: var(--text);
+  border-color: var(--button-border);
+}
+
+.os-tab.active {
+  background: var(--button);
+  border-color: var(--button-border);
+  color: var(--text);
+}
+
+.os-tab.active img {
+  filter: brightness(0) invert(1);
+}
+
+.releases-filters {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.releases-filters-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--line);
+  flex-shrink: 0;
+}
+
+.stable-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stable-toggle input[type="checkbox"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  transition: background 0.18s, border-color 0.18s;
+  flex-shrink: 0;
+}
+
+.stable-toggle input:checked ~ .toggle-track {
+  background: var(--green);
+  border-color: var(--green);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.18s, background 0.18s;
+}
+
+.stable-toggle input:checked ~ .toggle-track .toggle-thumb {
+  transform: translateX(14px);
+  background: #fff;
+}
+
+.stable-toggle:hover .toggle-track {
+  border-color: var(--button-border);
+}
+
+.stable-toggle input:focus-visible ~ .toggle-track {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.stable-toggle input:checked ~ .toggle-label {
+  color: var(--text);
+}
+
+.installation-guide {
+  margin-bottom: 48px;
+}
+
+.installation-guide h2 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  margin-top: 0;
+}
+
+.install-method {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.install-method h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--green-bright);
+  margin: 0 0 12px 0;
+}
+
+.install-method p {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--soft);
+}
+
+.install-method pre {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.install-method code {
+  color: #a8d3a8;
+  font-family: "Ubuntu Mono", "Cascadia Code", monospace;
+}
+
+.release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.release-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 18px 22px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.release-item:last-child {
+  border-bottom: none;
+}
+
+.release-item:nth-child(even) {
+  background: var(--panel-2);
+}
+
+.release-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.release-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.release-version {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: "Ubuntu Mono", "Cascadia Code", monospace;
+}
+
+.badge-latest {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--green);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.badge-pre {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #5c4a1e;
+  color: #f5c842;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.release-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.release-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.release-dl-btn {
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+.release-dl-btn img {
+  width: 16px;
+  height: 16px;
+  filter: brightness(0) invert(1);
+}
+
+.release-gh-link {
+  font-size: 13px;
+  color: var(--soft);
+}

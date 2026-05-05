@@ -45,7 +45,7 @@ sudo apt install dotnet-sdk-10.0 libmpv-dev
 
 **Via Debian Repository** (recommended):
 ```bash
-echo "deb https://piyushdoorwar.github.io/lumyn-media-player/site/debian stable main" | sudo tee /etc/apt/sources.list.d/lumyn.list
+echo "deb https://piyushdoorwar.github.io/lumyn-media-player/debian stable main" | sudo tee /etc/apt/sources.list.d/lumyn.list
 sudo apt update
 sudo apt install lumyn
 ```

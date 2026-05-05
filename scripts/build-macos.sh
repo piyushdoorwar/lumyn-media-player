@@ -205,15 +205,6 @@ copy_dylib_closure "${MPV_LIB}"
 copy_dylib_closure "${FFMPEG_BIN}"
 fix_install_names
 
-# Copy the ffmpeg binary and fix its library references to use @loader_path
-cp -pL "${FFMPEG_BIN}" "${MACOS_DIR}/ffmpeg"
-chmod 755 "${MACOS_DIR}/ffmpeg"
-while IFS= read -r dep; do
-  dep_base="$(basename "${dep}")"
-  if [[ -f "${MACOS_DIR}/${dep_base}" && "${dep}" != "@loader_path/${dep_base}" ]]; then
-    install_name_tool -change "${dep}" "@loader_path/${dep_base}" "${MACOS_DIR}/ffmpeg" || true
-  fi
-done < <(otool -L "${MACOS_DIR}/ffmpeg" | tail -n +2 | awk '{ print $1 }')
 cp "src/Lumyn.App/Assets/Icons/lumyn.svg" "${RESOURCES_DIR}/lumyn.svg"
 cp "packaging/macos/lumyn.icns" "${RESOURCES_DIR}/lumyn.icns"
 mkdir -p "${RESOURCES_DIR}/licenses"

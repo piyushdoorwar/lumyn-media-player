@@ -449,6 +449,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 6. Supports both `amd64` and `arm64`
 
 **Dependencies needed on build machine**: `libmpv-dev`, `dpkg`
+**Runtime package dependencies**: none (libmpv bundled; no `Depends:` field in control file)
 
 ### Windows — `.exe` installer (`scripts/build-windows.ps1`, 363 lines)
 
@@ -466,9 +467,10 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 ### macOS — `.dmg` bundle (`scripts/build-macos.sh`)
 
 1. `dotnet publish -c Release -r osx-arm64 (or osx-x64) --self-contained true`
-2. `brew install mpv` — install libmpv
-3. Bundle `libmpv.dylib` into `.app/Contents/MacOS/lib/`
-4. Create `.dmg` disk image → `Lumyn.dmg`
+2. `brew install mpv ffmpeg` — ffmpeg provides libav* dylibs that mpv links against
+3. Bundle `libmpv.dylib` + libav* dylibs (via `copy_dylib_closure`) into `.app/Contents/MacOS/`; fix `@loader_path` rpath
+4. The ffmpeg **binary** is NOT bundled — only its shared libraries are needed
+5. Create `.dmg` disk image → `Lumyn.dmg`
 
 **Flatpak**: `scripts/build-linux-flatpak.sh` — alternate Linux packaging (not in primary CI)
 
@@ -610,3 +612,4 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Media controls via DLNA cast (`a750c3b`) |
 | 2026-05 | Switch cast from DLNA/UPnP to Google Cast (Chromecast) — `DlnaCastService` replaced by `ChromecastCastService` using `GoogleCast` NuGet (mDNS discovery, Cast v2 protocol, SRT→WebVTT subtitle tracks). Format support is best-effort (no transcoding). |
 | 2026-05 | Casting: removed experimental remux-to-temp-file approach (too slow/unreliable). Unsupported formats (MKV, AVI, etc.) now show a clear "not supported" message in the Cast dialog and disable the Cast button. MP4/WebM + subtitle casting fully working. |
+| 2026-05 | Packaging: removed `Depends: ffmpeg` from Linux `.deb` control (app doesn't invoke the ffmpeg binary at runtime). Removed ffmpeg binary bundling from macOS `.app` (only libav* dylibs needed by mpv are kept). |

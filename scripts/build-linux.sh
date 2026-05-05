@@ -182,7 +182,6 @@ Version: ${VERSION}
 Section: video
 Priority: optional
 Architecture: ${DEB_ARCH}
-Depends: ffmpeg
 Maintainer: Lumyn Maintainers
 Description: Lumyn desktop media player
  A clean Avalonia and mpv desktop media player.

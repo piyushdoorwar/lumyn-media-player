@@ -538,23 +538,12 @@ if ($LASTEXITCODE -ne 0) {
 
 $installerFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64_setup.exe"
 
-# ── Create MSIX package (optional, requires Windows SDK) ──────────────────
-try {
-    Write-Host ""
-    Write-Host "Attempting to create MSIX package..."
-    $msixFile = New-MsixPackage -PackageDir $packageRoot -Version $Version -PackageOutDir $packageOutDir
-    Write-Host ""
-    Write-Host "Windows artifacts:"
-    Write-Host $installerFile
-    Write-Host $msixFile
-}
-catch {
-    Write-Host "⚠️  Warning: MSIX creation failed (Windows SDK/MakeAppx.exe may not be available)"
-    Write-Host "   Error: $($_.Exception.Message)"
-    Write-Host "   This is optional; the .exe installer was created successfully."
-    Write-Host ""
-    Write-Host "Windows artifacts:"
-    Write-Host $installerFile
-    Write-Host ""
-    Write-Host "To create MSIX locally: Install Windows SDK with 'App Packager' component"
-}
+# ── Create MSIX package ───────────────────────────────────────────────────
+Write-Host ""
+Write-Host "Creating MSIX package..."
+$msixFile = New-MsixPackage -PackageDir $packageRoot -Version $Version -PackageOutDir $packageOutDir
+
+Write-Host ""
+Write-Host "Windows artifacts:"
+Write-Host $installerFile
+Write-Host $msixFile

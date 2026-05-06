@@ -397,14 +397,13 @@ function New-MsixPackage {
         [string]$PackageOutDir
     )
 
-    # Convert version to MSIX format (X.X.X.X)
-    $versionParts = $Version -split "\."
-    $majorMinorPatch = @($versionParts[0], $versionParts[1], $versionParts[2]) -join "."
-    if ($versionParts.Count -lt 4) {
-        $msixVersion = "$majorMinorPatch.0"
-    } else {
-        $msixVersion = $Version
-    }
+    # Convert version to MSIX format (X.X.X.X — all components must be numeric).
+    # Strip any pre-release suffix (e.g. "1.2.3-beta.1" -> "1.2.3.0").
+    $numericVersion = $Version -replace '-.*$', ''   # drop everything from first '-'
+    $versionParts = $numericVersion -split "\."
+    # Pad to exactly 4 numeric components
+    while ($versionParts.Count -lt 4) { $versionParts += '0' }
+    $msixVersion = ($versionParts[0..3] | ForEach-Object { [int]$_ }) -join "."
 
     $appxManifest = Join-Path $scriptDir "..\packaging\windows\AppxManifest.xml"
     if (-not (Test-Path $appxManifest)) {

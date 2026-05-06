@@ -4,7 +4,7 @@
   <rect y="30" width="320" height="8" fill="#141414"/>
   <rect y="37" width="320" height="1" fill="rgba(255,255,255,0.06)"/>
   <g transform="translate(12,9) scale(0.078125)" fill="none"><path d="M22 71.5L135 19" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 103.5L234 5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 135.5L234 37" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 167.5L234 69" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M155 118L229 83.5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M96 118V181H62L67 207H189L194 181H159V130" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M71 217L184 197" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M75 239L176 221" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M112 150C112 147.7 114.5 146.3 116.5 147.5L142.5 163.2C145.5 165 145.5 170 142.5 171.8L116.5 187.5C114.5 188.7 112 187.3 112 185V150Z" fill="#D8D4CF"/></g>
-  <text x="40" y="24" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#DEDAD5">sample-video.mkv — Lumyn</text>
+  <text x="40" y="24" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#DEDAD5">sample-video.mp4 — Lumyn</text>
   <circle cx="272" cy="19" r="5.5" fill="#4c4c4c"/>
   <circle cx="286" cy="19" r="5.5" fill="#4c4c4c"/>
   <circle cx="300" cy="19" r="5.5" fill="#4c4c4c"/>
@@ -24,19 +24,19 @@
   <!-- font size row -->
   <text x="62" y="82" font-family="system-ui,sans-serif" font-size="8" fill="#807C79">Font size</text>
   <rect x="168" y="74" width="92" height="14" rx="3" fill="#252525" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-  <rect x="168" y="74" width="52" height="14" rx="3" fill="#2A3A2E"/>
-  <text x="178" y="84" font-family="system-ui,sans-serif" font-size="8" fill="#3a9b4b" font-weight="600">Medium</text>
+  <rect x="168" y="74" width="92" height="14" rx="3" fill="#2A3A2E"/>
+  <text x="200" y="84" font-family="system-ui,sans-serif" font-size="8" fill="#3a9b4b" font-weight="600">Medium</text>
 
   <!-- delay row -->
   <text x="62" y="100" font-family="system-ui,sans-serif" font-size="8" fill="#807C79">Sync delay</text>
   <rect x="168" y="92" width="92" height="14" rx="3" fill="#252525" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
-  <text x="195" y="102" font-family="system-ui,sans-serif" font-size="8" fill="#C8C3C2" font-weight="600">−0.3 s</text>
+  <text x="195" y="102" font-family="system-ui,sans-serif" font-size="8" fill="#C8C3C2" font-weight="600">− 0.3 s</text>
 
   <!-- color row -->
   <text x="62" y="118" font-family="system-ui,sans-serif" font-size="8" fill="#807C79">Text colour</text>
-  <circle cx="176" cy="117" r="6" fill="#E8E8E8" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
-  <circle cx="193" cy="117" r="6" fill="#999999" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-  <circle cx="210" cy="117" r="6" fill="#B8A010" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <circle cx="176" cy="117" r="6" fill="#646363" stroke="rgba(255,255,255,0.15)" stroke-width="1"/>
+  <circle cx="193" cy="117" r="6" fill="#191818" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <circle cx="210" cy="117" r="6" fill="#615409" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
 
   <!-- track row -->
   <text x="62" y="136" font-family="system-ui,sans-serif" font-size="8" fill="#807C79">Track</text>

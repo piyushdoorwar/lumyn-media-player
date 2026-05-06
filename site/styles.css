@@ -346,21 +346,38 @@ h3 {
 
 .feature-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
 }
 
 .feature-grid article {
-  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  min-height: 360px;
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel-2);
 }
 
+.feature-grid article:nth-child(7) {
+  grid-column: 2;
+}
+
 .feature-grid p,
 .download p {
   color: var(--muted);
+}
+
+.feature-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 320 / 220;
+  margin-top: auto;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.42);
 }
 
 .download {
@@ -1073,6 +1090,12 @@ nav a:hover::after {
   .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .feature-grid article:nth-child(7) {
+    grid-column: 1 / -1;
+    justify-self: center;
+    width: min(100%, 520px);
+  }
 }
 
 @media (max-width: 620px) {
@@ -1097,6 +1120,16 @@ nav a:hover::after {
     grid-template-columns: 1fr;
   }
 
+  .feature-grid article {
+    min-height: 0;
+  }
+
+  .feature-grid article:nth-child(7) {
+    grid-column: auto;
+    justify-self: stretch;
+    width: auto;
+  }
+
   .window-bar span {
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1119,75 +1152,7 @@ nav a:hover::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track,
-  .marquee-track--rtl {
+  .marquee-track {
     animation: none;
   }
-}
-
-/* ── Feature preview card marquee ───────────────────────────────────────── */
-.marquee-wrap--cards {
-  margin-top: 48px;
-  margin-bottom: -8px;
-}
-
-.marquee-track--rtl {
-  animation-name: marquee-scroll-rtl;
-  animation-duration: 120s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-.marquee-wrap--cards:hover .marquee-track--rtl {
-  animation-play-state: paused;
-}
-
-@keyframes marquee-scroll-rtl {
-  from { transform: translateX(-50%); }
-  to   { transform: translateX(0); }
-}
-
-.marquee-cards {
-  display: flex;
-  gap: 20px;
-  padding: 0 10px;
-  flex-shrink: 0;
-}
-
-.preview-card {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0;
-  cursor: default;
-}
-
-.preview-card__img {
-  width: 380px;
-  /* SVGs are 320×220, so aspect ratio is 16/11 */
-  aspect-ratio: 320 / 220;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  transition:
-    transform 0.28s ease,
-    box-shadow 0.28s ease,
-    border-color 0.28s ease;
-}
-
-.preview-card:hover .preview-card__img {
-  transform: translateY(-5px) scale(1.015);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.6);
-  border-color: rgba(58, 155, 75, 0.4);
-}
-
-.preview-card span {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: center;
-  letter-spacing: 0.02em;
 }

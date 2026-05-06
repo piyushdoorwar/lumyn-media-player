@@ -332,6 +332,122 @@ function Copy-Notices {
         }
 }
 
+function New-PlaceholderImage {
+    param(
+        [string]$OutputPath,
+        [int]$Width,
+        [int]$Height,
+        [string]$Color = "#1E1E1E"
+    )
+
+    Add-Type -AssemblyName System.Drawing
+    $bitmap = New-Object System.Drawing.Bitmap($Width, $Height)
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    
+    $colorObj = [System.Drawing.ColorTranslator]::FromHtml($Color)
+    $brush = New-Object System.Drawing.SolidBrush($colorObj)
+    
+    $graphics.FillRectangle($brush, 0, 0, $Width, $Height)
+    
+    $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    $graphics.Dispose()
+    $bitmap.Dispose()
+    
+    Write-Host "Generated placeholder image: $OutputPath"
+}
+
+function Ensure-MsixAssets {
+    param(
+        [string]$AssetsDir
+    )
+
+    New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
+
+    $requiredImages = @(
+        @{ Name = "square44x44logo.png"; Width = 44; Height = 44 }
+        @{ Name = "square71x71logo.png"; Width = 71; Height = 71 }
+        @{ Name = "square150x150logo.png"; Width = 150; Height = 150 }
+        @{ Name = "wide310x150logo.png"; Width = 310; Height = 150 }
+        @{ Name = "square310x310logo.png"; Width = 310; Height = 310 }
+        @{ Name = "StoreLogo.png"; Width = 50; Height = 50 }
+        @{ Name = "SplashScreen.png"; Width = 620; Height = 300 }
+    )
+
+    foreach ($image in $requiredImages) {
+        $imagePath = Join-Path $AssetsDir $image.Name
+        if (-not (Test-Path $imagePath)) {
+            New-PlaceholderImage -OutputPath $imagePath -Width $image.Width -Height $image.Height
+        }
+    }
+
+    Write-Host "MSIX assets verified in: $AssetsDir"
+}
+
+function New-MsixPackage {
+    param(
+        [string]$PackageDir,
+        [string]$Version,
+        [string]$PackageOutDir
+    )
+
+    # Convert version to MSIX format (X.X.X.X)
+    $versionParts = $Version -split "\."
+    $majorMinorPatch = @($versionParts[0], $versionParts[1], $versionParts[2]) -join "."
+    if ($versionParts.Count -lt 4) {
+        $msixVersion = "$majorMinorPatch.0"
+    } else {
+        $msixVersion = $Version
+    }
+
+    $appxManifest = Join-Path $scriptDir "..\packaging\windows\AppxManifest.xml"
+    $appxManifestTemp = Join-Path $PackageDir "AppxManifest.xml"
+
+    # Copy manifest and update version
+    Copy-Item $appxManifest $appxManifestTemp -Force
+    
+    $manifestContent = Get-Content $appxManifestTemp -Raw
+    $manifestContent = $manifestContent -replace 'Version="[^"]*"', "Version=`"$msixVersion`""
+    Set-Content $appxManifestTemp -Value $manifestContent
+
+    # Copy assets
+    $assetsSource = Join-Path $scriptDir "..\packaging\windows\Assets"
+    $assetsTarget = Join-Path $PackageDir "Assets"
+    
+    Ensure-MsixAssets -AssetsDir $assetsSource
+    Copy-Item $assetsSource $assetsTarget -Recurse -Force
+
+    # Find MakeAppx.exe (comes with Windows SDK)
+    $makeappx = $null
+    $sdk10Paths = @(
+        "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe",
+        "C:\Program Files\Windows Kits\10\bin\*\x64\makeappx.exe"
+    )
+    
+    foreach ($pattern in $sdk10Paths) {
+        $result = Get-Item $pattern -ErrorAction SilentlyContinue | Sort-Object -Descending | Select-Object -First 1
+        if ($result) {
+            $makeappx = $result.FullName
+            break
+        }
+    }
+
+    if ($null -eq $makeappx) {
+        throw "MakeAppx.exe not found. Install Windows 10/11 SDK from https://developer.microsoft.com/windows/downloads/windows-sdk/"
+    }
+
+    $msixPath = Join-Path $PackageOutDir "lumyn_${msixVersion}_win-x64.msix"
+    
+    Write-Host "Creating MSIX package: $msixPath"
+    & $makeappx pack /d $PackageDir /p $msixPath | Out-Null
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "MakeAppx.exe failed to create MSIX package."
+    }
+
+    Write-Host "MSIX package created: $msixPath"
+    return $msixPath
+}
+
 dotnet restore Lumyn.sln
 dotnet build Lumyn.sln -c $Configuration --no-restore
 dotnet publish $appProject -c $Configuration -r $Rid --self-contained true -o $publishDir `
@@ -377,5 +493,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 $installerFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64_setup.exe"
+
+# ── Create MSIX package ────────────────────────────────────────────────────
+$msixFile = New-MsixPackage -PackageDir $packageRoot -Version $Version -PackageOutDir $packageOutDir
+
+Write-Host ""
 Write-Host "Windows artifacts:"
 Write-Host $installerFile
+Write-Host $msixFile

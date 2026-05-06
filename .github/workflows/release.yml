@@ -87,6 +87,12 @@ jobs:
           name: lumyn-windows-x64-installer
           path: artifacts/packages/*_setup.exe
 
+      - name: Upload MSIX package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumyn-windows-x64-msix
+          path: artifacts/packages/*.msix
+
   macos-zip:
     name: macOS app zip (${{ matrix.rid }})
     runs-on: ${{ matrix.runner }}

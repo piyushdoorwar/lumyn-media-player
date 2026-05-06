@@ -442,19 +442,22 @@ function New-MsixPackage {
         $makeappx = $cmdResult.Source
         Write-Host "Found MakeAppx via command: $makeappx"
     } else {
-        # Try common SDK paths
-        $sdk10Paths = @(
+        # Try common SDK paths and Visual Studio paths
+        $searchPaths = @(
+            # Windows SDK standard paths
             "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe",
             "C:\Program Files\Windows Kits\10\bin\*\x64\makeappx.exe",
-            "C:\Program Files (x86)\Windows Kits\10\bin\10.0.*\x64\makeappx.exe",
-            "C:\Program Files\Windows Kits\10\bin\10.0.*\x64\makeappx.exe"
+            "C:\Program Files (x86)\Windows Kits\11\bin\*\x64\makeappx.exe",
+            "C:\Program Files\Windows Kits\11\bin\*\x64\makeappx.exe",
+            # Visual Studio paths (sometimes has SDK tools)
+            "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\SDK\ScopedBuild\windows\*\x64\makeappx.exe",
+            "C:\Program Files\Microsoft Visual Studio\2022\Community\SDK\ScopedBuild\windows\*\x64\makeappx.exe"
         )
         
-        foreach ($pattern in $sdk10Paths) {
-            Write-Host "Searching: $pattern"
-            $result = @(Get-Item $pattern -ErrorAction SilentlyContinue) | Sort-Object -Descending | Select-Object -First 1
-            if ($null -ne $result) {
-                $makeappx = $result.FullName
+        foreach ($pattern in $searchPaths) {
+            $results = @(Get-Item $pattern -ErrorAction SilentlyContinue | Sort-Object -Descending)
+            if ($results.Count -gt 0) {
+                $makeappx = $results[0].FullName
                 Write-Host "Found MakeAppx at: $makeappx"
                 break
             }
@@ -462,7 +465,10 @@ function New-MsixPackage {
     }
 
     if ($null -eq $makeappx) {
-        throw "MakeAppx.exe not found. Windows SDK must be installed. Searched: $($sdk10Paths -join ', ')"
+        Write-Host "⚠️  MakeAppx.exe not found in standard locations."
+        Write-Host "   Windows SDK is not installed or MSIX tools not available."
+        Write-Host "   To create MSIX locally: Install Windows SDK with 'App Packager' component from https://developer.microsoft.com/windows/downloads/windows-sdk/"
+        throw "MakeAppx.exe not found. Cannot create MSIX package without Windows SDK."
     }
 
     $msixPath = Join-Path $PackageOutDir "lumyn_${msixVersion}_win-x64.msix"
@@ -532,10 +538,23 @@ if ($LASTEXITCODE -ne 0) {
 
 $installerFile = Join-Path $packageOutDir "lumyn_${Version}_win-x64_setup.exe"
 
-# ── Create MSIX package ────────────────────────────────────────────────────
-$msixFile = New-MsixPackage -PackageDir $packageRoot -Version $Version -PackageOutDir $packageOutDir
-
-Write-Host ""
-Write-Host "Windows artifacts:"
-Write-Host $installerFile
-Write-Host $msixFile
+# ── Create MSIX package (optional, requires Windows SDK) ──────────────────
+try {
+    Write-Host ""
+    Write-Host "Attempting to create MSIX package..."
+    $msixFile = New-MsixPackage -PackageDir $packageRoot -Version $Version -PackageOutDir $packageOutDir
+    Write-Host ""
+    Write-Host "Windows artifacts:"
+    Write-Host $installerFile
+    Write-Host $msixFile
+}
+catch {
+    Write-Host "⚠️  Warning: MSIX creation failed (Windows SDK/MakeAppx.exe may not be available)"
+    Write-Host "   Error: $($_.Exception.Message)"
+    Write-Host "   This is optional; the .exe installer was created successfully."
+    Write-Host ""
+    Write-Host "Windows artifacts:"
+    Write-Host $installerFile
+    Write-Host ""
+    Write-Host "To create MSIX locally: Install Windows SDK with 'App Packager' component"
+}

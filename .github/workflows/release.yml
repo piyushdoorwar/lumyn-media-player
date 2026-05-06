@@ -93,6 +93,7 @@ jobs:
         with:
           name: lumyn-windows-x64-msix
           path: artifacts/packages/*.msix
+        continue-on-error: true
 
   macos-zip:
     name: macOS app zip (${{ matrix.rid }})

@@ -48,10 +48,11 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Install native packaging inputs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libmpv-dev
+      - name: Cache apt packages
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libmpv2
+          version: 1.0
 
       - name: Build deb
         run: ./scripts/build-linux.sh

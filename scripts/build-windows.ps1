@@ -336,24 +336,30 @@ function New-PlaceholderImage {
     param(
         [string]$OutputPath,
         [int]$Width,
-        [int]$Height,
-        [string]$Color = "#1E1E1E"
+        [int]$Height
     )
 
-    Add-Type -AssemblyName System.Drawing
-    $bitmap = New-Object System.Drawing.Bitmap($Width, $Height)
-    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    
-    $colorObj = [System.Drawing.ColorTranslator]::FromHtml($Color)
-    $brush = New-Object System.Drawing.SolidBrush($colorObj)
-    
-    $graphics.FillRectangle($brush, 0, 0, $Width, $Height)
-    
-    $bitmap.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
-    $graphics.Dispose()
-    $bitmap.Dispose()
-    
-    Write-Host "Generated placeholder image: $OutputPath"
+    # Create a minimal valid PNG file (1x1 transparent pixel, scaled)
+    # PNG magic number + minimal IHDR chunk for the specified dimensions
+    $pngBytes = @(
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # PNG signature
+        0x00, 0x00, 0x00, 0x0D,                            # IHDR chunk size
+        0x49, 0x48, 0x44, 0x52,                            # "IHDR"
+        [byte]($Width -shr 24), [byte]($Width -shr 16), [byte]($Width -shr 8), [byte]$Width,  # Width
+        [byte]($Height -shr 24), [byte]($Height -shr 16), [byte]($Height -shr 8), [byte]$Height,  # Height
+        0x08, 0x02, 0x00, 0x00, 0x00,                      # Bit depth, color type, compression, filter, interlace
+        0xAF, 0xC8, 0xB5, 0x5C,                            # CRC
+        0x00, 0x00, 0x00, 0x0C,                            # IDAT chunk size
+        0x49, 0x44, 0x41, 0x54,                            # "IDAT"
+        0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00, 0x00,  # Compressed pixel data
+        0x03, 0x01, 0x01, 0x00, 0x18, 0xDD, 0x8D, 0xB4,  # End of IDAT
+        0x00, 0x00, 0x00, 0x00,                            # IEND chunk size
+        0x49, 0x45, 0x4E, 0x44,                            # "IEND"
+        0xAE, 0x42, 0x60, 0x82                             # CRC
+    )
+
+    [System.IO.File]::WriteAllBytes($OutputPath, $pngBytes)
+    Write-Host "Generated placeholder image: $OutputPath ($Width x $Height)"
 }
 
 function Ensure-MsixAssets {
@@ -400,6 +406,10 @@ function New-MsixPackage {
     }
 
     $appxManifest = Join-Path $scriptDir "..\packaging\windows\AppxManifest.xml"
+    if (-not (Test-Path $appxManifest)) {
+        throw "AppxManifest.xml not found at: $appxManifest"
+    }
+
     $appxManifestTemp = Join-Path $PackageDir "AppxManifest.xml"
 
     # Copy manifest and update version
@@ -408,43 +418,71 @@ function New-MsixPackage {
     $manifestContent = Get-Content $appxManifestTemp -Raw
     $manifestContent = $manifestContent -replace 'Version="[^"]*"', "Version=`"$msixVersion`""
     Set-Content $appxManifestTemp -Value $manifestContent
+    Write-Host "Manifest updated with version: $msixVersion"
 
     # Copy assets
     $assetsSource = Join-Path $scriptDir "..\packaging\windows\Assets"
     $assetsTarget = Join-Path $PackageDir "Assets"
     
+    if (-not (Test-Path $assetsSource)) {
+        Write-Host "Assets directory not found, creating: $assetsSource"
+        New-Item -ItemType Directory -Force -Path $assetsSource | Out-Null
+    }
+
     Ensure-MsixAssets -AssetsDir $assetsSource
-    Copy-Item $assetsSource $assetsTarget -Recurse -Force
+    Copy-Item $assetsSource $assetsTarget -Recurse -Force -ErrorAction Stop
+    Write-Host "Assets copied to: $assetsTarget"
 
     # Find MakeAppx.exe (comes with Windows SDK)
     $makeappx = $null
-    $sdk10Paths = @(
-        "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe",
-        "C:\Program Files\Windows Kits\10\bin\*\x64\makeappx.exe"
-    )
     
-    foreach ($pattern in $sdk10Paths) {
-        $result = Get-Item $pattern -ErrorAction SilentlyContinue | Sort-Object -Descending | Select-Object -First 1
-        if ($result) {
-            $makeappx = $result.FullName
-            break
+    # Try to find MakeAppx via command
+    $cmdResult = Get-Command makeappx.exe -ErrorAction SilentlyContinue
+    if ($null -ne $cmdResult) {
+        $makeappx = $cmdResult.Source
+        Write-Host "Found MakeAppx via command: $makeappx"
+    } else {
+        # Try common SDK paths
+        $sdk10Paths = @(
+            "C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe",
+            "C:\Program Files\Windows Kits\10\bin\*\x64\makeappx.exe",
+            "C:\Program Files (x86)\Windows Kits\10\bin\10.0.*\x64\makeappx.exe",
+            "C:\Program Files\Windows Kits\10\bin\10.0.*\x64\makeappx.exe"
+        )
+        
+        foreach ($pattern in $sdk10Paths) {
+            Write-Host "Searching: $pattern"
+            $result = @(Get-Item $pattern -ErrorAction SilentlyContinue) | Sort-Object -Descending | Select-Object -First 1
+            if ($null -ne $result) {
+                $makeappx = $result.FullName
+                Write-Host "Found MakeAppx at: $makeappx"
+                break
+            }
         }
     }
 
     if ($null -eq $makeappx) {
-        throw "MakeAppx.exe not found. Install Windows 10/11 SDK from https://developer.microsoft.com/windows/downloads/windows-sdk/"
+        throw "MakeAppx.exe not found. Windows SDK must be installed. Searched: $($sdk10Paths -join ', ')"
     }
 
     $msixPath = Join-Path $PackageOutDir "lumyn_${msixVersion}_win-x64.msix"
     
     Write-Host "Creating MSIX package: $msixPath"
-    & $makeappx pack /d $PackageDir /p $msixPath | Out-Null
+    Write-Host "  Package source: $PackageDir"
+    Write-Host "  MakeAppx tool: $makeappx"
+    
+    & $makeappx pack /d $PackageDir /p $msixPath
 
     if ($LASTEXITCODE -ne 0) {
-        throw "MakeAppx.exe failed to create MSIX package."
+        throw "MakeAppx.exe failed with exit code $LASTEXITCODE while creating MSIX package."
     }
 
-    Write-Host "MSIX package created: $msixPath"
+    if (-not (Test-Path $msixPath)) {
+        throw "MSIX package was not created at: $msixPath"
+    }
+
+    $msixSize = (Get-Item $msixPath).Length / 1MB
+    Write-Host "MSIX package created successfully: $msixPath ($([math]::Round($msixSize, 2)) MB)"
     return $msixPath
 }
 

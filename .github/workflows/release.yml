@@ -96,6 +96,7 @@ jobs:
           path: artifacts/packages/*_setup.exe
 
       - name: Upload MSIX package
+        if: hashFiles('artifacts/packages/*.msix') != ''
         uses: actions/upload-artifact@v4
         with:
           name: lumyn-windows-x64-msix

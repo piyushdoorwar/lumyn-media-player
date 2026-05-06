@@ -402,7 +402,7 @@ function New-MsixPackage {
     Copy-Item $appxManifest $appxManifestTemp -Force
     
     $manifestContent = [System.IO.File]::ReadAllText($appxManifestTemp, [System.Text.Encoding]::UTF8)
-    $manifestContent = $manifestContent -replace 'Version="[^"]*"', "Version=`"$msixVersion`""
+    $manifestContent = $manifestContent -creplace 'Version="[^"]*"', "Version=`"$msixVersion`""
     [System.IO.File]::WriteAllText($appxManifestTemp, $manifestContent, [System.Text.UTF8Encoding]::new($false))
     Write-Host "Manifest updated with version: $msixVersion"
 

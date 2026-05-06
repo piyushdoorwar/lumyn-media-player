@@ -64,14 +64,6 @@ async function hydrateDownloadLinks() {
 
 hydrateDownloadLinks();
 
-// Keep decorative feature previews from exposing browser image actions.
-(function () {
-  document.querySelectorAll(".feature-preview").forEach((img) => {
-    img.addEventListener("contextmenu", (event) => event.preventDefault());
-    img.addEventListener("dragstart", (event) => event.preventDefault());
-  });
-})();
-
 // ── Scroll reveal ─────────────────────────────────────────────────────────
 (function () {
   const obs = new IntersectionObserver(

@@ -401,9 +401,9 @@ function New-MsixPackage {
     # Copy manifest and update version
     Copy-Item $appxManifest $appxManifestTemp -Force
     
-    $manifestContent = Get-Content $appxManifestTemp -Raw
+    $manifestContent = [System.IO.File]::ReadAllText($appxManifestTemp, [System.Text.Encoding]::UTF8)
     $manifestContent = $manifestContent -replace 'Version="[^"]*"', "Version=`"$msixVersion`""
-    Set-Content $appxManifestTemp -Value $manifestContent
+    [System.IO.File]::WriteAllText($appxManifestTemp, $manifestContent, [System.Text.UTF8Encoding]::new($false))
     Write-Host "Manifest updated with version: $msixVersion"
 
     # Copy assets

@@ -339,27 +339,13 @@ function New-PlaceholderImage {
         [int]$Height
     )
 
-    # Minimal valid 1x1 transparent RGBA PNG with correct CRCs.
-    # MakeAppx only requires the files to exist and be valid PNGs — it does not
-    # validate that the pixel dimensions match the asset slot.
-    $pngBytes = [byte[]]@(
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,  # PNG signature
-        0x00, 0x00, 0x00, 0x0D,                            # IHDR length = 13
-        0x49, 0x48, 0x44, 0x52,                            # "IHDR"
-        0x00, 0x00, 0x00, 0x01,                            # width  = 1
-        0x00, 0x00, 0x00, 0x01,                            # height = 1
-        0x08, 0x06, 0x00, 0x00, 0x00,                      # 8-bit RGBA, no interlace
-        0x1F, 0x15, 0xC4, 0x89,                            # IHDR CRC (correct for 1x1 RGBA)
-        0x00, 0x00, 0x00, 0x0B,                            # IDAT length = 11
-        0x49, 0x44, 0x41, 0x54,                            # "IDAT"
-        0x78, 0x9C, 0x62, 0x00, 0x00, 0x00, 0x02, 0x00,   # zlib-compressed transparent pixel
-        0x01, 0xE2, 0x21, 0xBC, 0x33,                      # (last 2 bytes = IDAT CRC high word)
-        0x00, 0x00, 0x00, 0x00,                            # IEND length = 0
-        0x49, 0x45, 0x4E, 0x44,                            # "IEND"
-        0xAE, 0x42, 0x60, 0x82                             # IEND CRC
-    )
-
-    [System.IO.File]::WriteAllBytes($OutputPath, $pngBytes)
+    # Use System.Drawing to produce a real valid PNG.
+    # MakeAppx strictly validates PNG structure; hand-crafted byte arrays are fragile.
+    Add-Type -AssemblyName System.Drawing
+    $bmp = New-Object System.Drawing.Bitmap(1, 1, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+    $bmp.SetPixel(0, 0, [System.Drawing.Color]::Transparent)
+    $bmp.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
+    $bmp.Dispose()
     Write-Host "Generated placeholder image: $OutputPath (${Width}x${Height})"
 }
 
@@ -476,8 +462,8 @@ function New-MsixPackage {
     Write-Host "Creating MSIX package: $msixPath"
     Write-Host "  Package source: $PackageDir"
     Write-Host "  MakeAppx tool: $makeappx"
-    
-    & $makeappx pack /d $PackageDir /p $msixPath
+
+    & $makeappx pack /d $PackageDir /p $msixPath 2>&1 | Write-Host
 
     if ($LASTEXITCODE -ne 0) {
         throw "MakeAppx.exe failed with exit code $LASTEXITCODE while creating MSIX package."

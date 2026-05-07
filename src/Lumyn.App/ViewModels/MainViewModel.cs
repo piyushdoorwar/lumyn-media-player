@@ -106,6 +106,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _trackTitle;
     private string? _trackArtist;
     private string? _trackAlbum;
+    private string? _coverArtPath;
     private Avalonia.Media.Imaging.Bitmap? _coverArtBitmap;
 
     // ── Playlist / queue ───────────────────────────────────────────────
@@ -672,7 +673,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             CastStatusText = $"Connecting to {device.Name}...";
             var subtitlePath = CurrentSubtitleSettings.FilePath;
-            await _casting.CastAsync(device, CurrentFilePath, subtitlePath, _playback.Position, Math.Clamp(Volume, 0, 100));
+            await _casting.CastAsync(
+                device,
+                CurrentFilePath,
+                subtitlePath,
+                _playback.Position,
+                Math.Clamp(Volume, 0, 100),
+                BuildCastMetadata(CurrentFilePath));
             _playback.Pause();
             IsCasting = true;
             IsCastPlaying = true;
@@ -787,7 +794,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         else
             SetPlaylist([filePath], 0);
 
-        CoverArtBitmap = audioOnly ? FindCoverArt(filePath) : null;
+        SetCoverArt(filePath, audioOnly);
         TrackTitle = null; TrackArtist = null; TrackAlbum = null;
 
         NotifyPlaylistState();
@@ -811,7 +818,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(IsAudioMode));
 
         SetPlaylist(mediaPaths, 0);
-        CoverArtBitmap = audioOnly ? FindCoverArt(mediaPaths[0]) : null;
+        SetCoverArt(mediaPaths[0], audioOnly);
         TrackTitle = null; TrackArtist = null; TrackAlbum = null;
         NotifyPlaylistState();
 
@@ -1248,7 +1255,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TrackTitle    = null;
         TrackArtist   = null;
         TrackAlbum    = null;
-        CoverArtBitmap = null;
+        SetCoverArt(null, false);
         ChapterPositions = [];
         // Leave the playlist intact so the user can resume or navigate.
         NotifyPlaylistState();
@@ -1500,7 +1507,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private static Avalonia.Media.Imaging.Bitmap? FindCoverArt(string filePath)
+    private static string? FindCoverArtPath(string filePath)
     {
         var dir = Path.GetDirectoryName(filePath);
         if (string.IsNullOrWhiteSpace(dir)) return null;
@@ -1510,7 +1517,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         foreach (var imgExt in new[] { ".jpg", ".jpeg", ".png", ".webp" })
         {
             var candidate = Path.Combine(dir, baseName + imgExt);
-            if (File.Exists(candidate)) return TryLoadBitmap(candidate);
+            if (File.Exists(candidate)) return candidate;
         }
 
         // 2. Well-known cover art file names in the same folder.
@@ -1519,11 +1526,37 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             foreach (var imgExt in new[] { ".jpg", ".jpeg", ".png", ".webp" })
             {
                 var candidate = Path.Combine(dir, name + imgExt);
-                if (File.Exists(candidate)) return TryLoadBitmap(candidate);
+                if (File.Exists(candidate)) return candidate;
             }
         }
 
         return null;
+    }
+
+    private void SetCoverArt(string? filePath, bool audioOnly)
+    {
+        _coverArtPath = audioOnly && !string.IsNullOrWhiteSpace(filePath)
+            ? FindCoverArtPath(filePath)
+            : null;
+        CoverArtBitmap = _coverArtPath is null ? null : TryLoadBitmap(_coverArtPath);
+    }
+
+    private ChromecastMediaMetadata BuildCastMetadata(string filePath)
+    {
+        var title = _playback.GetMetadata("title") ?? TrackTitle;
+        var artist = _playback.GetMetadata("artist") ?? TrackArtist;
+        var album = _playback.GetMetadata("album") ?? TrackAlbum;
+        var albumArtist = _playback.GetMetadata("album_artist")
+            ?? _playback.GetMetadata("albumartist");
+
+        return new ChromecastMediaMetadata(
+            string.IsNullOrWhiteSpace(title) ? Path.GetFileNameWithoutExtension(filePath) : title,
+            artist,
+            album,
+            albumArtist,
+            _coverArtPath ?? FindCoverArtPath(filePath),
+            _playback.Duration,
+            IsAudioOnly);
     }
 
     private static Avalonia.Media.Imaging.Bitmap? TryLoadBitmap(string path)
@@ -1570,7 +1603,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         IsAudioOnly = audioOnly;
         OnPropertyChanged(nameof(IsAudioMode));
 
-        CoverArtBitmap = audioOnly ? FindCoverArt(filePath) : null;
+        SetCoverArt(filePath, audioOnly);
         TrackTitle = null; TrackArtist = null; TrackAlbum = null;
 
         RebuildPlaylistItems();

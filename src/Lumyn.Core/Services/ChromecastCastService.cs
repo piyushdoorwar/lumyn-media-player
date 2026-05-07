@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Text;
 using GoogleCast;
 using GoogleCast.Channels;
+using GoogleCast.Models;
 using GoogleCast.Models.Media;
 
 namespace Lumyn.Core.Services;
@@ -13,6 +14,15 @@ public sealed record ChromecastDevice(string Id, string Name, IReceiver Receiver
 
 public sealed record ChromecastPositionInfo(TimeSpan Position, TimeSpan Duration);
 
+public sealed record ChromecastMediaMetadata(
+    string? Title,
+    string? Artist,
+        string? Album,
+        string? AlbumArtist,
+        string? CoverArtPath,
+        TimeSpan? Duration,
+        bool IsAudio);
+
 public sealed class ChromecastCastService : IDisposable
 {
     private readonly object _serverLock = new();
@@ -20,9 +30,11 @@ public sealed class ChromecastCastService : IDisposable
     private TcpListener? _listener;
     private string? _servedFilePath;
     private string? _servedSubtitlePath;
+    private string? _servedCoverArtPath;
     private string? _servedSubtitleVttContent;
     private Uri? _servedFileUri;
     private Uri? _servedSubtitleUri;
+    private Uri? _servedCoverArtUri;
 
     private ISender? _sender;
     private IMediaChannel? _mediaChannel;
@@ -49,11 +61,18 @@ public sealed class ChromecastCastService : IDisposable
         }
     }
 
-    public async Task CastAsync(ChromecastDevice device, string filePath, string? subtitlePath, TimeSpan startPosition, int volume, CancellationToken cancellationToken = default)
+    public async Task CastAsync(
+        ChromecastDevice device,
+        string filePath,
+        string? subtitlePath,
+        TimeSpan startPosition,
+        int volume,
+        ChromecastMediaMetadata? metadata = null,
+        CancellationToken cancellationToken = default)
     {
         await DisconnectSenderAsync();
 
-        var (mediaUri, subtitleUri) = StartServer(filePath, subtitlePath);
+        var (mediaUri, subtitleUri, coverArtUri) = StartServer(filePath, subtitlePath, metadata?.CoverArtPath);
 
         var sender = new Sender();
         sender.Disconnected += OnDisconnected;
@@ -105,6 +124,9 @@ public sealed class ChromecastCastService : IDisposable
         {
             ContentId = mediaUri.ToString(),
             ContentType = GetMimeType(filePath),
+            StreamType = StreamType.Buffered,
+            Metadata = BuildCastMetadata(filePath, metadata, coverArtUri),
+            Duration = metadata?.Duration is { TotalSeconds: > 0 } duration ? duration.TotalSeconds : null,
             Tracks = tracks
         };
 
@@ -215,18 +237,22 @@ public sealed class ChromecastCastService : IDisposable
 
     // ── HTTP file server ──────────────────────────────────────────────────────
 
-    private (Uri mediaUri, Uri? subtitleUri) StartServer(string filePath, string? subtitlePath)
+    private (Uri mediaUri, Uri? subtitleUri, Uri? coverArtUri) StartServer(string filePath, string? subtitlePath, string? coverArtPath)
     {
         lock (_serverLock)
         {
             var normalizedSubtitle = !string.IsNullOrWhiteSpace(subtitlePath) && File.Exists(subtitlePath)
                 ? subtitlePath
                 : null;
+            var normalizedCoverArt = !string.IsNullOrWhiteSpace(coverArtPath) && File.Exists(coverArtPath)
+                ? coverArtPath
+                : null;
 
             if (_listener is not null &&
                 string.Equals(_servedFilePath, filePath, StringComparison.Ordinal) &&
-                string.Equals(_servedSubtitlePath, normalizedSubtitle, StringComparison.Ordinal))
-                return (_servedFileUri!, _servedSubtitleUri);
+                string.Equals(_servedSubtitlePath, normalizedSubtitle, StringComparison.Ordinal) &&
+                string.Equals(_servedCoverArtPath, normalizedCoverArt, StringComparison.Ordinal))
+                return (_servedFileUri!, _servedSubtitleUri, _servedCoverArtUri);
 
             StopServerInternal();
 
@@ -242,16 +268,22 @@ public sealed class ChromecastCastService : IDisposable
                 subtitleUri = new Uri($"http://{address}:{port}/lumyn-cast/subtitle/{Uri.EscapeDataString(Path.GetFileNameWithoutExtension(normalizedSubtitle))}.vtt");
             }
 
+            Uri? coverArtUri = null;
+            if (normalizedCoverArt is not null)
+                coverArtUri = new Uri($"http://{address}:{port}/lumyn-cast/art/{Uri.EscapeDataString(Path.GetFileName(normalizedCoverArt))}");
+
             _listener = new TcpListener(IPAddress.Any, port);
             _listener.Start();
             _serverCts = new CancellationTokenSource();
             _servedFilePath = filePath;
             _servedSubtitlePath = normalizedSubtitle;
+            _servedCoverArtPath = normalizedCoverArt;
             _servedSubtitleVttContent = vttContent;
             _servedFileUri = mediaUri;
             _servedSubtitleUri = subtitleUri;
+            _servedCoverArtUri = coverArtUri;
             _ = Task.Run(() => ServerLoopAsync(_listener, _serverCts.Token));
-            return (mediaUri, subtitleUri);
+            return (mediaUri, subtitleUri, coverArtUri);
         }
     }
 
@@ -259,9 +291,11 @@ public sealed class ChromecastCastService : IDisposable
     {
         _servedFilePath = null;
         _servedSubtitlePath = null;
+        _servedCoverArtPath = null;
         _servedSubtitleVttContent = null;
         _servedFileUri = null;
         _servedSubtitleUri = null;
+        _servedCoverArtUri = null;
         _serverCts?.Cancel();
         _listener?.Stop();
         _listener = null;
@@ -308,6 +342,27 @@ public sealed class ChromecastCastService : IDisposable
             await WriteResponseHeadersAsync(network, 200, "OK", "text/vtt; charset=utf-8", bytes.Length, null, cancellationToken).ConfigureAwait(false);
             if (!string.Equals(request.Value.Method, "HEAD", StringComparison.OrdinalIgnoreCase))
                 await network.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        var isCoverArt = request.Value.Path.Contains("/art/", StringComparison.OrdinalIgnoreCase);
+        if (isCoverArt)
+        {
+            var coverArtPath = _servedCoverArtPath;
+            if (string.IsNullOrWhiteSpace(coverArtPath) || !File.Exists(coverArtPath))
+            {
+                await WriteStatusAsync(network, 404, "Not Found", cancellationToken).ConfigureAwait(false);
+                return;
+            }
+
+            try
+            {
+                var bytes = await File.ReadAllBytesAsync(coverArtPath, cancellationToken).ConfigureAwait(false);
+                await WriteResponseHeadersAsync(network, 200, "OK", GetImageMimeType(coverArtPath), bytes.Length, null, cancellationToken).ConfigureAwait(false);
+                if (!string.Equals(request.Value.Method, "HEAD", StringComparison.OrdinalIgnoreCase))
+                    await network.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
+            }
+            catch { /* client disconnected early or artwork could not be read */ }
             return;
         }
 
@@ -418,6 +473,59 @@ public sealed class ChromecastCastService : IDisposable
     private static Task WriteStatusAsync(NetworkStream stream, int status, string reason, CancellationToken cancellationToken)
         => WriteResponseHeadersAsync(stream, status, reason, "text/plain", 0, null, cancellationToken);
 
+    private static GenericMediaMetadata BuildCastMetadata(string filePath, ChromecastMediaMetadata? metadata, Uri? coverArtUri)
+    {
+        var title = FirstNonBlank(metadata?.Title, Path.GetFileNameWithoutExtension(filePath));
+        var subtitle = BuildMetadataSubtitle(metadata);
+
+        var castMetadata = new GenericMediaMetadata
+        {
+            Title = title,
+            Subtitle = subtitle,
+            Images = coverArtUri is null
+                ? null
+                :
+                [
+                    new Image
+                    {
+                        Url = coverArtUri.ToString()
+                    }
+                ]
+        };
+        SetMetadataType(castMetadata, metadata?.IsAudio == true ? MetadataType.Music : MetadataType.Movie);
+        return castMetadata;
+    }
+
+    private static void SetMetadataType(GenericMediaMetadata metadata, MetadataType metadataType)
+    {
+        try
+        {
+            typeof(GenericMediaMetadata)
+                .GetProperty(nameof(GenericMediaMetadata.MetadataType))
+                ?.SetValue(metadata, metadataType);
+        }
+        catch
+        {
+            // Older GoogleCast metadata models still display title/subtitle/images
+            // even when the protected metadata type cannot be changed.
+        }
+    }
+
+    private static string? BuildMetadataSubtitle(ChromecastMediaMetadata? metadata)
+    {
+        if (metadata is null) return null;
+
+        var people = FirstNonBlank(metadata.Artist, metadata.AlbumArtist);
+        var album = FirstNonBlank(metadata.Album);
+
+        if (!string.IsNullOrWhiteSpace(people) && !string.IsNullOrWhiteSpace(album))
+            return $"{people} - {album}";
+        return FirstNonBlank(people, album);
+    }
+
+    private static string? FirstNonBlank(params string?[] values)
+        => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v))?.Trim();
+
     // ── SRT → WebVTT conversion ───────────────────────────────────────────────
 
     private static string ConvertSubtitleToVtt(string subtitlePath)
@@ -464,6 +572,15 @@ public sealed class ChromecastCastService : IDisposable
             ".wav"           => "audio/wav",
             ".m4a" or ".aac" => "audio/aac",
             _                => "application/octet-stream"
+        };
+
+    private static string GetImageMimeType(string path)
+        => Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png"            => "image/png",
+            ".webp"           => "image/webp",
+            _                 => "application/octet-stream"
         };
 
     private static int GetFreePort()

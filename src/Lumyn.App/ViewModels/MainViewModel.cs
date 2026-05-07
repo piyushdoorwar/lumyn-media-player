@@ -219,7 +219,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public void AddBookmarkAtCurrentPosition(string label)
     {
         if (string.IsNullOrWhiteSpace(CurrentFilePath)) return;
-        var pos = _playback.Position;
+        var pos = CurrentMediaPosition;
         if (pos == TimeSpan.Zero && !HasMedia) return;
         var lbl = string.IsNullOrWhiteSpace(label)
             ? (pos.TotalHours >= 1
@@ -250,7 +250,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void JumpToBookmark(TimeSpan position)
     {
-        _playback.Seek(position);
+        JumpTo(position);
         ShowOsd($"Jumped to {(position.TotalHours >= 1 ? $"{(int)position.TotalHours}:{position.Minutes:D2}:{position.Seconds:D2}" : $"{position.Minutes}:{position.Seconds:D2}")}");
     }
 
@@ -390,6 +390,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasCoverArt => _coverArtBitmap is not null;
+
+    private TimeSpan CurrentMediaPosition => IsCasting ? _castPosition : _playback.Position;
+
+    private TimeSpan CurrentMediaDuration
+        => IsCasting && _castDuration > TimeSpan.Zero ? _castDuration : _playback.Duration;
 
     // ── Playlist / queue properties ─────────────────────────────────────────
 
@@ -703,8 +708,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task StopCastingAsync()
     {
+        var finalPosition = _castPosition;
         try
         {
+            var position = await _casting.GetPositionInfoAsync();
+            if (position is not null)
+            {
+                finalPosition = position.Position;
+                _castPosition = position.Position;
+                if (position.Duration > TimeSpan.Zero)
+                    _castDuration = position.Duration;
+            }
+
             await _casting.StopAsync();
         }
         catch
@@ -713,13 +728,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
         finally
         {
+            if (finalPosition > TimeSpan.Zero)
+            {
+                _playback.Seek(finalPosition);
+                _settings.SaveResumePosition(CurrentFilePath, finalPosition, CurrentMediaDuration);
+            }
+
             _casting.StopServer();
             IsCasting = false;
             IsCastPlaying = false;
-            _castPosition = TimeSpan.Zero;
+            _castPosition = finalPosition;
             _castDuration = TimeSpan.Zero;
             CastTargetName = null;
             CastStatusText = null;
+            RefreshState();
             ShowOsd("Casting stopped");
         }
     }
@@ -1138,7 +1160,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void SaveResumePosition()
     {
-        _settings.SaveResumePosition(CurrentFilePath, _playback.Position, _playback.Duration);
+        _settings.SaveResumePosition(CurrentFilePath, CurrentMediaPosition, CurrentMediaDuration);
     }
 
     public void ShowOsd(string message)

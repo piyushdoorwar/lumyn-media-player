@@ -258,7 +258,7 @@
                           Tag="{Binding FilePath}"
                           Width="180" Height="80"
                           Margin="0"
-                          Padding="12,10"
+                          Padding="12,10,12,6"
                           Background="#1E1E1E"
                           BorderBrush="#2A2A2A" BorderThickness="1"
                           CornerRadius="6"
@@ -287,18 +287,11 @@
                             ColumnSpacing="6"
                             Margin="3,0,3,0"
                             IsVisible="{Binding HasResume}">
-                        <Border Grid.Column="0"
-                                Height="3"
-                                Background="#2A2A2A"
-                                CornerRadius="1.5"
-                                ClipToBounds="True"
-                                VerticalAlignment="Center">
-                          <ProgressBar Minimum="0" Maximum="100"
-                                       Value="{Binding ProgressPct}"
-                                       Background="Transparent"
-                                       Foreground="#3A9B4B"
-                                       CornerRadius="1.5" />
-                        </Border>
+                        <controls:MiniProgressBar Grid.Column="0"
+                                                  Minimum="0"
+                                                  Maximum="100"
+                                                  Value="{Binding ProgressPct}"
+                                                  VerticalAlignment="Center" />
                         <TextBlock Grid.Column="1"
                                    Text="{Binding ProgressLabel}"
                                    FontSize="9"
@@ -369,12 +362,12 @@
         Padding="10,7"
         CornerRadius="6"
         Background="#E51B1B1B"
-        BorderBrush="#334D9EFF"
+        BorderBrush="#443A9B4B"
         BorderThickness="1"
         IsVisible="{Binding IsCasting}"
         HorizontalAlignment="Center">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="#BFD8FF" />
+        <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="#49B35C" />
         <TextBlock Text="{Binding CastStatusText}" Foreground="#F4F0EC" FontSize="12"
                    VerticalAlignment="Center" />
         <Button Classes="ctrl" Command="{Binding ToggleCastPlaybackCommand}" ToolTip.Tip="Play / pause cast">

@@ -77,6 +77,7 @@ lumyn-media-player/
 │   │   │   ├── MpvVideoSurface.cs   # OpenGL video surface (Avalonia control)
 │   │   │   ├── VideoSurface.cs      # Video surface wrapper
 │   │   │   ├── SeekBar.cs           # Custom timeline/scrubbing control
+│   │   │   ├── MiniProgressBar.cs   # Tiny custom-rendered resume progress bar
 │   │   │   ├── VolumeSlider.cs      # Volume slider control
 │   │   │   └── AudioBars.cs         # Audio visualization bars
 │   │   ├── Models/
@@ -245,6 +246,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.Core/Services/SubtitleParser.cs` | 150+ | SRT/ASS/SSA parsing |
 | `src/Lumyn.App/Controls/MpvVideoSurface.cs` | — | Avalonia OpenGL surface for mpv rendering |
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
+| `src/Lumyn.App/Controls/MiniProgressBar.cs` | — | Custom 3px recent-card progress indicator; avoid default `ProgressBar` template for tiny bars |
 
 ---
 
@@ -287,7 +289,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Cover art detection and display
 
 ### Navigation & Persistence
-- Recent files list (last 12 files)
+- Recent files list (last 12 files) with resume percentage labels and miniature progress bars
 - Resume playback position per file (SHA256-hashed path for privacy)
 - Bookmarks / chapter markers with custom labels per file
 - Jump-to-time dialog
@@ -322,6 +324,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
 - Windows file association registration script
 - Single-instance, command-line file argument support
+- Chromecast/cast icon uses the Font Awesome style filled cast silhouette in `MediaIcons.axaml` and `site/assets/ic-cast.svg`; app cast accents should use Lumyn green (`#49B35C` / `#3A9B4B`), not blue.
 
 ---
 
@@ -408,6 +411,15 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 └─────────────────────────────────────────────┘
        [Playlist sidebar — toggle with Q]
 ```
+
+### Recent Files Start Screen
+
+- Recent files are exposed as `RecentFileItem` records from `MainViewModel.RecentFileItems`.
+- `SettingsService.GetResumeInfo()` returns resume position plus progress percentage (`0–100`), or `-1` when no resume state exists.
+- The recent-card percentage label is `RecentFileItem.ProgressLabel`, rounded and clamped to `0%`–`100%`.
+- The tiny green progress indicator uses `Controls/MiniProgressBar.cs`, not Avalonia's built-in `ProgressBar`. The default template can render incorrectly in a 3px-high card bar, so keep this custom-drawn control for recent cards.
+- Card progress rows are bottom-aligned inside the card content, with a shortened bottom padding so the bar sits near the card bottom without crowding the border.
+- Stop/end/cast-stop paths must call `NotifyRecentFilesChanged()` after saving or clearing resume state so recent-card percentages refresh immediately without requiring app restart.
 
 ### Dialogs
 
@@ -594,6 +606,8 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 - **Settings path**: `Environment.GetFolderPath(SpecialFolder.ApplicationData)` + `Lumyn/settings.json`.
 - **Avalonia resources**: Icons and styles defined in `App.axaml` as `Application.Resources`. Referenced in XAML as `StaticResource`.
 - **Custom controls**: Placed in `Lumyn.App/Controls/`. Inherit from Avalonia primitives (e.g., `Control`, `Slider`).
+- **Tiny progress visuals**: For very small progress indicators, prefer a custom-rendered `Control` (like `MiniProgressBar`) over styling Avalonia `ProgressBar`; template layout can make tiny fills appear full or empty incorrectly.
+- **Seek/timeline hit targets**: `SeekBar` intentionally has a larger invisible hit area than its visible track. Preserve that ergonomic leeway when adjusting bottom controls.
 
 ---
 
@@ -603,6 +617,10 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
+| 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |
+| 2026-05 | Seek bar hit target increased while keeping the visible timeline slim, making nearby clicks update seek position more forgivingly. |
+| 2026-05 | Cast icon refreshed to a filled Font Awesome-style Chromecast silhouette across app resources and website asset; cast accents standardized to Lumyn green. |
 | 2026-05 | Git tag–based versioning — `VERSION` file removed, version now sourced from git tag (`v1.2.3`), baked into assembly via `-p:InformationalVersion`, read from `AssemblyInformationalVersionAttribute` at runtime. Pre-release tags (containing `-`) auto-marked on GitHub. Local dev shows `0.0.0-dev`. |
 | 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`, macOS: `IOPMAssertion`, Linux: `org.freedesktop.ScreenSaver.Inhibit` via `dbus-send` (uses `ArgumentList` to avoid argv-splitting issues with typed values). Driven by `IsPlaying` setter in `MainViewModel`. |
 | 2026-05 | Full-screen / maximize conflict fix (`386f746`) |

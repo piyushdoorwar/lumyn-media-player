@@ -71,7 +71,7 @@
                             Width="17"
                             Height="17"
                             Data="{StaticResource Icon.Cast}"
-                            Foreground="#BFD8FF"
+                            Foreground="#49B35C"
                             VerticalAlignment="Center"
                             Margin="0,0,10,0" />
                   <TextBlock Grid.Column="1"

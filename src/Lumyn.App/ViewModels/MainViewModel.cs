@@ -179,6 +179,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback.EndReached += (_, _) => Dispatcher.UIThread.InvokeAsync(() =>
         {
             _settings.ClearResumePosition(CurrentFilePath);
+            NotifyRecentFilesChanged();
             RefreshState();
             // Auto-advance to next playlist item when not looping.
             if (!_playback.IsLooping && HasNextTrack)
@@ -734,6 +735,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             {
                 _playback.Seek(finalPosition);
                 _settings.SaveResumePosition(CurrentFilePath, finalPosition, CurrentMediaDuration);
+                NotifyRecentFilesChanged();
             }
 
             _casting.StopServer();
@@ -1081,6 +1083,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 0, 1000);
             OnPropertyChanged(nameof(SeekValue));
         }
+        else if (!_isSeeking && _seekValue != 0)
+        {
+            _seekValue = 0;
+            OnPropertyChanged(nameof(SeekValue));
+        }
 
         TimeText = $"{FormatTime(displayPosition)} / {FormatTime(displayDuration)}";
         NotifyMediaIdentityIfChanged();
@@ -1273,6 +1280,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void Stop()
     {
         SaveResumePosition();
+        NotifyRecentFilesChanged();
         _playback.Stop();
         Title         = "Lumyn";
         IsAudioOnly   = false;

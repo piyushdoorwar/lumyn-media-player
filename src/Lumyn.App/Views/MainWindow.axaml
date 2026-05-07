@@ -263,10 +263,10 @@
                           BorderBrush="#2A2A2A" BorderThickness="1"
                           CornerRadius="6"
                           HorizontalContentAlignment="Left"
-                          VerticalContentAlignment="Top">
-                    <Panel HorizontalAlignment="Stretch">
+                          VerticalContentAlignment="Stretch">
+                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch">
 
-                      <StackPanel Margin="0,0,18,12">
+                      <StackPanel Grid.Row="0" Margin="0,0,18,6">
                         <!-- File name -->
                         <TextBlock Text="{Binding DisplayName}"
                                    FontSize="12" FontWeight="SemiBold"
@@ -281,22 +281,34 @@
                                    Margin="0,3,0,0" />
                       </StackPanel>
 
-                      <!-- Resume progress bar -->
-                      <Border Margin="3,0,3,0"
-                              Height="3"
-                              Background="#2A2A2A"
-                              CornerRadius="1.5"
-                              ClipToBounds="True"
-                              VerticalAlignment="Bottom"
-                              IsVisible="{Binding HasResume}">
-                        <ProgressBar Minimum="0" Maximum="100"
-                                     Value="{Binding ProgressPct}"
-                                     Background="Transparent"
-                                     Foreground="#3A9B4B"
-                                     CornerRadius="1.5" />
-                      </Border>
+                      <!-- Resume progress -->
+                      <Grid Grid.Row="1"
+                            ColumnDefinitions="*,30"
+                            ColumnSpacing="6"
+                            Margin="3,0,3,0"
+                            IsVisible="{Binding HasResume}">
+                        <Border Grid.Column="0"
+                                Height="3"
+                                Background="#2A2A2A"
+                                CornerRadius="1.5"
+                                ClipToBounds="True"
+                                VerticalAlignment="Center">
+                          <ProgressBar Minimum="0" Maximum="100"
+                                       Value="{Binding ProgressPct}"
+                                       Background="Transparent"
+                                       Foreground="#3A9B4B"
+                                       CornerRadius="1.5" />
+                        </Border>
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding ProgressLabel}"
+                                   FontSize="9"
+                                   FontWeight="SemiBold"
+                                   Foreground="#3A9B4B"
+                                   TextAlignment="Right"
+                                   VerticalAlignment="Center" />
+                      </Grid>
 
-                    </Panel>
+                    </Grid>
                   </Button>
 
                   <!-- Remove button (top-right overlay) -->

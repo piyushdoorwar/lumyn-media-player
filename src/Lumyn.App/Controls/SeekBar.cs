@@ -9,6 +9,11 @@ namespace Lumyn.App.Controls;
 
 public sealed class SeekBar : Control
 {
+    private const double HitTargetHeight = 32.0;
+    private const double TrackHeight = 5.0;
+    private const double TrackBottomInset = 6.5;
+
+    private static readonly IBrush HitTestBrush = new SolidColorBrush(Colors.Transparent);
     private static readonly IBrush TrackBrush   = new SolidColorBrush(Color.Parse("#554A4A4A"));
     private static readonly IBrush FillBrush    = new SolidColorBrush(Color.Parse("#3A9B4B"));
     private static readonly IBrush ChapterBrush = new SolidColorBrush(Color.Parse("#80F7F5F3"));
@@ -86,7 +91,7 @@ public sealed class SeekBar : Control
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = double.IsInfinity(availableSize.Width) ? 240 : availableSize.Width;
-        return new Size(width, 18);
+        return new Size(width, HitTargetHeight);
     }
 
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
@@ -101,14 +106,14 @@ public sealed class SeekBar : Control
         var height = Bounds.Height;
         if (width <= 0 || height <= 0) return;
 
-        var trackHeight = 5.0;
-        var trackY = (height - trackHeight) / 2;
-        var track = new Rect(0, trackY, width, trackHeight);
-        var radius = trackHeight / 2;
+        var trackY = Math.Max(0, height - TrackHeight - TrackBottomInset);
+        var track = new Rect(0, trackY, width, TrackHeight);
+        var radius = TrackHeight / 2;
         var ratio = GetRatio();
-        var filled = new Rect(0, trackY, width * ratio, trackHeight);
+        var filled = new Rect(0, trackY, width * ratio, TrackHeight);
         var thumbX = width * ratio;
 
+        context.DrawRectangle(HitTestBrush, null, new Rect(0, 0, width, height));
         context.DrawRectangle(TrackBrush, null, track, radius, radius);
         context.DrawRectangle(FillBrush, null, filled, radius, radius);
 

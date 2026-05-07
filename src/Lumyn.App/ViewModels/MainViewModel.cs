@@ -27,6 +27,8 @@ public sealed record RecentFileItem(
     public string DisplayName   => Path.GetFileNameWithoutExtension(FilePath);
     public string Directory     => Path.GetDirectoryName(FilePath) ?? "";
     public bool   HasResume     => ProgressPct >= 0;
+    public int    ProgressPercent => (int)Math.Clamp(Math.Round(ProgressPct), 0, 100);
+    public string ProgressLabel => $"{ProgressPercent}%";
     public string ResumeLabel   =>
         ResumePosition.TotalHours >= 1
             ? $"Resume from {(int)ResumePosition.TotalHours}:{ResumePosition.Minutes:D2}:{ResumePosition.Seconds:D2}"

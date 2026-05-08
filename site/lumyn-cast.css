@@ -23,7 +23,9 @@ cast-media-player {
   --splash-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-splash.png");
   --splash-size: 176px 176px;
   --spinner-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-loading.png");
+  --spinner-size: 72px 72px;
   --buffering-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-loading.png");
+  --buffering-size: 72px 72px;
   --watermark-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-watermark.png");
   --watermark-size: 56px 56px;
 }

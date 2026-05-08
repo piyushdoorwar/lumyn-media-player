@@ -3,7 +3,7 @@
 */
 
 body {
-  --playback-logo-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  --playback-logo-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-logo.png");
 }
 
 cast-media-player {
@@ -11,41 +11,32 @@ cast-media-player {
   --progress-color: #49b35c;
   --break-color: #49b35c;
   --font-family: Cantarell, Ubuntu, Inter, "Segoe UI", sans-serif;
-  --background-color: #111111;
-  --background-image:
+  --background:
     radial-gradient(circle at 50% 42%, rgba(73, 179, 92, 0.24), rgba(17, 17, 17, 0) 34%),
     radial-gradient(circle at 20% 80%, rgba(73, 179, 92, 0.10), rgba(17, 17, 17, 0) 26%),
     linear-gradient(135deg, #111111 0%, #161616 48%, #101010 100%);
-  --logo-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  --background-color: #111111;
+  --background-repeat: no-repeat;
+  --background-size: cover;
+  --logo-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-logo.png");
   --logo-size: 168px 168px;
-  --splash-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  --splash-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-splash.png");
   --splash-size: 176px 176px;
-  --watermark-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  --spinner-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-loading.png");
+  --buffering-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-loading.png");
+  --watermark-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-watermark.png");
   --watermark-size: 56px 56px;
 }
 
 .background {
   background:
-    radial-gradient(
-      circle at 50% 42%,
-      rgba(73, 179, 92, 0.24),
-      rgba(17, 17, 17, 0) 34%
-    ),
-    radial-gradient(
-      circle at 20% 80%,
-      rgba(73, 179, 92, 0.10),
-      rgba(17, 17, 17, 0) 26%
-    ),
-    linear-gradient(
-      135deg,
-      #111111 0%,
-      #161616 48%,
-      #101010 100%
-    );
+    radial-gradient(circle at 50% 42%, rgba(73, 179, 92, 0.24), rgba(17, 17, 17, 0) 34%),
+    radial-gradient(circle at 20% 80%, rgba(73, 179, 92, 0.10), rgba(17, 17, 17, 0) 26%),
+    linear-gradient(135deg, #111111 0%, #161616 48%, #101010 100%);
 }
 
 .logo {
-  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-logo.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 168px 168px;
@@ -57,27 +48,14 @@ cast-media-player {
 
 .splash {
   background:
-    radial-gradient(
-      circle at 50% 42%,
-      rgba(73, 179, 92, 0.24),
-      rgba(17, 17, 17, 0) 34%
-    ),
-    radial-gradient(
-      circle at 20% 80%,
-      rgba(73, 179, 92, 0.10),
-      rgba(17, 17, 17, 0) 26%
-    ),
-    center 42% / 176px 176px no-repeat url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png"),
-    linear-gradient(
-      135deg,
-      #111111 0%,
-      #161616 48%,
-      #101010 100%
-    );
+    center / 176px 176px no-repeat url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-splash.png"),
+    radial-gradient(circle at 50% 42%, rgba(73, 179, 92, 0.24), rgba(17, 17, 17, 0) 34%),
+    radial-gradient(circle at 20% 80%, rgba(73, 179, 92, 0.10), rgba(17, 17, 17, 0) 26%),
+    linear-gradient(135deg, #111111 0%, #161616 48%, #101010 100%);
 }
 
 .watermark {
-  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
+  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn-cast-watermark.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 56px 56px;

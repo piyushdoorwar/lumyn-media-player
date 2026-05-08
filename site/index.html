@@ -187,22 +187,69 @@
           <p class="eyebrow">Latest release</p>
           <h2>Get Lumyn for Ubuntu, Windows, and macOS</h2>
           <p>
-            Release builds are distributed as a Debian package for Linux, a single-file installer for Windows, and a DMG for macOS.
+            Pick the installer that matches your desktop. Windows users can install from the Microsoft Store or download the standalone installer.
           </p>
         </div>
         <div class="download-actions" aria-label="Download Lumyn" data-reveal style="--reveal-delay: 0.15s">
-          <a class="button primary large platform-download disabled" id="linuxDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Linux">
-            <img src="assets/ubuntu.svg" alt="" />
-            <span>Download</span>
-          </a>
-          <a class="button primary large platform-download disabled" id="windowsDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Windows">
-            <img src="assets/windows.svg" alt="" />
-            <span>Download</span>
-          </a>
-          <a class="button primary large platform-download disabled" id="macosDownloadLink" aria-disabled="true" aria-label="Download Lumyn for macOS">
-            <img src="assets/apple.svg" alt="" />
-            <span>Download</span>
-          </a>
+          <div class="download-tabs" role="tablist" aria-label="Choose operating system">
+            <button class="download-tab" id="download-tab-linux" type="button" role="tab" aria-selected="true" aria-controls="download-panel-linux" data-download-tab="linux">
+              <img src="assets/ubuntu.svg" alt="" />
+              <span>Linux</span>
+            </button>
+            <button class="download-tab" id="download-tab-windows" type="button" role="tab" aria-selected="false" aria-controls="download-panel-windows" data-download-tab="windows" tabindex="-1">
+              <img src="assets/windows.svg" alt="" />
+              <span>Windows</span>
+            </button>
+            <button class="download-tab" id="download-tab-macos" type="button" role="tab" aria-selected="false" aria-controls="download-panel-macos" data-download-tab="macos" tabindex="-1">
+              <img src="assets/apple.svg" alt="" />
+              <span>macOS</span>
+            </button>
+          </div>
+
+          <article class="download-panel" id="download-panel-linux" role="tabpanel" aria-labelledby="download-tab-linux" data-download-panel="linux">
+            <div class="download-panel-copy">
+              <h3>Ubuntu</h3>
+              <p>Install Lumyn with the latest Debian package.</p>
+            </div>
+            <a class="button primary platform-download disabled" id="linuxDownloadLink" aria-disabled="true" aria-label="Download Lumyn .deb package for Ubuntu">
+              <img src="assets/download.svg" alt="" />
+              <span>Download .deb</span>
+            </a>
+          </article>
+
+          <article class="download-panel" id="download-panel-windows" role="tabpanel" aria-labelledby="download-tab-windows" data-download-panel="windows" hidden>
+            <div class="download-panel-copy">
+              <h3>Windows</h3>
+              <p>Install via the Microsoft Store, or download the standalone installer.</p>
+            </div>
+            <div class="download-options">
+              <a class="button primary platform-download" href="https://apps.microsoft.com/detail/9p8vwdsftsn6?hl=en-us&gl=IN&ocid=pdpshare" rel="noreferrer" aria-label="Get Lumyn from the Microsoft Store">
+                <img src="assets/windows.svg" alt="" />
+                <span>Microsoft Store</span>
+              </a>
+              <a class="button secondary platform-download disabled" id="windowsDownloadLink" aria-disabled="true" aria-label="Download Lumyn .exe installer for Windows">
+                <img src="assets/download.svg" alt="" />
+                <span>Standalone installer</span>
+              </a>
+            </div>
+          </article>
+
+          <article class="download-panel" id="download-panel-macos" role="tabpanel" aria-labelledby="download-tab-macos" data-download-panel="macos" hidden>
+            <div class="download-panel-copy">
+              <h3>macOS</h3>
+              <p>Choose the build that matches your Mac chip.</p>
+            </div>
+            <div class="download-options">
+              <a class="button primary platform-download disabled" id="macosArmDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Apple Silicon Macs">
+                <img src="assets/apple.svg" alt="" />
+                <span>Apple Silicon</span>
+              </a>
+              <a class="button secondary platform-download disabled" id="macosIntelDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Intel Macs">
+                <img src="assets/apple.svg" alt="" />
+                <span>Intel Mac</span>
+              </a>
+            </div>
+          </article>
         </div>
       </section>
     </main>

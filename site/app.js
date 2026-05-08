@@ -1,9 +1,51 @@
 const linuxLink = document.querySelector("#linuxDownloadLink");
 const windowsLink = document.querySelector("#windowsDownloadLink");
-const macosLink = document.querySelector("#macosDownloadLink");
+const macosArmLink = document.querySelector("#macosArmDownloadLink");
+const macosIntelLink = document.querySelector("#macosIntelDownloadLink");
 const heroDownloadLink = document.querySelector("#downloadLink");
+const downloadTabs = Array.from(document.querySelectorAll("[data-download-tab]"));
+const downloadPanels = Array.from(document.querySelectorAll("[data-download-panel]"));
 
 heroDownloadLink.href = "#download";
+
+function selectDownloadTab(os) {
+  downloadTabs.forEach((tab) => {
+    const active = tab.dataset.downloadTab === os;
+    tab.setAttribute("aria-selected", active ? "true" : "false");
+    tab.tabIndex = active ? 0 : -1;
+  });
+
+  downloadPanels.forEach((panel) => {
+    panel.hidden = panel.dataset.downloadPanel !== os;
+  });
+}
+
+function detectedDownloadOS() {
+  const platform = [
+    navigator.userAgentData?.platform,
+    navigator.platform,
+    navigator.userAgent,
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  if (platform.includes("win")) return "windows";
+  if (platform.includes("mac")) return "macos";
+  return "linux";
+}
+
+downloadTabs.forEach((tab, index) => {
+  tab.addEventListener("click", () => selectDownloadTab(tab.dataset.downloadTab));
+  tab.addEventListener("keydown", (event) => {
+    const dir = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!dir) return;
+
+    event.preventDefault();
+    const next = downloadTabs[(index + dir + downloadTabs.length) % downloadTabs.length];
+    selectDownloadTab(next.dataset.downloadTab);
+    next.focus();
+  });
+});
+
+selectDownloadTab(detectedDownloadOS());
 
 function enableDownload(link, url) {
   link.href = url;
@@ -19,9 +61,12 @@ function windowsAsset(release) {
   return release.assets.find((asset) => /win-x64.*_setup\.exe$/i.test(asset.name));
 }
 
-function macosAsset(release) {
-  return release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name)) ??
-    release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name));
+function macosArmAsset(release) {
+  return release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name));
+}
+
+function macosIntelAsset(release) {
+  return release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name));
 }
 
 function latestAssetWithInstaller(releases, findAsset) {
@@ -44,7 +89,8 @@ async function hydrateDownloadLinks() {
 
     const linux = latestAssetWithInstaller(stableReleases, linuxAsset);
     const windows = latestAssetWithInstaller(stableReleases, windowsAsset);
-    const macos = latestAssetWithInstaller(stableReleases, macosAsset);
+    const macosArm = latestAssetWithInstaller(stableReleases, macosArmAsset);
+    const macosIntel = latestAssetWithInstaller(stableReleases, macosIntelAsset);
 
     if (linux?.browser_download_url) {
       enableDownload(linuxLink, linux.browser_download_url);
@@ -54,8 +100,12 @@ async function hydrateDownloadLinks() {
       enableDownload(windowsLink, windows.browser_download_url);
     }
 
-    if (macos?.browser_download_url) {
-      enableDownload(macosLink, macos.browser_download_url);
+    if (macosArm?.browser_download_url) {
+      enableDownload(macosArmLink, macosArm.browser_download_url);
+    }
+
+    if (macosIntel?.browser_download_url) {
+      enableDownload(macosIntelLink, macosIntel.browser_download_url);
     }
   } catch {
     // Keep the buttons disabled if GitHub is unreachable or matching assets are absent.

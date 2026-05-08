@@ -544,6 +544,7 @@ All jobs install .NET 10.0 SDK.
 - Deployed automatically to GitHub Pages via `static.yml` on every push to `main`
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
 - Contains: landing page, download links, documentation
+- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows Apple Silicon + Intel `.dmg`.
 
 ### Releases page (`/site/releases/`)
 
@@ -617,6 +618,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |
 | 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
 | 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |
 | 2026-05 | Seek bar hit target increased while keeping the visible timeline slim, making nearby clicks update seek position more forgivingly. |

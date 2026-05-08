@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Text;
 using GoogleCast;
 using GoogleCast.Channels;
@@ -25,6 +26,8 @@ public sealed record ChromecastMediaMetadata(
 
 public sealed class ChromecastCastService : IDisposable
 {
+    private const string LumynReceiverApplicationId = "A5A9455D";
+
     private readonly object _serverLock = new();
     private CancellationTokenSource? _serverCts;
     private TcpListener? _listener;
@@ -91,6 +94,7 @@ public sealed class ChromecastCastService : IDisposable
         catch { /* no app running yet, or stop not supported — safe to ignore */ }
 
         var mediaChannel = sender.GetChannel<IMediaChannel>();
+        ConfigureReceiverApplicationId(mediaChannel);
         await sender.LaunchAsync(mediaChannel);
         _mediaChannel = mediaChannel;
 
@@ -236,6 +240,13 @@ public sealed class ChromecastCastService : IDisposable
     }
 
     // ── HTTP file server ──────────────────────────────────────────────────────
+
+    private static void ConfigureReceiverApplicationId(IMediaChannel mediaChannel)
+    {
+        const BindingFlags flags = BindingFlags.Instance | BindingFlags.NonPublic;
+        var applicationIdField = mediaChannel.GetType().GetField("<ApplicationId>k__BackingField", flags);
+        applicationIdField?.SetValue(mediaChannel, LumynReceiverApplicationId);
+    }
 
     private (Uri mediaUri, Uri? subtitleUri, Uri? coverArtUri) StartServer(string filePath, string? subtitlePath, string? coverArtPath)
     {

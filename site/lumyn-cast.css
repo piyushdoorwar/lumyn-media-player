@@ -23,7 +23,7 @@
 }
 
 .logo {
-  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn.svg");
+  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 168px 168px;
@@ -45,7 +45,7 @@
       rgba(73, 179, 92, 0.10),
       rgba(17, 17, 17, 0) 26%
     ),
-    center 42% / 176px 176px no-repeat url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn.svg"),
+    center 42% / 176px 176px no-repeat url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png"),
     linear-gradient(
       135deg,
       #111111 0%,
@@ -55,7 +55,7 @@
 }
 
 .watermark {
-  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn.svg");
+  background-image: url("https://piyushdoorwar.github.io/lumyn-media-player/assets/lumyn300x300.png");
   background-position: center;
   background-repeat: no-repeat;
   background-size: 56px 56px;

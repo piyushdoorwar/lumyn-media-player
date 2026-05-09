@@ -112,7 +112,7 @@ lumyn-media-player/
 │   ├── build-linux.sh               # Linux .deb packaging (266 lines)
 │   ├── build-windows.ps1            # Windows installer via Inno Setup (363 lines, PowerShell)
 │   ├── build-macos.sh               # macOS .app + .dmg packaging
-│   └── build-linux-flatpak.sh       # Flatpak packaging (alternate format)
+│   └── build-snap.sh                # Snap / Ubuntu App Center packaging wrapper
 │
 ├── packaging/
 │   ├── windows/                     # Inno Setup .iss config
@@ -510,8 +510,6 @@ Build/test locally:
 sudo snap install ./lumyn_*.snap --dangerous
 lumyn
 ```
-
-**Flatpak**: `scripts/build-linux-flatpak.sh` — alternate Linux packaging (not in primary CI)
 
 ---
 

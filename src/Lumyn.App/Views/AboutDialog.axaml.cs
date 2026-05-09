@@ -76,9 +76,11 @@ public partial class AboutDialog : Window
     private async void CheckUpdates_Click(object? sender, RoutedEventArgs e)
     {
         var btn = this.FindControl<Button>("CheckUpdatesButton");
+        var btnText = this.FindControl<TextBlock>("CheckUpdatesButtonText");
         var statusText = this.FindControl<TextBlock>("UpdateStatusText");
 
-        if (btn is not null) { btn.IsEnabled = false; btn.Content = "Checking…"; }
+        if (btn is not null) btn.IsEnabled = false;
+        if (btnText is not null) btnText.Text = "Checking...";
         if (statusText is not null) statusText.Text = "";
 
         try
@@ -101,7 +103,7 @@ public partial class AboutDialog : Window
                             Avalonia.Media.Color.Parse("#6A6560"));
                         statusText.Text = "No releases published yet.";
                     }
-                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                    ResetCheckUpdatesButton(btn, btnText);
                 });
                 return;
             }
@@ -116,7 +118,7 @@ public partial class AboutDialog : Window
                             Avalonia.Media.Color.Parse("#B05050"));
                         statusText.Text = "GitHub rate limit reached. Try again later.";
                     }
-                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                    ResetCheckUpdatesButton(btn, btnText);
                 });
                 return;
             }
@@ -131,7 +133,7 @@ public partial class AboutDialog : Window
                             Avalonia.Media.Color.Parse("#B05050"));
                         statusText.Text = $"GitHub returned {(int)response.StatusCode}. Try again later.";
                     }
-                    if (btn is not null) { btn.Content = "Check for Updates"; btn.IsEnabled = true; }
+                    ResetCheckUpdatesButton(btn, btnText);
                 });
                 return;
             }
@@ -156,11 +158,7 @@ public partial class AboutDialog : Window
                         ? $"v{latestVersion} is available!"
                         : "You're up to date.";
                 }
-                if (btn is not null)
-                {
-                    btn.Content = "Check for Updates";
-                    btn.IsEnabled = true;
-                }
+                ResetCheckUpdatesButton(btn, btnText);
             });
         }
         catch
@@ -173,13 +171,15 @@ public partial class AboutDialog : Window
                         Avalonia.Media.Color.Parse("#B05050"));
                     statusText.Text = "Could not reach GitHub. Check your connection.";
                 }
-                if (btn is not null)
-                {
-                    btn.Content = "Check for Updates";
-                    btn.IsEnabled = true;
-                }
+                ResetCheckUpdatesButton(btn, btnText);
             });
         }
+    }
+
+    private static void ResetCheckUpdatesButton(Button? btn, TextBlock? btnText)
+    {
+        if (btnText is not null) btnText.Text = "Check for Updates";
+        if (btn is not null) btn.IsEnabled = true;
     }
 
     /// <summary>Returns true when <paramref name="latest"/> is newer than <paramref name="current"/>.</summary>

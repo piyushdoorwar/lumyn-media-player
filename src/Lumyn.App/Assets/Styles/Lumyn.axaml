@@ -146,6 +146,23 @@
     <Setter Property="Background" Value="#A01E12" />
   </Style>
 
+  <!-- Link-style text buttons (About dialog footer) -->
+  <Style Selector="Button.link">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="#3A9B4B" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="Button.link:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#48B35A" />
+  </Style>
+
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="#F7F5F3" />
   </Style>

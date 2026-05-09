@@ -59,8 +59,21 @@
               Click="CheckUpdates_Click"
               Background="#2A2A2A" Foreground="#C8C3C2"
               BorderBrush="#3A3A3A" BorderThickness="1"
-              Padding="0,8" CornerRadius="4"
-              Content="Check for Updates" />
+              Padding="0,8" CornerRadius="4">
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <PathIcon Width="13"
+                    Height="13"
+                    Data="{StaticResource Icon.CheckUpdates}"
+                    Foreground="#C8C3C2"
+                    VerticalAlignment="Center" />
+          <TextBlock Name="CheckUpdatesButtonText"
+                     Text="Check for Updates"
+                     FontSize="12"
+                     FontWeight="SemiBold"
+                     Foreground="#C8C3C2"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
     </StackPanel>
 
     <!-- Divider -->
@@ -68,9 +81,33 @@
 
     <!-- Footer links -->
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="16">
-      <Button Classes="link" Content="GitHub" Click="GitHub_Click" />
+      <Button Classes="link" Click="GitHub_Click">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <PathIcon Width="13"
+                    Height="13"
+                    Data="{StaticResource Icon.GitHub}"
+                    Foreground="#3A9B4B"
+                    VerticalAlignment="Center" />
+          <TextBlock Text="GitHub"
+                     FontSize="12"
+                     Foreground="#3A9B4B"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
       <TextBlock Text="·" Foreground="#3A3A3A" VerticalAlignment="Center" />
-      <Button Classes="link" Content="Releases" Click="Releases_Click" />
+      <Button Classes="link" Click="Releases_Click">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <PathIcon Width="13"
+                    Height="13"
+                    Data="{StaticResource Icon.Releases}"
+                    Foreground="#3A9B4B"
+                    VerticalAlignment="Center" />
+          <TextBlock Text="Releases"
+                     FontSize="12"
+                     Foreground="#3A9B4B"
+                     VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
     </StackPanel>
 
     <!-- License note -->

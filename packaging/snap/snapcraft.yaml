@@ -36,17 +36,19 @@ apps:
       - wayland
       - x11
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib:$SNAP/lib/$CRAFT_ARCH_TRIPLET:$LD_LIBRARY_PATH
 
 parts:
   lumyn:
     plugin: nil
     source: .
+
     build-packages:
       - bash
       - ca-certificates
       - curl
-      - libicu74
+      - git
+
     stage-packages:
       - libmpv2
       - libgl1
@@ -67,13 +69,16 @@ parts:
       - fontconfig
       - fonts-inter
       - dbus
+
     override-build: |
       set -eu
 
       dotnet_dir="$CRAFT_PART_BUILD/.dotnet"
       mkdir -p "$dotnet_dir"
+
       curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$CRAFT_PART_BUILD/dotnet-install.sh"
       bash "$CRAFT_PART_BUILD/dotnet-install.sh" --channel 10.0 --install-dir "$dotnet_dir"
+
       export PATH="$dotnet_dir:$PATH"
 
       version="${VERSION:-}"
@@ -86,6 +91,7 @@ parts:
       else
         version="0.0.0-dev"
       fi
+
       craftctl set version="$version"
 
       case "$CRAFT_ARCH_BUILD_FOR" in
@@ -95,6 +101,7 @@ parts:
       esac
 
       dotnet restore Lumyn.sln
+
       dotnet publish src/Lumyn.App/Lumyn.App.csproj \
         -c Release \
         -r linux-$dotnet_arch \
@@ -105,26 +112,45 @@ parts:
 
       mkdir -p "$CRAFT_PART_INSTALL/opt/lumyn/lib"
 
-      # Copy libmpv and its soname symlinks into opt/lumyn/lib so the
-      # .NET NativeLibrary resolver finds them via AppContext.BaseDirectory/../lib
-      # and via LD_LIBRARY_PATH without needing runtime arch detection.
-      for lib_dir in \
-        "$CRAFT_STAGE/usr/lib/x86_64-linux-gnu" \
-        "$CRAFT_STAGE/usr/lib/aarch64-linux-gnu" \
-        "$CRAFT_STAGE/usr/lib"; do
-        if [ -f "$lib_dir/libmpv.so.2" ] || [ -L "$lib_dir/libmpv.so.2" ]; then
-          cp -aL "$lib_dir"/libmpv.so* "$CRAFT_PART_INSTALL/opt/lumyn/lib/" 2>/dev/null || true
-          break
-        fi
-      done
-
       install -Dm755 packaging/snap/lumyn-launcher \
         "$CRAFT_PART_INSTALL/opt/lumyn/lumyn"
 
       install -Dm644 src/Lumyn.App/Assets/Icons/lumyn.svg \
         "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/lumyn.svg"
+
       install -Dm644 packaging/snap/gui/lumyn.desktop \
         "$CRAFT_PART_INSTALL/usr/share/applications/lumyn.desktop"
 
       sed -i 's|^Exec=.*|Exec=lumyn %U|' \
         "$CRAFT_PART_INSTALL/usr/share/applications/lumyn.desktop"
+
+    override-prime: |
+      set -eu
+
+      craftctl default
+
+      mkdir -p opt/lumyn/lib
+
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) arch_triplet="x86_64-linux-gnu" ;;
+        arm64) arch_triplet="aarch64-linux-gnu" ;;
+        *) echo "Unsupported snap architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
+      esac
+
+      echo "Checking for libmpv in usr/lib/$arch_triplet"
+
+      if [ -f "usr/lib/$arch_triplet/libmpv.so.2" ] || [ -L "usr/lib/$arch_triplet/libmpv.so.2" ]; then
+        cp -aL usr/lib/$arch_triplet/libmpv.so* opt/lumyn/lib/
+      else
+        echo "ERROR: libmpv.so.2 was not staged into usr/lib/$arch_triplet" >&2
+        echo "Available libmpv files:" >&2
+        find usr lib -name "libmpv*" -print 2>/dev/null || true
+        exit 1
+      fi
+
+      if [ -f opt/lumyn/lib/libmpv.so.2 ] && [ ! -e opt/lumyn/lib/libmpv.so ]; then
+        ln -s libmpv.so.2 opt/lumyn/lib/libmpv.so
+      fi
+
+      echo "Bundled libmpv files:"
+      find opt/lumyn/lib -name "libmpv*" -print

@@ -103,6 +103,23 @@ jobs:
         id: build-snap
         uses: canonical/action-build@v1
 
+      - name: Verify bundled libmpv
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+
+          echo "Checking bundled libmpv files..."
+          unsquashfs -ll "${{ steps.build-snap.outputs.snap }}" | grep 'libmpv' || {
+            echo "libmpv was not bundled in the snap." >&2
+            exit 1
+          }
+
+          echo "Checking expected Lumyn libmpv location..."
+          unsquashfs -ll "${{ steps.build-snap.outputs.snap }}" | grep 'opt/lumyn/lib/libmpv.so.2' || {
+            echo "opt/lumyn/lib/libmpv.so.2 is missing." >&2
+            exit 1
+          }
+
       - name: Upload snap
         uses: actions/upload-artifact@v5
         with:

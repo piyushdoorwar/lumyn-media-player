@@ -274,7 +274,7 @@ jobs:
 
       - name: Build source package
         run: |
-          dpkg-buildpackage -S -d -us -uc
+          dpkg-buildpackage -S -d -us -uc --no-buildinfo
 
       - name: Sign source package
         env:

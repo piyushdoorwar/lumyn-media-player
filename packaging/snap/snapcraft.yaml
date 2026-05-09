@@ -36,7 +36,7 @@ apps:
       - wayland
       - x11
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$LD_LIBRARY_PATH
 
 parts:
   lumyn:

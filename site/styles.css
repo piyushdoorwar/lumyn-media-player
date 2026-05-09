@@ -597,13 +597,16 @@ h3 {
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 6px;
+  overflow: hidden;
 }
 
 .code-block code {
   flex: 1;
   white-space: pre;
+  overflow-x: auto;
   font-size: 13px;
   line-height: 1.6;
+  min-width: 0;
 }
 
 .copy-btn {

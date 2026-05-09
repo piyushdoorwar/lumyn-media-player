@@ -42,6 +42,7 @@ parts:
     plugin: nil
     source: .
     build-packages:
+      - bash
       - ca-certificates
       - curl
     stage-packages:
@@ -68,7 +69,7 @@ parts:
       dotnet_dir="$CRAFT_PART_BUILD/.dotnet"
       mkdir -p "$dotnet_dir"
       curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$CRAFT_PART_BUILD/dotnet-install.sh"
-      sh "$CRAFT_PART_BUILD/dotnet-install.sh" --channel 10.0 --install-dir "$dotnet_dir"
+      bash "$CRAFT_PART_BUILD/dotnet-install.sh" --channel 10.0 --install-dir "$dotnet_dir"
       export PATH="$dotnet_dir:$PATH"
 
       version="${VERSION:-}"

@@ -544,21 +544,27 @@
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
             </Button>
 
-            <Button Classes="ctrl"
-                    Command="{Binding ToggleMuteCommand}"
-                    ToolTip.Tip="Mute">
-              <Panel>
-                <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeHigh}"
-                          IsVisible="{Binding !IsMuted}" />
-                <PathIcon Width="18" Height="18" Data="{StaticResource Icon.VolumeMuted}"
-                          IsVisible="{Binding IsMuted}" />
-              </Panel>
-            </Button>
+            <StackPanel Orientation="Horizontal"
+                        Spacing="3"
+                        VerticalAlignment="Center"
+                        Margin="0,0,4,0">
+              <Button Classes="ctrl"
+                      Width="30"
+                      MinWidth="30"
+                      Command="{Binding ToggleMuteCommand}"
+                      ToolTip.Tip="Mute">
+                <Panel>
+                  <PathIcon Width="17" Height="17" Data="{StaticResource Icon.VolumeHigh}"
+                            IsVisible="{Binding !IsMuted}" />
+                  <PathIcon Width="17" Height="17" Data="{StaticResource Icon.VolumeMuted}"
+                            IsVisible="{Binding IsMuted}" />
+                </Panel>
+              </Button>
 
-            <controls:VolumeSlider Width="86" Minimum="0" Maximum="150"
-                                   Value="{Binding Volume}"
-                                   VerticalAlignment="Center"
-                                   Margin="0,0,4,0" />
+              <controls:VolumeSlider Width="96" Minimum="0" Maximum="150"
+                                     Value="{Binding Volume}"
+                                     VerticalAlignment="Center" />
+            </StackPanel>
 
             <Button Classes="ctrl"
                     Click="FullscreenButton_OnClick"

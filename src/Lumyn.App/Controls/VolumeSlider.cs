@@ -9,13 +9,14 @@ public sealed class VolumeSlider : Control
 {
     private const double NormalMax = 100;
 
-    private static readonly IBrush TrackBrush = new SolidColorBrush(Color.Parse("#554A4A4A"));
-    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush BoostFillBrush = new SolidColorBrush(Color.Parse("#D94A45"));
-    private static readonly IBrush BoostTrackBrush = new SolidColorBrush(Color.Parse("#5531262A"));
+    private static readonly IBrush TrackBrush = new SolidColorBrush(Color.Parse("#334D4D4D"));
+    private static readonly IBrush FillBrush = new SolidColorBrush(Color.Parse("#49B35C"));
+    private static readonly IBrush BoostFillBrush = new SolidColorBrush(Color.Parse("#D66A5F"));
+    private static readonly IBrush BoostTrackBrush = new SolidColorBrush(Color.Parse("#2A6A4A45"));
     private static readonly IBrush ThumbBrush = new SolidColorBrush(Color.Parse("#F7F5F3"));
-    private static readonly IPen ThumbPen = new Pen(new SolidColorBrush(Color.Parse("#33111111")), 1);
-    private static readonly IPen NormalMaxPen = new Pen(new SolidColorBrush(Color.Parse("#88DEDAD5")), 1);
+    private static readonly IBrush ThumbHaloBrush = new SolidColorBrush(Color.Parse("#223A9B4B"));
+    private static readonly IPen ThumbPen = new Pen(new SolidColorBrush(Color.Parse("#55FFFFFF")), 1);
+    private static readonly IPen NormalMaxPen = new Pen(new SolidColorBrush(Color.Parse("#557A7675")), 1);
 
     public static readonly StyledProperty<double> MinimumProperty =
         AvaloniaProperty.Register<VolumeSlider, double>(nameof(Minimum), 0);
@@ -57,7 +58,7 @@ public sealed class VolumeSlider : Control
     protected override Size MeasureOverride(Size availableSize)
     {
         var width = double.IsInfinity(availableSize.Width) ? 96 : availableSize.Width;
-        return new Size(width, 18);
+        return new Size(width, 24);
     }
 
     public override void Render(DrawingContext context)
@@ -66,7 +67,7 @@ public sealed class VolumeSlider : Control
         var height = Bounds.Height;
         if (width <= 0 || height <= 0) return;
 
-        var trackHeight = 4.0;
+        var trackHeight = 3.0;
         var trackY = (height - trackHeight) / 2;
         var radius = trackHeight / 2;
         var track = new Rect(0, trackY, width, trackHeight);
@@ -86,7 +87,8 @@ public sealed class VolumeSlider : Control
             context.DrawRectangle(BoostFillBrush, null, new Rect(normalX, trackY, valueX - normalX, trackHeight), radius, radius);
 
         context.DrawLine(NormalMaxPen, new Point(normalX, trackY - 3), new Point(normalX, trackY + trackHeight + 3));
-        context.DrawEllipse(ThumbBrush, ThumbPen, new Point(valueX, height / 2), 6, 6);
+        context.DrawEllipse(ThumbHaloBrush, null, new Point(valueX, height / 2), 8, 8);
+        context.DrawEllipse(ThumbBrush, ThumbPen, new Point(valueX, height / 2), 5, 5);
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)

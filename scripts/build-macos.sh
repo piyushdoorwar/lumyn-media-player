@@ -324,14 +324,21 @@ cp -R "${APP_ROOT}" "${DMG_STAGING_DIR}/Lumyn.app"
 ln -s /Applications "${DMG_STAGING_DIR}/Applications"
 
 # Create a writable image first, then convert to compressed read-only.
+# Use HFS+ explicitly to avoid APFS-related "Resource busy" issues on CI runners.
+# Retry up to 3 times since hdiutil can be transiently flaky on GitHub Actions.
 DMG_TEMP="${PACKAGE_OUT_DIR}/lumyn-tmp.dmg"
 rm -f "${DMG_TEMP}" "${DMG_FILE}"
-hdiutil create \
-  -volname "Lumyn" \
-  -srcfolder "${DMG_STAGING_DIR}" \
-  -ov \
-  -format UDRW \
-  "${DMG_TEMP}"
+for attempt in 1 2 3; do
+  hdiutil create \
+    -volname "Lumyn" \
+    -srcfolder "${DMG_STAGING_DIR}" \
+    -ov \
+    -fs HFS+ \
+    -format UDRW \
+    "${DMG_TEMP}" && break
+  echo "hdiutil create attempt ${attempt} failed, retrying in 5s..." >&2
+  sleep 5
+done
 hdiutil convert "${DMG_TEMP}" -format UDZO -imagekey zlib-level=9 -o "${DMG_FILE}"
 rm -f "${DMG_TEMP}"
 rm -rf "${DMG_STAGING_DIR}"

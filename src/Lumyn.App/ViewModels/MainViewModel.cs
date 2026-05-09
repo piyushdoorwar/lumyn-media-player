@@ -200,7 +200,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
     public ObservableCollection<ChromecastDevice> CastDevices { get; } = [];
 
-    public bool HasRecentFiles => _settings.RecentFiles.Count > 0;
+    public bool HasRecentFiles => _settings.RecentFiles.Any(File.Exists);
 
     public IReadOnlyList<RecentFileItem> RecentFileItems =>
         _settings.RecentFiles
@@ -211,6 +211,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 return new RecentFileItem(f, pct, pos);
             })
             .ToList();
+
+    public IReadOnlyList<RecentFileItem> ContinueWatchingItems =>
+        RecentFileItems
+            .Where(item => item.HasResume)
+            .ToList();
+
+    public bool HasContinueWatching => ContinueWatchingItems.Count > 0;
+
+    public IReadOnlyList<RecentFileItem> StartScreenItems =>
+        HasContinueWatching
+            ? RecentFileItems.OrderByDescending(item => item.HasResume).ToList()
+            : RecentFileItems;
+
+    public string StartScreenTitle => HasContinueWatching ? "Continue Watching" : "Recently Played";
 
     // ── Bookmarks ────────────────────────────────────────────────────────────
 
@@ -1221,6 +1235,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         OnPropertyChanged(nameof(RecentFiles));
         OnPropertyChanged(nameof(RecentFileItems));
+        OnPropertyChanged(nameof(ContinueWatchingItems));
+        OnPropertyChanged(nameof(HasContinueWatching));
+        OnPropertyChanged(nameof(StartScreenItems));
+        OnPropertyChanged(nameof(StartScreenTitle));
         OnPropertyChanged(nameof(HasRecentFiles));
     }
 

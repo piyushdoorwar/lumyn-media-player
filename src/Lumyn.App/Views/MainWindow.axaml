@@ -228,7 +228,7 @@
                    FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
       </StackPanel>
 
-      <!-- Has recent files: recent files grid -->
+      <!-- Has recent files: continue watching / recent files grid -->
       <Grid IsVisible="{Binding HasRecentFiles}"
             RowDefinitions="Auto,*"
             Margin="24,18,24,12">
@@ -236,14 +236,14 @@
         <!-- Heading -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
           <Image Width="22" Height="22" Source="{StaticResource Icon.LumynMark}" Opacity="0.7" />
-          <TextBlock Text="Recently Played"
+          <TextBlock Text="{Binding StartScreenTitle}"
                      FontSize="16" FontWeight="SemiBold"
                      Foreground="#E0DCD8" VerticalAlignment="Center" />
         </StackPanel>
 
         <!-- File cards -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-          <ItemsControl ItemsSource="{Binding RecentFileItems}">
+          <ItemsControl ItemsSource="{Binding StartScreenItems}">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
                 <WrapPanel Orientation="Horizontal" />
@@ -251,12 +251,12 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Panel Width="180" Height="80" Margin="0,0,10,10">
+                <Panel Width="200" Height="102" Margin="0,0,10,10">
 
                   <!-- Card button (plays the file) -->
                   <Button Click="RecentItem_Click"
                           Tag="{Binding FilePath}"
-                          Width="180" Height="80"
+                          Width="200" Height="102"
                           Margin="0"
                           Padding="12,10,12,6"
                           Background="#1E1E1E"
@@ -279,6 +279,13 @@
                                    FontSize="10" Foreground="#4A4948"
                                    TextTrimming="CharacterEllipsis"
                                    Margin="0,3,0,0" />
+                        <TextBlock Text="{Binding ResumeLabel}"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"
+                                   Foreground="#3A9B4B"
+                                   TextTrimming="CharacterEllipsis"
+                                   Margin="0,5,0,0"
+                                   IsVisible="{Binding HasResume}" />
                       </StackPanel>
 
                       <!-- Resume progress -->

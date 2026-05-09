@@ -67,6 +67,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private string _title = "Lumyn";
     private string _timeText = "00:00 / 00:00";
+    private string _positionText = "00:00";
+    private string _durationText = "00:00";
     private string? _errorMessage;
     private double _seekValue;
     private int _volume = 80;
@@ -283,6 +285,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _timeText;
         private set => SetField(ref _timeText, value);
+    }
+
+    public string PositionText
+    {
+        get => _positionText;
+        private set => SetField(ref _positionText, value);
+    }
+
+    public string DurationText
+    {
+        get => _durationText;
+        private set => SetField(ref _durationText, value);
     }
 
     public string? ErrorMessage
@@ -1103,7 +1117,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(SeekValue));
         }
 
-        TimeText = $"{FormatTime(displayPosition)} / {FormatTime(displayDuration)}";
+        SetDisplayedTime(displayPosition, displayDuration);
         NotifyMediaIdentityIfChanged();
         RefreshTracksIfNeeded();
 
@@ -1168,7 +1182,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                         0, 1000);
                     OnPropertyChanged(nameof(SeekValue));
                 }
-                TimeText = $"{FormatTime(_castPosition)} / {FormatTime(_castDuration)}";
+                SetDisplayedTime(_castPosition, _castDuration);
             });
         }
         catch
@@ -1342,7 +1356,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
             await _casting.SeekAsync(position);
             _castPosition = position;
-            TimeText = $"{FormatTime(_castPosition)} / {FormatTime(_castDuration)}";
+            SetDisplayedTime(_castPosition, _castDuration);
             if (_castDuration > TimeSpan.Zero)
             {
                 _seekValue = Math.Clamp(
@@ -1527,6 +1541,15 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         return value.TotalHours >= 1
             ? value.ToString(@"h\:mm\:ss")
             : value.ToString(@"mm\:ss");
+    }
+
+    private void SetDisplayedTime(TimeSpan position, TimeSpan duration)
+    {
+        var positionText = FormatTime(position);
+        var durationText = FormatTime(duration);
+        PositionText = positionText;
+        DurationText = durationText;
+        TimeText = $"{positionText} / {durationText}";
     }
 
     // ── Audio mode helpers ────────────────────────────────────────────────────

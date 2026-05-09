@@ -45,6 +45,7 @@ parts:
       - bash
       - ca-certificates
       - curl
+      - libicu74
     stage-packages:
       - libmpv2
       - libgl1

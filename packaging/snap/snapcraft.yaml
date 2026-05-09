@@ -48,8 +48,10 @@ parts:
       - ca-certificates
       - curl
       - git
+      - libicu-dev
 
     stage-packages:
+      - libicu74
       - libmpv2
       - libgl1
       - libglu1-mesa

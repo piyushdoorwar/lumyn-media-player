@@ -31,7 +31,10 @@ The `linux-snap` job in `.github/workflows/release.yml`:
 
 1. Builds the snap with `canonical/action-build@v1`.
 2. Uploads the `.snap` file as a GitHub Actions artifact.
-3. Publishes the same `.snap` to the Snap Store with `snapcraft upload --release`.
+3. Verifies the packed snap metadata version matches the release version.
+4. Publishes the same `.snap` to the Snap Store with `snapcraft upload --release`.
+
+The workflow injects the resolved release version into the staged `snap/snapcraft.yaml` before building. This keeps the Snap Store version aligned with the release tag or manual workflow input.
 
 Channel selection:
 

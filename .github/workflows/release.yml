@@ -79,6 +79,24 @@ jobs:
         run: |
           mkdir -p snap
           cp packaging/snap/snapcraft.yaml snap/snapcraft.yaml
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("snap/snapcraft.yaml")
+          text = path.read_text(encoding="utf-8")
+          marker = "    override-build: |\n"
+          version = os.environ["VERSION"]
+          replacement = (
+              "    build-environment:\n"
+              f"      - VERSION: {json.dumps(version)}\n"
+              f"{marker}"
+          )
+          if marker not in text:
+              raise SystemExit("Could not find snapcraft override-build marker")
+          path.write_text(text.replace(marker, replacement, 1), encoding="utf-8")
+          PY
 
       - name: Build snap
         id: build-snap
@@ -89,6 +107,18 @@ jobs:
         with:
           name: lumyn-linux-amd64-snap
           path: ${{ steps.build-snap.outputs.snap }}
+
+      - name: Verify snap version
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+          SNAP_VERSION="$(unsquashfs -cat "${{ steps.build-snap.outputs.snap }}" meta/snap.yaml | python3 -c 'import sys; print(next(line.split(":", 1)[1].strip().strip("\"'\''") for line in sys.stdin if line.startswith("version:")))')"
+          echo "Snap version: ${SNAP_VERSION}"
+          echo "Release version: ${VERSION}"
+          if [ "${SNAP_VERSION}" != "${VERSION}" ]; then
+            echo "Packed snap version does not match release version." >&2
+            exit 1
+          fi
 
       - name: Choose Snap Store channel
         run: |

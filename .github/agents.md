@@ -515,6 +515,8 @@ File association notes:
 - Desktop launcher metadata: `packaging/snap/gui/lumyn.desktop`
 - Build wrapper: `scripts/build-snap.sh` stages `packaging/snap/snapcraft.yaml` into Snapcraft's expected root-level `snap/` path, runs `snapcraft`, then removes the temporary root `snap/` directory
 - GitHub Actions stage the same temporary root `snap/snapcraft.yaml` and build via `canonical/action-build@v1`; the resulting `*.snap` is uploaded as `lumyn-linux-amd64-snap`
+- Release workflow injects the resolved `VERSION` into staged `snap/snapcraft.yaml` as a part `build-environment` entry before `canonical/action-build@v1`; this is required because Snapcraft's managed build instance does not reliably inherit the outer GitHub job environment
+- Release workflow verifies `meta/snap.yaml` inside the packed snap before publishing, and fails if the snap version does not match the release version
 - The release workflow publishes the snap to the Snap Store with `snapcraft upload --release="$SNAP_CHANNEL"` when `SNAPCRAFT_STORE_CREDENTIALS` is configured
 - Snap Store target: registered snap name `lumyn`
 - Release channel mapping: stable versions like `1.2.3` publish to `stable`; prerelease versions like `1.2.3-beta.1` or `0.0.0-dev` publish to `edge`
@@ -570,9 +572,10 @@ All jobs install .NET 10.0 SDK.
 - **How the version flows**:
   1. `release.yml` extracts the version from the tag (`v1.2.3` → `1.2.3`) in a `prepare` job
   2. All build jobs receive it as the `VERSION` env var
-  3. Each build script passes it to `dotnet publish` via `-p:Version=... -p:InformationalVersion=...`
-  4. The version is baked into the assembly `AssemblyInformationalVersionAttribute`
-  5. `AboutDialog.axaml.cs` reads it from the attribute at runtime
+  3. Standard build scripts pass it to `dotnet publish` via `-p:Version=... -p:InformationalVersion=...`
+  4. Snap releases also inject it into staged `snap/snapcraft.yaml` as a part `build-environment` value, because the managed Snapcraft build does not reliably inherit the outer job env
+  5. The version is baked into the assembly `AssemblyInformationalVersionAttribute`
+  6. `AboutDialog.axaml.cs` reads it from the attribute at runtime
 - **Local dev builds**: Show `0.0.0-dev` — set as default `<InformationalVersion>` in `Lumyn.App.csproj`
 - **CI builds** (`build-artifacts.yml` on push to main): Use `VERSION=0.0.0-dev` — for build validation only, not releases
 - **Manual trigger**: `release.yml` supports `workflow_dispatch` with an explicit version input for testing
@@ -668,6 +671,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
 | 2026-05 | Moved release setup guides under `docs/release/` so PPA and Snap Store publishing notes are grouped away from the repo root. |
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |
 | 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |

@@ -232,6 +232,79 @@ cat > "${CONTENTS_DIR}/Info.plist" <<PLIST
   <string>lumyn</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleDocumentTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Video File</string>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>lumyn</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.movie</string>
+        <string>public.video</string>
+        <string>public.mpeg-4</string>
+        <string>com.apple.quicktime-movie</string>
+      </array>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>mp4</string>
+        <string>m4v</string>
+        <string>mkv</string>
+        <string>mk3d</string>
+        <string>webm</string>
+        <string>avi</string>
+        <string>mov</string>
+        <string>mpg</string>
+        <string>mpeg</string>
+        <string>flv</string>
+        <string>3gp</string>
+        <string>wmv</string>
+        <string>ogv</string>
+        <string>ogm</string>
+        <string>ts</string>
+        <string>mts</string>
+        <string>m2ts</string>
+        <string>divx</string>
+      </array>
+    </dict>
+    <dict>
+      <key>CFBundleTypeName</key>
+      <string>Audio File</string>
+      <key>CFBundleTypeRole</key>
+      <string>Viewer</string>
+      <key>LSHandlerRank</key>
+      <string>Alternate</string>
+      <key>CFBundleTypeIconFile</key>
+      <string>lumyn</string>
+      <key>LSItemContentTypes</key>
+      <array>
+        <string>public.audio</string>
+        <string>public.mp3</string>
+        <string>public.mpeg-4-audio</string>
+      </array>
+      <key>CFBundleTypeExtensions</key>
+      <array>
+        <string>mp3</string>
+        <string>flac</string>
+        <string>ogg</string>
+        <string>oga</string>
+        <string>wav</string>
+        <string>m4a</string>
+        <string>m4b</string>
+        <string>aac</string>
+        <string>wma</string>
+        <string>opus</string>
+        <string>mka</string>
+        <string>aiff</string>
+        <string>aif</string>
+      </array>
+    </dict>
+  </array>
   <key>NSHighResolutionCapable</key>
   <true/>
 </dict>

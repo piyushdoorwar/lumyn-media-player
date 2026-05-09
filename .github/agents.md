@@ -322,8 +322,9 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - OSD messages
 - Sidebar playlist panel (toggle with Q)
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
-- Windows file association registration script
-- Single-instance, command-line file argument support
+- Windows file associations through Inno Setup registry entries (`packaging/windows/lumyn.iss`) and MSIX declarations (`packaging/windows/AppxManifest.xml`); `scripts/build-windows.ps1` also contains a portable `Register-FileAssociations.ps1` generator helper.
+- macOS Finder/Open With document declarations are generated in `scripts/build-macos.sh` under `CFBundleDocumentTypes`.
+- Command-line startup file support: `App.axaml.cs` accepts normal file paths and `file://` URIs from `desktop.Args`, then calls `OpenFileWhenReadyAsync()`.
 - Chromecast/cast icon uses the Font Awesome style filled cast silhouette in `MediaIcons.axaml` and `site/assets/ic-cast.svg`; app cast accents should use Lumyn green (`#49B35C` / `#3A9B4B`), not blue.
 
 ---
@@ -474,6 +475,11 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 4. Generate `Register-FileAssociations.ps1` for post-install user run
 5. Compile Inno Setup `.iss` → `lumyn_X.X.X_win-x64_setup.exe`
 
+File association notes:
+- Inno Setup registers common audio/video extensions in `packaging/windows/lumyn.iss`.
+- MSIX file type declarations live in `packaging/windows/AppxManifest.xml`.
+- The portable registration helper in `scripts/build-windows.ps1` writes `Register-FileAssociations.ps1`, but the main installer/MSIX path should be checked first before changing that helper.
+
 **Dependencies needed on build machine**: Inno Setup, 7-Zip
 
 ### macOS — `.dmg` bundle (`scripts/build-macos.sh`)
@@ -482,7 +488,8 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 2. `brew install mpv ffmpeg` — ffmpeg provides libav* dylibs that mpv links against
 3. Bundle `libmpv.dylib` + libav* dylibs (via `copy_dylib_closure`) into `.app/Contents/MacOS/`; fix `@loader_path` rpath
 4. The ffmpeg **binary** is NOT bundled — only its shared libraries are needed
-5. Create `.dmg` disk image → `Lumyn.dmg`
+5. Generate `Info.plist`, including `CFBundleDocumentTypes` for common audio/video Finder/Open With support
+6. Create `.dmg` disk image → `Lumyn.dmg`
 
 **Flatpak**: `scripts/build-linux-flatpak.sh` — alternate Linux packaging (not in primary CI)
 
@@ -618,6 +625,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | macOS packaging now emits `CFBundleDocumentTypes` in `Info.plist` for common audio/video Finder/Open With support. File-association notes updated in this agent reference. |
 | 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |
 | 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
 | 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |

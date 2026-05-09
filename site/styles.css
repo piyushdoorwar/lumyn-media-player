@@ -407,6 +407,7 @@ h3 {
   gap: 16px;
   width: min(100%, 640px);
   justify-self: end;
+  min-width: 0;
 }
 
 .platform-download {
@@ -492,6 +493,8 @@ h3 {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .download-panel[hidden] {
@@ -742,6 +745,31 @@ footer a:hover,
 
 .modal-close:hover {
   color: var(--text);
+}
+
+/* ── Scrollbars ─────────────────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--green) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--green);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--green-bright);
 }
 
 /* ── Releases page ──────────────────────────────────────────────────────── */

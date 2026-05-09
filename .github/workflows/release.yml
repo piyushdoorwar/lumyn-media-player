@@ -271,7 +271,6 @@ jobs:
       - name: Vendor NuGet packages
         run: |
           dotnet restore src/Lumyn.App/Lumyn.App.csproj \
-            --runtime linux-x64 \
             --packages ./packages
 
       - name: Stage Debian source packaging

@@ -11,7 +11,7 @@ Vcs-Browser: https://github.com/piyushdoorwar/lumyn-media-player
 Package: lumyn
 Section: video
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, libmpv2, libfontconfig1, libgl1, libx11-6, libxcb1, libxext6, libxrandr2, libxrender1, libxi6, libxfixes3, libxcursor1, libxinerama1, libasound2t64, libpulse0
+Depends: ${shlibs:Depends}, ${misc:Depends}, dotnet-runtime-10.0, libmpv2, libfontconfig1, libgl1, libx11-6, libxcb1, libxext6, libxrandr2, libxrender1, libxi6, libxfixes3, libxcursor1, libxinerama1, libasound2t64, libpulse0
 Description: Clean desktop media player
  Lumyn is a quiet, fast local video and audio player with a focused
  interface, mpv-powered playback, subtitle tools, playlists, bookmarks,

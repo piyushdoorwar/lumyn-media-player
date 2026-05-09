@@ -18,11 +18,11 @@ DEB_VERSION = $(shell dpkg-parsechangelog -S Version | sed 's/-.*//')
 override_dh_auto_build:
 	mkdir -p "$(HOME)" "$(XDG_CACHE_HOME)" "$(XDG_CONFIG_HOME)"
 	printf '<configuration><packageSources><clear /></packageSources></configuration>' > NuGet.Config
-	dotnet restore src/Lumyn.App/Lumyn.App.csproj --runtime linux-x64
+	dotnet restore src/Lumyn.App/Lumyn.App.csproj
 	dotnet publish src/Lumyn.App/Lumyn.App.csproj \
 		--configuration Release \
-		--runtime linux-x64 \
-		--self-contained=true \
+		--self-contained=false \
+		-p:UseAppHost=false \
 		-p:Version="$(DEB_VERSION)" \
 		-p:InformationalVersion="$(DEB_VERSION)" \
 		--no-restore \
@@ -38,7 +38,7 @@ override_dh_auto_install:
 	if [ -d debian/lumyn/usr/lib/lumyn/runtimes ]; then \
 		find debian/lumyn/usr/lib/lumyn/runtimes -mindepth 1 -maxdepth 1 ! -name linux-x64 -exec rm -rf {} +; \
 	fi
-	printf '#!/bin/sh\nexec /usr/lib/lumyn/Lumyn "$$@"\n' > debian/lumyn/usr/bin/lumyn
+	printf '#!/bin/sh\nexec dotnet /usr/lib/lumyn/Lumyn.dll "$$@"\n' > debian/lumyn/usr/bin/lumyn
 	chmod 755 debian/lumyn/usr/bin/lumyn
 	install -Dm644 src/Lumyn.App/Assets/Icons/lumyn.svg \
 		debian/lumyn/usr/share/icons/hicolor/scalable/apps/lumyn.svg

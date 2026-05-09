@@ -150,8 +150,75 @@ parts:
         exit 1
       fi
 
+      copy_library() {
+        source="$1"
+        target_dir="$2"
+        resolved="$(readlink -f "$source")"
+        base="$(basename "$resolved")"
+
+        if [ ! -f "$target_dir/$base" ]; then
+          cp -a "$resolved" "$target_dir/$base"
+          chmod 755 "$target_dir/$base" || true
+        fi
+
+        link_name="$(basename "$source")"
+        if [ "$link_name" != "$base" ] && [ ! -e "$target_dir/$link_name" ]; then
+          ln -s "$base" "$target_dir/$link_name"
+        fi
+      }
+
+      should_bundle_library() {
+        base="$(basename "$1")"
+        case "$base" in
+          ld-linux*.so*|linux-vdso.so*|libc.so*|libm.so*|libdl.so*|libpthread.so*|librt.so*|libresolv.so*|libnsl.so*|libutil.so*)
+            return 1
+            ;;
+        esac
+        return 0
+      }
+
+      bundle_library_closure() {
+        library="$1"
+        queue_file="$(mktemp)"
+        seen_file="$(mktemp)"
+        printf '%s\n' "$library" > "$queue_file"
+
+        while [ -s "$queue_file" ]; do
+          current="$(sed -n '1p' "$queue_file")"
+          sed -i '1d' "$queue_file"
+          [ -f "$current" ] || continue
+
+          resolved="$(readlink -f "$current")"
+          if grep -Fxq "$resolved" "$seen_file"; then
+            continue
+          fi
+          printf '%s\n' "$resolved" >> "$seen_file"
+
+          if should_bundle_library "$resolved"; then
+            copy_library "$current" opt/lumyn/lib
+          fi
+
+          ldd "$resolved" | awk '/=> \// { print $3 } /^[[:space:]]*\// { print $1 }' |
+            while IFS= read -r dep; do
+              [ -n "$dep" ] && [ -f "$dep" ] && should_bundle_library "$dep" && printf '%s\n' "$dep" >> "$queue_file"
+            done
+        done
+
+        rm -f "$queue_file" "$seen_file"
+      }
+
+      bundle_library_closure "usr/lib/$arch_triplet/libmpv.so.2"
+
       if [ -f opt/lumyn/lib/libmpv.so.2 ] && [ ! -e opt/lumyn/lib/libmpv.so ]; then
         ln -s libmpv.so.2 opt/lumyn/lib/libmpv.so
+      fi
+
+      if [ -f opt/lumyn/lib/libmpv.so.2 ] && [ ! -e opt/lumyn/libmpv.so.2 ]; then
+        ln -s lib/libmpv.so.2 opt/lumyn/libmpv.so.2
+      fi
+
+      if [ -e opt/lumyn/libmpv.so.2 ] && [ ! -e opt/lumyn/libmpv.so ]; then
+        ln -s libmpv.so.2 opt/lumyn/libmpv.so
       fi
 
       echo "Bundled libmpv files:"

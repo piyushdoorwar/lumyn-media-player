@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+
+arch_lib_dir="$(find "$SNAP/usr/lib" -maxdepth 1 -type d -name '*-linux-gnu' | head -n 1 || true)"
+export LD_LIBRARY_PATH="$SNAP/opt/lumyn/lib${arch_lib_dir:+:$arch_lib_dir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+if [ -n "$arch_lib_dir" ] && [ -d "$arch_lib_dir/dri" ]; then
+  export LIBGL_DRIVERS_PATH="$arch_lib_dir/dri"
+fi
+exec "$SNAP/opt/lumyn/Lumyn" "$@"

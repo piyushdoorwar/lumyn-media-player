@@ -355,6 +355,19 @@ h3 {
   font-size: clamp(24px, 3.5vw, 58px);
 }
 
+.features-banner {
+  display: block;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto 56px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .feature-timeline {
   position: relative;
   display: flex;

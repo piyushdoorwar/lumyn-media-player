@@ -491,6 +491,26 @@ File association notes:
 5. Generate `Info.plist`, including `CFBundleDocumentTypes` for common audio/video Finder/Open With support
 6. Create `.dmg` disk image → `Lumyn.dmg`
 
+### Linux — Snap / Ubuntu App Center (`packaging/snap/snapcraft.yaml`)
+
+- Snapcraft project file: `packaging/snap/snapcraft.yaml`
+- Desktop launcher metadata: `packaging/snap/gui/lumyn.desktop`
+- Build wrapper: `scripts/build-snap.sh` stages `packaging/snap/snapcraft.yaml` into Snapcraft's expected root-level `snap/` path, runs `snapcraft`, then removes the temporary root `snap/` directory
+- GitHub Actions stage the same temporary root `snap/snapcraft.yaml` and build via `canonical/action-build@v1`; the resulting `*.snap` is uploaded as `lumyn-linux-amd64-snap`
+- Uses `base: core24`, `confinement: strict`, and self-contained `dotnet publish`
+- Build installs .NET 10 via `dotnet-install.sh` inside the Snapcraft build part so the snap is not blocked by host SDK availability
+- Stages `libmpv2` and desktop/audio/OpenGL runtime libraries through `stage-packages`
+- Declared plugs include `home`, `removable-media`, `audio-playback`, `opengl`, `network`, `network-bind`, `screen-inhibit-control`, `wayland`, and `x11`
+- `removable-media` and Chromecast/mDNS-related access may need store review or manual connection depending on final Snap Store policy and interface behavior
+
+Build/test locally:
+
+```bash
+./scripts/build-snap.sh
+sudo snap install ./lumyn_*.snap --dangerous
+lumyn
+```
+
 **Flatpak**: `scripts/build-linux-flatpak.sh` — alternate Linux packaging (not in primary CI)
 
 ---
@@ -502,6 +522,7 @@ File association notes:
 | Job | Runner | Output artifact |
 |---|---|---|
 | `linux-deb` | ubuntu-latest | `lumyn-linux-amd64-deb` (*.deb) |
+| `linux-snap` | ubuntu-latest | `lumyn-linux-amd64-snap` (*.snap) |
 | `windows-installer` | windows-latest | `lumyn-windows-x64-installer` (*_setup.exe) |
 | `macos-arm64` | macos-15 | `lumyn-macos-osx-arm64` (*.dmg) |
 | `macos-x64` | macos-15-intel | `lumyn-macos-osx-x64` (*.dmg) |
@@ -625,6 +646,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
 | 2026-05 | macOS packaging now emits `CFBundleDocumentTypes` in `Info.plist` for common audio/video Finder/Open With support. File-association notes updated in this agent reference. |
 | 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |
 | 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |

@@ -5,6 +5,11 @@ artifacts/
 publish/
 out/
 dist/
+parts/
+prime/
+stage/
+*.snap
+*.assert
 Debug/
 Release/
 x64/

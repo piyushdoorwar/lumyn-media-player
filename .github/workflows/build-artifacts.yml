@@ -38,6 +38,30 @@ jobs:
           name: lumyn-linux-amd64-deb
           path: artifacts/packages/*.deb
 
+  linux-snap:
+    name: Linux Snap package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Stage snapcraft project
+        run: |
+          mkdir -p snap
+          cp packaging/snap/snapcraft.yaml snap/snapcraft.yaml
+
+      - name: Build snap
+        id: build-snap
+        uses: canonical/action-build@v1
+
+      - name: Upload snap
+        uses: actions/upload-artifact@v4
+        with:
+          name: lumyn-linux-amd64-snap
+          path: ${{ steps.build-snap.outputs.snap }}
+
   windows-installer:
     name: Windows installer
     runs-on: windows-latest

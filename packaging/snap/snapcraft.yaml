@@ -1,0 +1,121 @@
+name: lumyn
+adopt-info: lumyn
+summary: A clean desktop media player
+description: |
+  Lumyn is a quiet, fast local video and audio player with a focused
+  interface, mpv-powered playback, subtitle tools, playlists, bookmarks,
+  screenshots, Chromecast support, and practical keyboard controls.
+
+base: core24
+grade: stable
+confinement: strict
+
+platforms:
+  amd64:
+    build-on: amd64
+    build-for: amd64
+  arm64:
+    build-on: arm64
+    build-for: arm64
+
+apps:
+  lumyn:
+    command: opt/lumyn/lumyn
+    desktop: usr/share/applications/lumyn.desktop
+    plugs:
+      - audio-playback
+      - desktop
+      - desktop-legacy
+      - home
+      - network
+      - network-bind
+      - opengl
+      - removable-media
+      - screen-inhibit-control
+      - wayland
+      - x11
+    environment:
+      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$LD_LIBRARY_PATH
+
+parts:
+  lumyn:
+    plugin: nil
+    source: .
+    build-packages:
+      - ca-certificates
+      - curl
+    stage-packages:
+      - libmpv2
+      - libgl1
+      - libglu1-mesa
+      - libx11-6
+      - libxcb1
+      - libxext6
+      - libxrandr2
+      - libxrender1
+      - libxi6
+      - libxfixes3
+      - libxcursor1
+      - libxinerama1
+      - libasound2t64
+      - libpulse0
+      - fontconfig
+      - fonts-inter
+      - dbus
+    override-build: |
+      set -eu
+
+      dotnet_dir="$CRAFT_PART_BUILD/.dotnet"
+      mkdir -p "$dotnet_dir"
+      curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$CRAFT_PART_BUILD/dotnet-install.sh"
+      sh "$CRAFT_PART_BUILD/dotnet-install.sh" --channel 10.0 --install-dir "$dotnet_dir"
+      export PATH="$dotnet_dir:$PATH"
+
+      version="${VERSION:-}"
+      if [ -n "$version" ]; then
+        version="${version#v}"
+      elif tag="$(git describe --tags --exact-match 2>/dev/null)"; then
+        version="${tag#v}"
+      elif tag="$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null)"; then
+        version="${tag#v}-dev"
+      else
+        version="0.0.0-dev"
+      fi
+      craftctl set version="$version"
+
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) dotnet_arch="x64" ;;
+        arm64) dotnet_arch="arm64" ;;
+        *) echo "Unsupported snap architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
+      esac
+
+      dotnet restore Lumyn.sln
+      dotnet publish src/Lumyn.App/Lumyn.App.csproj \
+        -c Release \
+        -r linux-$dotnet_arch \
+        --self-contained true \
+        -o "$CRAFT_PART_INSTALL/opt/lumyn" \
+        -p:Version="$version" \
+        -p:InformationalVersion="$version"
+
+      mkdir -p "$CRAFT_PART_INSTALL/opt/lumyn/lib"
+      cat > "$CRAFT_PART_INSTALL/opt/lumyn/lumyn" <<'LAUNCHER'
+      #!/bin/sh
+      set -eu
+
+      arch_lib_dir="$(find "$SNAP/usr/lib" -maxdepth 1 -type d -name '*-linux-gnu' | head -n 1 || true)"
+      export LD_LIBRARY_PATH="$SNAP/opt/lumyn/lib${arch_lib_dir:+:$arch_lib_dir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+      if [ -n "$arch_lib_dir" ] && [ -d "$arch_lib_dir/dri" ]; then
+        export LIBGL_DRIVERS_PATH="$arch_lib_dir/dri"
+      fi
+      exec "$SNAP/opt/lumyn/Lumyn" "$@"
+      LAUNCHER
+      chmod 755 "$CRAFT_PART_INSTALL/opt/lumyn/lumyn"
+
+      install -Dm644 src/Lumyn.App/Assets/Icons/lumyn.svg \
+        "$CRAFT_PART_INSTALL/usr/share/icons/hicolor/scalable/apps/lumyn.svg"
+      install -Dm644 packaging/snap/gui/lumyn.desktop \
+        "$CRAFT_PART_INSTALL/usr/share/applications/lumyn.desktop"
+
+      sed -i 's|^Exec=.*|Exec=lumyn %U|' \
+        "$CRAFT_PART_INSTALL/usr/share/applications/lumyn.desktop"

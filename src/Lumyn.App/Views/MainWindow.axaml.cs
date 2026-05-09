@@ -33,7 +33,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
 
-        PointerMoved += (_, _) => ShowControls();
+        PointerMoved += (_, e) => OnWindowPointerMoved(e);
         PointerWheelChanged += OnWindowPointerWheelChanged;
         Opened += (_, _) =>
         {
@@ -45,6 +45,9 @@ public partial class MainWindow : Window
                 pic.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
                 pic.AddHandler(DragDrop.DropEvent, PlaylistDrop);
             }
+
+            WireControlOverlayHover("ControlBar");
+            WireControlOverlayHover("CastStatusBar");
         };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) => ViewModel?.Dispose();
@@ -73,12 +76,46 @@ public partial class MainWindow : Window
 
     // ── Controls visibility ──────────────────────────────────────────────────
 
-    private void ShowControls()
+    private void OnWindowPointerMoved(PointerEventArgs e)
+    {
+        if (IsFromControlOverlay(e.Source))
+            return;
+
+        ShowControls();
+    }
+
+    private void WireControlOverlayHover(string name)
+    {
+        var overlay = this.FindControl<Border>(name);
+        if (overlay is null) return;
+
+        overlay.PointerEntered += (_, _) => ShowControls(restartHideTimer: false);
+        overlay.PointerExited += (_, _) => ShowControls();
+    }
+
+    private bool IsFromControlOverlay(object? source)
+    {
+        if (source is not Visual visual)
+            return false;
+
+        var controlBar = this.FindControl<Border>("ControlBar");
+        var castStatusBar = this.FindControl<Border>("CastStatusBar");
+
+        for (var current = visual; current is not null; current = current.GetVisualParent())
+        {
+            if (ReferenceEquals(current, controlBar) || ReferenceEquals(current, castStatusBar))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void ShowControls(bool restartHideTimer = true)
     {
         if (ViewModel is null) return;
 
         var now = Environment.TickCount64;
-        if (ViewModel.ControlsVisible && now - _lastControlsPulseMs < 250)
+        if (ViewModel.ControlsVisible && restartHideTimer && now - _lastControlsPulseMs < 750)
             return;
 
         _lastControlsPulseMs = now;
@@ -87,10 +124,16 @@ public partial class MainWindow : Window
             ViewModel.ControlsVisible = true;
             Cursor = Cursor.Default;
         }
-        UpdateTopBarVisibility();
 
-        _hideControlsTimer.Stop();
-        _hideControlsTimer.Start();
+        if (restartHideTimer)
+        {
+            _hideControlsTimer.Stop();
+            _hideControlsTimer.Start();
+        }
+        else
+        {
+            _hideControlsTimer.Stop();
+        }
     }
 
     private void HideControls()

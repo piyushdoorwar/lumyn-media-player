@@ -35,7 +35,14 @@ function Get-MpvArchiveUrl {
     )
 
     $apiUrl = "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest"
-    $release = Invoke-RestMethod -Uri $apiUrl -Headers @{ "User-Agent" = "Lumyn-Packager" }
+    
+    # Build headers with GitHub token if available (for authenticated requests with higher rate limits)
+    $headers = @{ "User-Agent" = "Lumyn-Packager" }
+    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
+        $headers["Authorization"] = "token $($env:GITHUB_TOKEN)"
+    }
+    
+    $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers
 
     $pattern = if ($Kind -eq "Dev") {
         '^mpv-dev-x86_64.*\.7z$'

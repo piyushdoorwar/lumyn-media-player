@@ -41,10 +41,10 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -58,7 +58,7 @@ jobs:
         run: ./scripts/build-linux.sh
 
       - name: Upload deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-linux-amd64-deb
           path: artifacts/packages/*.deb
@@ -71,7 +71,7 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -104,7 +104,7 @@ jobs:
         uses: canonical/action-build@v1
 
       - name: Upload snap
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-linux-amd64-snap
           path: ${{ steps.build-snap.outputs.snap }}
@@ -147,10 +147,10 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -166,13 +166,13 @@ jobs:
         run: ./scripts/build-windows.ps1
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-windows-x64-installer
           path: artifacts/packages/*_setup.exe
 
       - name: Upload MSIX package
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-windows-x64-msix
           path: artifacts/packages/*.msix
@@ -193,10 +193,10 @@ jobs:
             runner: macos-15-intel
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -207,7 +207,7 @@ jobs:
         run: RID=${{ matrix.rid }} ./scripts/build-macos.sh
 
       - name: Upload app DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-macos-${{ matrix.rid }}
           path: artifacts/packages/*.dmg
@@ -219,7 +219,7 @@ jobs:
     needs: [prepare, linux-deb, linux-snap, windows-installer, macos-zip]
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           path: release-artifacts
 
@@ -239,10 +239,10 @@ jobs:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 

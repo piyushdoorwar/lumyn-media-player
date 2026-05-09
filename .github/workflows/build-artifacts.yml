@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -33,7 +33,7 @@ jobs:
         run: ./scripts/build-linux.sh
 
       - name: Upload deb
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-linux-amd64-deb
           path: artifacts/packages/*.deb
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
         uses: canonical/action-build@v1
 
       - name: Upload snap
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-linux-amd64-snap
           path: ${{ steps.build-snap.outputs.snap }}
@@ -67,10 +67,10 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -79,7 +79,7 @@ jobs:
         run: ./scripts/build-windows.ps1
 
       - name: Upload installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-windows-x64-installer
           path: artifacts/packages/*_setup.exe
@@ -97,10 +97,10 @@ jobs:
             runner: macos-15-intel
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
 
@@ -111,7 +111,7 @@ jobs:
         run: RID=${{ matrix.rid }} ./scripts/build-macos.sh
 
       - name: Upload app DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: lumyn-macos-${{ matrix.rid }}
           path: artifacts/packages/*.dmg

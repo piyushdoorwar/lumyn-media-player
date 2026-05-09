@@ -37,21 +37,21 @@
                  Source="{StaticResource Icon.LumynMark}"
                  IsHitTestVisible="False" />
           <Button Classes="icon ctrl" Name="OpenButton"
-                  Click="OpenButton_OnClick" ToolTip.Tip="Open file">
+                  Click="OpenButton_OnClick">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Open}" />
           </Button>
           <Button Classes="icon ctrl" Name="LoadSubtitleButton"
-                  Click="LoadSubtitleButton_OnClick" ToolTip.Tip="Subtitles">
+                  Click="LoadSubtitleButton_OnClick">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Subtitle}" />
           </Button>
           <Button Classes="icon ctrl" Name="VideoAdjustmentsButton"
                   Classes.dim="{Binding !HasVideoAdjustments}"
-                  Click="VideoAdjustmentsButton_OnClick" ToolTip.Tip="Video adjustments">
+                  Click="VideoAdjustmentsButton_OnClick">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
           </Button>
           <Button Classes="icon ctrl" Name="PlaylistButton"
                   Classes.dim="{Binding !IsPlaylistVisible}"
-                  Command="{Binding TogglePlaylistCommand}" ToolTip.Tip="Queue (Q)">
+                  Command="{Binding TogglePlaylistCommand}">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Playlist}" />
           </Button>
         </StackPanel>
@@ -71,32 +71,32 @@
         <!-- Right: info | pin | window chrome -->
         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="0">
           <Button Classes="icon ctrl" Name="AboutButton"
-                  Click="AboutButton_Click" ToolTip.Tip="About Lumyn">
+                  Click="AboutButton_Click">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Info}" />
           </Button>
           <Button Classes="icon ctrl" Name="KeyboardShortcutsButton"
-                  Click="KeyboardShortcutsButton_OnClick" ToolTip.Tip="Keyboard shortcuts">
+                  Click="KeyboardShortcutsButton_OnClick">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Keyboard}" />
           </Button>
           <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"
-                  Command="{Binding ToggleAlwaysOnTopCommand}" ToolTip.Tip="Always on top">
+                  Command="{Binding ToggleAlwaysOnTopCommand}">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.AlwaysOnTop}" />
           </Button>
           <!-- Divider -->
           <Border Width="1" Margin="4,9" Background="#383838" />
           <!-- Window chrome -->
           <Button Classes="wchrome" Name="MinimizeButton"
-                  Click="MinimizeButton_Click" ToolTip.Tip="Minimise">
+                  Click="MinimizeButton_Click">
             <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowMinimize}" />
           </Button>
           <Button Classes="wchrome" Name="MaximizeButton"
-                  Click="MaximizeButton_Click" ToolTip.Tip="Maximise">
+                  Click="MaximizeButton_Click">
             <PathIcon Name="MaximizeIcon" Width="11" Height="11"
                       Data="{StaticResource Icon.WindowMaximize}" />
           </Button>
           <Button Classes="wchrome close" Name="CloseButton"
-                  Click="CloseButton_Click" ToolTip.Tip="Close">
+                  Click="CloseButton_Click">
             <PathIcon Width="11" Height="11" Data="{StaticResource Icon.WindowClose}" />
           </Button>
         </StackPanel>
@@ -322,8 +322,7 @@
                           Width="20" Height="20" MinWidth="20" MinHeight="20"
                           HorizontalAlignment="Right" VerticalAlignment="Top"
                           Margin="0,4,4,0"
-                          Opacity="0.35"
-                          ToolTip.Tip="Remove from recently played">
+                          Opacity="0.35">
                     <PathIcon Width="7" Height="7"
                               Data="{StaticResource Icon.WindowClose}"
                               Foreground="#6A6560" />
@@ -397,7 +396,7 @@
       </Grid>
     </Border>
 
-    <!-- ── Bottom control bar overlay ────────────────────────────────────── -->
+    <!-- ── Cast status pill ──────────────────────────────────────────────── -->
     <Border
         Name="CastStatusBar"
         VerticalAlignment="Bottom"
@@ -413,7 +412,7 @@
         <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="#49B35C" />
         <TextBlock Text="{Binding CastStatusText}" Foreground="#F4F0EC" FontSize="12"
                    VerticalAlignment="Center" />
-        <Button Classes="ctrl" Command="{Binding ToggleCastPlaybackCommand}" ToolTip.Tip="Play / pause cast">
+        <Button Classes="ctrl" Command="{Binding ToggleCastPlaybackCommand}">
           <Panel>
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Play}"
                       IsVisible="{Binding !IsCastPlaying}" />
@@ -421,7 +420,7 @@
                       IsVisible="{Binding IsCastPlaying}" />
           </Panel>
         </Button>
-        <Button Classes="ctrl" Command="{Binding StopCastingCommand}" ToolTip.Tip="Stop casting">
+        <Button Classes="ctrl" Command="{Binding StopCastingCommand}">
           <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Stop}" />
         </Button>
       </StackPanel>
@@ -431,7 +430,7 @@
         Name="ControlBar"
         VerticalAlignment="Bottom"
         Padding="12,0,12,10"
-        Opacity="{Binding ControlsOpacity}"
+        IsVisible="{Binding ControlsVisible}"
         IsHitTestVisible="{Binding ControlsVisible}">
       <Border.Background>
         <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
@@ -484,22 +483,19 @@
                       Spacing="2"
                       HorizontalAlignment="Left">
             <Button Classes="ctrl"
-                    Command="{Binding StopCommand}"
-                    ToolTip.Tip="Stop">
+                    Command="{Binding StopCommand}">
               <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
             </Button>
 
             <Button Classes="ctrl"
                     Classes.dim="{Binding !IsLooping}"
-                    Command="{Binding ToggleLoopCommand}"
-                    ToolTip.Tip="Loop">
+                    Command="{Binding ToggleLoopCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
             </Button>
 
             <Button Classes="ctrl"
                     Width="54"
-                    Command="{Binding CycleSeekStepCommand}"
-                    ToolTip.Tip="Seek step - click to cycle (5s / 10s / 30s)">
+                    Command="{Binding CycleSeekStepCommand}">
               <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                 <PathIcon Width="13" Height="13" Data="{StaticResource Icon.SeekForward}" />
                 <TextBlock Text="{Binding SeekStepLabel}" FontSize="10"
@@ -508,12 +504,12 @@
             </Button>
 
             <Button Classes="ctrl" Name="BookmarksButton"
-                    Click="BookmarksButton_Click" ToolTip.Tip="Bookmarks (B)">
+                    Click="BookmarksButton_Click">
               <PathIcon Width="15" Height="15" Data="{StaticResource Icon.BookmarkOutline}" />
             </Button>
 
             <Button Classes="ctrl"
-                    Command="{Binding TakeScreenshotCommand}" ToolTip.Tip="Screenshot (Alt+I)">
+                    Command="{Binding TakeScreenshotCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
             </Button>
           </StackPanel>
@@ -525,14 +521,12 @@
 
             <Button Classes="ctrl"
                     Classes.dim="{Binding !HasPreviousTrack}"
-                    Command="{Binding PreviousTrackCommand}"
-                    ToolTip.Tip="Previous track (P)">
+                    Command="{Binding PreviousTrackCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SkipPrevious}" />
             </Button>
 
             <Button Classes="ctrl"
-                    Command="{Binding SeekBackwardCommand}"
-                    ToolTip.Tip="{Binding SeekStepLabel, StringFormat='Back {0}'}">
+                    Command="{Binding SeekBackwardCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SeekBack}" />
             </Button>
 
@@ -548,15 +542,13 @@
             </Button>
 
             <Button Classes="ctrl"
-                    Command="{Binding SeekForwardCommand}"
-                    ToolTip.Tip="{Binding SeekStepLabel, StringFormat='Forward {0}'}">
+                    Command="{Binding SeekForwardCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SeekForward}" />
             </Button>
 
             <Button Classes="ctrl"
                     Classes.dim="{Binding !HasNextTrack}"
-                    Command="{Binding NextTrackCommand}"
-                    ToolTip.Tip="Next track (N)">
+                    Command="{Binding NextTrackCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SkipNext}" />
             </Button>
           </StackPanel>
@@ -577,7 +569,7 @@
 
             <Button Classes="ctrl" Name="CastButton"
                     Classes.dim="{Binding !IsCasting}"
-                    Click="CastButton_Click" ToolTip.Tip="Cast">
+                    Click="CastButton_Click">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
             </Button>
 
@@ -588,8 +580,7 @@
               <Button Classes="ctrl"
                       Width="30"
                       MinWidth="30"
-                      Command="{Binding ToggleMuteCommand}"
-                      ToolTip.Tip="Mute">
+                      Command="{Binding ToggleMuteCommand}">
                 <Panel>
                   <PathIcon Width="17" Height="17" Data="{StaticResource Icon.VolumeHigh}"
                             IsVisible="{Binding !IsMuted}" />
@@ -604,8 +595,7 @@
             </StackPanel>
 
             <Button Classes="ctrl"
-                    Click="FullscreenButton_OnClick"
-                    ToolTip.Tip="Fullscreen">
+                    Click="FullscreenButton_OnClick">
               <PathIcon Name="FullscreenCtrlIcon" Width="18" Height="18"
                         Data="{StaticResource Icon.Fullscreen}" />
             </Button>
@@ -688,8 +678,7 @@
                        FontSize="11" Foreground="#353230"
                        VerticalAlignment="Center" Margin="0,0,4,0" />
             <Button Grid.Column="2" Classes="ctrl"
-                    Command="{Binding ClearPlaylistCommand}"
-                    ToolTip.Tip="Clear queue" Width="28" Height="28" MinWidth="28" MinHeight="28">
+                    Command="{Binding ClearPlaylistCommand}" Width="28" Height="28" MinWidth="28" MinHeight="28">
               <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Stop}" Foreground="#3A3836" />
             </Button>
           </Grid>
@@ -729,8 +718,7 @@
                     <Border Grid.Column="0"
                             Background="Transparent"
                             Cursor="SizeAll"
-                            PointerPressed="PlaylistDragHandle_PointerPressed"
-                            ToolTip.Tip="Drag to reorder">
+                            PointerPressed="PlaylistDragHandle_PointerPressed">
                       <PathIcon Classes="drag-icon"
                                 Width="9" Height="9"
                                 Data="{StaticResource Icon.DragHandle}"
@@ -750,8 +738,7 @@
                             Command="{Binding $parent[Window].DataContext.OpenPlaylistItemCommand}"
                             CommandParameter="{Binding Index}"
                             Padding="4,9" HorizontalContentAlignment="Left"
-                            Background="Transparent" BorderThickness="0"
-                            ToolTip.Tip="{Binding FilePath}">
+                            Background="Transparent" BorderThickness="0">
                       <TextBlock Classes="track-name"
                                  Classes.active="{Binding IsCurrent}"
                                  Text="{Binding DisplayName}"
@@ -765,8 +752,7 @@
                             Command="{Binding $parent[Window].DataContext.RemovePlaylistItemCommand}"
                             CommandParameter="{Binding Index}"
                             Width="28" Height="28" MinWidth="28" MinHeight="28"
-                            Opacity="0.35"
-                            ToolTip.Tip="Remove">
+                            Opacity="0.35">
                       <PathIcon Width="9" Height="9"
                                 Data="{StaticResource Icon.WindowClose}"
                                 Foreground="#6A6560" />

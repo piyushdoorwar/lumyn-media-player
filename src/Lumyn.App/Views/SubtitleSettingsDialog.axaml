@@ -160,8 +160,7 @@
                           Classes="downloadIcon"
                           VerticalAlignment="Center"
                           CommandParameter="{Binding}"
-                          Click="DownloadResultButton_Click"
-                          ToolTip.Tip="Download subtitle file">
+                          Click="DownloadResultButton_Click">
                     <Viewbox Width="22" Height="22">
                       <Canvas Width="24" Height="24">
                         <Path Data="{StaticResource Icon.DownloadTray}"

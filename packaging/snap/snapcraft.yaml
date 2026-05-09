@@ -104,17 +104,31 @@ parts:
         -p:InformationalVersion="$version"
 
       mkdir -p "$CRAFT_PART_INSTALL/opt/lumyn/lib"
-      cat > "$CRAFT_PART_INSTALL/opt/lumyn/lumyn" <<'LAUNCHER'
-      #!/bin/sh
-      set -eu
 
-      arch_lib_dir="$(find "$SNAP/usr/lib" -maxdepth 1 -type d -name '*-linux-gnu' | head -n 1 || true)"
-      export LD_LIBRARY_PATH="$SNAP/opt/lumyn/lib${arch_lib_dir:+:$arch_lib_dir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-      if [ -n "$arch_lib_dir" ] && [ -d "$arch_lib_dir/dri" ]; then
-        export LIBGL_DRIVERS_PATH="$arch_lib_dir/dri"
-      fi
-      exec "$SNAP/opt/lumyn/Lumyn" "$@"
-      LAUNCHER
+      # Copy libmpv and its soname symlinks into opt/lumyn/lib so the
+      # .NET NativeLibrary resolver finds them via AppContext.BaseDirectory/../lib
+      # and via LD_LIBRARY_PATH without needing runtime arch detection.
+      for lib_dir in \
+        "$CRAFT_STAGE/usr/lib/x86_64-linux-gnu" \
+        "$CRAFT_STAGE/usr/lib/aarch64-linux-gnu" \
+        "$CRAFT_STAGE/usr/lib"; do
+        if [ -f "$lib_dir/libmpv.so.2" ] || [ -L "$lib_dir/libmpv.so.2" ]; then
+          cp -aL "$lib_dir"/libmpv.so* "$CRAFT_PART_INSTALL/opt/lumyn/lib/" 2>/dev/null || true
+          break
+        fi
+      done
+
+      cat > "$CRAFT_PART_INSTALL/opt/lumyn/lumyn" <<'LAUNCHER'
+#!/bin/sh
+set -eu
+
+arch_lib_dir="$(find "$SNAP/usr/lib" -maxdepth 1 -type d -name '*-linux-gnu' | head -n 1 || true)"
+export LD_LIBRARY_PATH="$SNAP/opt/lumyn/lib${arch_lib_dir:+:$arch_lib_dir}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+if [ -n "$arch_lib_dir" ] && [ -d "$arch_lib_dir/dri" ]; then
+  export LIBGL_DRIVERS_PATH="$arch_lib_dir/dri"
+fi
+exec "$SNAP/opt/lumyn/Lumyn" "$@"
+LAUNCHER
       chmod 755 "$CRAFT_PART_INSTALL/opt/lumyn/lumyn"
 
       install -Dm644 src/Lumyn.App/Assets/Icons/lumyn.svg \

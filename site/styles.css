@@ -425,6 +425,10 @@ h3 {
   filter: brightness(0) invert(1);
 }
 
+.platform-download img.brand-icon {
+  filter: none;
+}
+
 .download-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

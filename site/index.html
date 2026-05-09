@@ -187,7 +187,7 @@
           <p class="eyebrow">Latest release</p>
           <h2>Get Lumyn for Ubuntu, Windows, and macOS</h2>
           <p>
-            Pick the installer that matches your desktop. Windows users can install from the Microsoft Store or download the standalone installer.
+            Pick the installer that matches your desktop. Ubuntu and Windows users can install from their app stores or download a standalone package.
           </p>
         </div>
         <div class="download-actions" aria-label="Download Lumyn" data-reveal style="--reveal-delay: 0.15s">
@@ -209,12 +209,18 @@
           <article class="download-panel" id="download-panel-linux" role="tabpanel" aria-labelledby="download-tab-linux" data-download-panel="linux">
             <div class="download-panel-copy">
               <h3>Ubuntu</h3>
-              <p>Install Lumyn with the latest Debian package.</p>
+              <p>Install from the Ubuntu App Center, or download the latest Debian package.</p>
             </div>
-            <a class="button primary platform-download disabled" id="linuxDownloadLink" aria-disabled="true" aria-label="Download Lumyn .deb package for Ubuntu">
-              <img src="assets/download.svg" alt="" />
-              <span>Download .deb</span>
-            </a>
+            <div class="download-options">
+              <a class="button primary platform-download" href="https://snapcraft.io/lumyn" rel="noreferrer" aria-label="Install Lumyn from the Ubuntu App Center">
+                <img src="assets/snapcraft.svg" alt="" />
+                <span>Ubuntu App Center</span>
+              </a>
+              <a class="button secondary platform-download disabled" id="linuxDownloadLink" aria-disabled="true" aria-label="Download Lumyn .deb package for Ubuntu">
+                <img src="assets/download.svg" alt="" />
+                <span>Download .deb</span>
+              </a>
+            </div>
           </article>
 
           <article class="download-panel" id="download-panel-windows" role="tabpanel" aria-labelledby="download-tab-windows" data-download-panel="windows" hidden>

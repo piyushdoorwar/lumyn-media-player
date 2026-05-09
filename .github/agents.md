@@ -597,7 +597,7 @@ All jobs install .NET 10.0 SDK.
 - Deployed automatically to GitHub Pages via `static.yml` on every push to `main`
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
 - Contains: landing page, download links, documentation
-- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows Apple Silicon + Intel `.dmg`.
+- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, Windows shows Microsoft Store + standalone `.exe`, and macOS shows Apple Silicon + Intel `.dmg`.
 
 ### Releases page (`/site/releases/`)
 
@@ -671,6 +671,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Website Linux download panel now promotes Ubuntu App Center / Snapcraft first with a Snapcraft icon, keeping the `.deb` package as the secondary option. |
 | 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
 | 2026-05 | Moved release setup guides under `docs/release/` so PPA and Snap Store publishing notes are grouped away from the repo root. |
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |

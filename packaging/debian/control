@@ -1,0 +1,29 @@
+Source: lumyn
+Section: video
+Priority: optional
+Maintainer: Piyush Doorwar <piyushdoorwar+lumyn@gmail.com>
+Build-Depends: debhelper-compat (= 13), dotnet-sdk-10.0, libfontconfig1
+Standards-Version: 4.6.2
+Homepage: https://github.com/piyushdoorwar/lumyn-media-player
+Vcs-Git: https://github.com/piyushdoorwar/lumyn-media-player.git
+Vcs-Browser: https://github.com/piyushdoorwar/lumyn-media-player
+
+Package: lumyn
+Section: video
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, dotnet-runtime-10.0, libmpv2, libfontconfig1, libgl1, libx11-6, libxcb1, libxext6, libxrandr2, libxrender1, libxi6, libxfixes3, libxcursor1, libxinerama1, libasound2t64, libpulse0
+Description: Clean desktop media player
+ Lumyn is a quiet, fast local video and audio player with a focused
+ interface, mpv-powered playback, subtitle tools, playlists, bookmarks,
+ screenshots, Chromecast support, and practical keyboard controls.
+ .
+ Features:
+  - Open local audio and video files
+  - Play, pause, seek, mute, fullscreen, loop, and adjust speed
+  - Subtitle file loading, embedded track selection, appearance settings,
+    subtitle search, and sync delay
+  - Playlist and queue support with drag-to-reorder
+  - Bookmarks, resume playback, screenshots, and chapter markers
+  - Chromecast casting for supported media formats
+ .
+ Built with .NET 10, Avalonia UI, and mpv.

@@ -64,6 +64,7 @@ lumyn-media-player/
 ├── Lumyn.sln                        # Visual Studio solution (2 projects)
 ├── Directory.Build.props            # Global build config (net10.0, nullable, etc.)
 ├── Directory.Packages.props         # Central NuGet version management
+├── PPA_SETUP.md                     # Ubuntu PPA setup and required GitHub secrets
 ├── VERSION                          # Base version string, currently "1.0"
 │
 ├── src/
@@ -464,6 +465,19 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 **Dependencies needed on build machine**: `libmpv-dev`, `dpkg`
 **Runtime package dependencies**: none (libmpv bundled; no `Depends:` field in control file)
 
+### Linux — Ubuntu PPA (`packaging/debian/` + `.github/workflows/release.yml`)
+
+- Debian source package metadata lives in `packaging/debian/changelog`, `packaging/debian/control`, and `packaging/debian/rules`
+- Release workflow job: `publish-ppa`
+- PPA target: `ppa:piyushdoorwar/lumyn`
+- Upload target in `dput`: `~piyushdoorwar/ubuntu/lumyn/`
+- Package version is generated as `${VERSION}-0piyushdoorwar1`
+- Current target distribution in changelog updates: `resolute`
+- The workflow vendors NuGet packages into `./packages`, stages `packaging/debian/` into the root-level `debian/` directory expected by Debian tooling, builds an unsigned source package with `dpkg-buildpackage -S`, signs it with `debsign`, then uploads with `dput`
+- Required GitHub secret: `GPG_PRIVATE_KEY`
+- Optional GitHub secret: `GPG_PASSPHRASE` when the exported private key is passphrase-protected
+- Setup details are documented in `PPA_SETUP.md`
+
 ### Windows — `.exe` installer (`scripts/build-windows.ps1`, 363 lines)
 
 1. `dotnet publish -c Release -r win-x64 --self-contained true`
@@ -644,6 +658,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `PPA_SETUP.md` with required GitHub secrets. |
 | 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
 | 2026-05 | macOS packaging now emits `CFBundleDocumentTypes` in `Info.plist` for common audio/video Finder/Open With support. File-association notes updated in this agent reference. |
 | 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |

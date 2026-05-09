@@ -180,3 +180,78 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: "Lumyn ${{ needs.prepare.outputs.version }}"
           files: release-artifacts/**/*
+
+  # ── Publish to Ubuntu PPA ──────────────────────────────────────────────────
+  publish-ppa:
+    name: Publish to Ubuntu PPA
+    runs-on: ubuntu-latest
+    needs: [prepare]
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential devscripts debhelper-compat dput
+
+      - name: Vendor NuGet packages
+        run: |
+          dotnet restore src/Lumyn.App/Lumyn.App.csproj \
+            --packages ./packages
+
+      - name: Stage Debian source packaging
+        run: |
+          cp -a packaging/debian debian
+
+      - name: Import GPG signing key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          KEY_FP=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')
+          echo "KEY_FP=${KEY_FP}" >> "$GITHUB_ENV"
+
+      - name: Update debian/changelog
+        run: |
+          dch -v "${VERSION}-0piyushdoorwar1" --distribution resolute "Release version ${VERSION}"
+
+      - name: Build source package
+        run: |
+          dpkg-buildpackage -S -d -us -uc
+
+      - name: Sign source package
+        env:
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cat > "$HOME/gpg-wrapper.sh" <<'EOF'
+          #!/bin/sh
+          if [ -n "${GPG_PASSPHRASE:-}" ]; then
+            exec gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" "$@"
+          fi
+          exec gpg --batch --yes "$@"
+          EOF
+          chmod 700 "$HOME/gpg-wrapper.sh"
+          debsign -k "${KEY_FP}" -p "$HOME/gpg-wrapper.sh" ../*.changes
+
+      - name: Create dput configuration
+        run: |
+          cat > ~/.dput.cf <<EOF
+          [lumyn-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~piyushdoorwar/ubuntu/lumyn/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Upload to PPA
+        run: |
+          dput lumyn-ppa ../*.changes

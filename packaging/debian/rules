@@ -1,0 +1,46 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+export DOTNET_CLI_HOME = /tmp/dotnet-home
+export HOME = /tmp/dotnet-home
+export DOTNET_NOLOGO = 1
+export DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 1
+export DOTNET_CLI_TELEMETRY_OPTOUT = 1
+export AVALONIA_TELEMETRY_OPTOUT = 1
+export XDG_CACHE_HOME = /tmp/dotnet-home/.cache
+export XDG_CONFIG_HOME = /tmp/dotnet-home/.config
+export NUGET_PACKAGES = $(CURDIR)/packages
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	mkdir -p "$(HOME)" "$(XDG_CACHE_HOME)" "$(XDG_CONFIG_HOME)"
+	printf '<configuration><packageSources><clear /></packageSources></configuration>' > NuGet.Config
+	dotnet restore src/Lumyn.App/Lumyn.App.csproj
+	dotnet publish src/Lumyn.App/Lumyn.App.csproj \
+		--configuration Release \
+		--self-contained=false \
+		-p:UseAppHost=false \
+		--no-restore \
+		--output debian/build
+
+override_dh_auto_install:
+	mkdir -p \
+		debian/lumyn/usr/lib/lumyn \
+		debian/lumyn/usr/bin \
+		debian/lumyn/usr/share/applications \
+		debian/lumyn/usr/share/icons/hicolor/scalable/apps
+	cp -a debian/build/. debian/lumyn/usr/lib/lumyn/
+	if [ -d debian/lumyn/usr/lib/lumyn/runtimes ]; then \
+		find debian/lumyn/usr/lib/lumyn/runtimes -mindepth 1 -maxdepth 1 ! -name linux-x64 -exec rm -rf {} +; \
+	fi
+	printf '#!/bin/sh\nexec dotnet /usr/lib/lumyn/Lumyn.dll "$$@"\n' > debian/lumyn/usr/bin/lumyn
+	chmod 755 debian/lumyn/usr/bin/lumyn
+	install -Dm644 src/Lumyn.App/Assets/Icons/lumyn.svg \
+		debian/lumyn/usr/share/icons/hicolor/scalable/apps/lumyn.svg
+	install -Dm644 packaging/snap/gui/lumyn.desktop \
+		debian/lumyn/usr/share/applications/lumyn.desktop
+
+override_dh_auto_test:
+	# No tests to run

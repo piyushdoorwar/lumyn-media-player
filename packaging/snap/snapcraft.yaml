@@ -60,6 +60,8 @@ parts:
       - libxfixes3
       - libxcursor1
       - libxinerama1
+      - libice6
+      - libsm6
       - libasound2t64
       - libpulse0
       - fontconfig

@@ -16,7 +16,12 @@ function selectDownloadTab(os) {
   });
 
   downloadPanels.forEach((panel) => {
-    panel.hidden = panel.dataset.downloadPanel !== os;
+    const active = panel.dataset.downloadPanel === os;
+    panel.hidden = !active;
+    // Collapse any open terminal-install details when switching away
+    if (!active) {
+      panel.querySelectorAll("details.terminal-install[open]").forEach(d => d.removeAttribute("open"));
+    }
   });
 }
 
@@ -98,14 +103,29 @@ async function hydrateDownloadLinks() {
 
     if (windows?.browser_download_url) {
       enableDownload(windowsLink, windows.browser_download_url);
+      const u = windows.browser_download_url;
+      const fname = u.split("/").pop();
+      document.getElementById("win-ps-cmd").textContent =
+        `$url = "${u}"
+$out = "$env:TEMP\\${fname}"
+Invoke-WebRequest $url -OutFile $out
+Start-Process $out`;
     }
 
     if (macosArm?.browser_download_url) {
       enableDownload(macosArmLink, macosArm.browser_download_url);
+      const u = macosArm.browser_download_url;
+      const fname = u.split("/").pop();
+      document.getElementById("macos-arm-cmd").textContent =
+        `curl -fL "${u}" -o ~/Downloads/${fname} && open ~/Downloads/${fname}`;
     }
 
     if (macosIntel?.browser_download_url) {
       enableDownload(macosIntelLink, macosIntel.browser_download_url);
+      const u = macosIntel.browser_download_url;
+      const fname = u.split("/").pop();
+      document.getElementById("macos-intel-cmd").textContent =
+        `curl -fL "${u}" -o ~/Downloads/${fname} && open ~/Downloads/${fname}`;
     }
   } catch {
     // Keep the buttons disabled if GitHub is unreachable or matching assets are absent.

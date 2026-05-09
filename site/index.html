@@ -206,6 +206,7 @@
             </button>
           </div>
 
+          <div class="download-panels-wrap">
           <article class="download-panel" id="download-panel-linux" role="tabpanel" aria-labelledby="download-tab-linux" data-download-panel="linux">
             <div class="download-panel-copy">
               <h3>Ubuntu</h3>
@@ -221,6 +222,34 @@
                 <span>Download .deb</span>
               </a>
             </div>
+
+            <details class="terminal-install">
+              <summary>
+                <svg class="terminal-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Install via terminal
+              </summary>
+              <div class="terminal-install-body">
+
+                <div class="terminal-option">
+                  <p class="terminal-option-label">Snap</p>
+                  <div class="code-block">
+                    <code id="snap-cmd">sudo snap install lumyn</code>
+                    <button class="copy-btn" aria-label="Copy snap install command" data-copy="snap-cmd">Copy</button>
+                  </div>
+                </div>
+
+                <div class="terminal-option">
+                  <p class="terminal-option-label">PPA (Ubuntu / Debian)</p>
+                  <div class="code-block">
+                    <code id="ppa-cmd">sudo add-apt-repository ppa:piyushdoorwar/lumyn
+sudo apt update
+sudo apt install lumyn</code>
+                    <button class="copy-btn" aria-label="Copy PPA install commands" data-copy="ppa-cmd">Copy</button>
+                  </div>
+                </div>
+
+              </div>
+            </details>
           </article>
 
           <article class="download-panel" id="download-panel-windows" role="tabpanel" aria-labelledby="download-tab-windows" data-download-panel="windows" hidden>
@@ -238,6 +267,22 @@
                 <span>Standalone installer</span>
               </a>
             </div>
+
+            <details class="terminal-install">
+              <summary>
+                <svg class="terminal-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Install via terminal
+              </summary>
+              <div class="terminal-install-body">
+                <div class="terminal-option">
+                  <p class="terminal-option-label">PowerShell</p>
+                  <div class="code-block">
+                    <code id="win-ps-cmd">Fetching download URL…</code>
+                    <button class="copy-btn" aria-label="Copy PowerShell install command" data-copy="win-ps-cmd">Copy</button>
+                  </div>
+                </div>
+              </div>
+            </details>
           </article>
 
           <article class="download-panel" id="download-panel-macos" role="tabpanel" aria-labelledby="download-tab-macos" data-download-panel="macos" hidden>
@@ -255,7 +300,31 @@
                 <span>Intel Mac</span>
               </a>
             </div>
+
+            <details class="terminal-install">
+              <summary>
+                <svg class="terminal-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Install via terminal
+              </summary>
+              <div class="terminal-install-body">
+                <div class="terminal-option">
+                  <p class="terminal-option-label">Apple Silicon (arm64)</p>
+                  <div class="code-block">
+                    <code id="macos-arm-cmd">Fetching download URL…</code>
+                    <button class="copy-btn" aria-label="Copy Apple Silicon install command" data-copy="macos-arm-cmd">Copy</button>
+                  </div>
+                </div>
+                <div class="terminal-option">
+                  <p class="terminal-option-label">Intel (x64)</p>
+                  <div class="code-block">
+                    <code id="macos-intel-cmd">Fetching download URL…</code>
+                    <button class="copy-btn" aria-label="Copy Intel Mac install command" data-copy="macos-intel-cmd">Copy</button>
+                  </div>
+                </div>
+              </div>
+            </details>
           </article>
+          </div>
         </div>
       </section>
     </main>
@@ -303,6 +372,37 @@
 
     <script src="image-guard.js"></script>
     <script src="app.js"></script>
+    <script>
+      // Copy buttons for terminal install blocks
+      document.querySelectorAll(".copy-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const code = document.getElementById(btn.dataset.copy);
+          if (!code) return;
+          navigator.clipboard.writeText(code.textContent.trim()).then(() => {
+            const orig = btn.textContent;
+            btn.textContent = "Copied!";
+            setTimeout(() => { btn.textContent = orig; }, 1800);
+          });
+        });
+      });
+
+      // Scroll expanded terminal-install into view
+      document.querySelectorAll("details.terminal-install").forEach(details => {
+        details.addEventListener("toggle", () => {
+          if (!details.open) return;
+          // Wait one frame for the browser to paint the expanded content
+          requestAnimationFrame(() => {
+            const body = details.querySelector(".terminal-install-body");
+            if (!body) return;
+            const bottom = body.getBoundingClientRect().bottom;
+            const vh = window.innerHeight;
+            if (bottom > vh - 16) {
+              window.scrollBy({ top: bottom - vh + 24, behavior: "smooth" });
+            }
+          });
+        });
+      });
+    </script>
     <script>
       // Support modal
       const supportBtn   = document.getElementById("footerSupportBtn");

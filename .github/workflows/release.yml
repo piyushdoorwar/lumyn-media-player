@@ -90,6 +90,24 @@ jobs:
           name: lumyn-linux-amd64-snap
           path: ${{ steps.build-snap.outputs.snap }}
 
+      - name: Choose Snap Store channel
+        run: |
+          if [[ "${VERSION}" == *-* ]]; then
+            echo "SNAP_CHANNEL=edge" >> "$GITHUB_ENV"
+          else
+            echo "SNAP_CHANNEL=stable" >> "$GITHUB_ENV"
+          fi
+
+      - name: Publish snap to Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          if [ -z "${SNAPCRAFT_STORE_CREDENTIALS:-}" ]; then
+            echo "SNAPCRAFT_STORE_CREDENTIALS is not set." >&2
+            exit 1
+          fi
+          snapcraft upload --release="$SNAP_CHANNEL" "${{ steps.build-snap.outputs.snap }}"
+
   windows-installer:
     name: Windows installer
     runs-on: windows-latest

@@ -65,6 +65,7 @@ lumyn-media-player/
 ├── Directory.Build.props            # Global build config (net10.0, nullable, etc.)
 ├── Directory.Packages.props         # Central NuGet version management
 ├── PPA_SETUP.md                     # Ubuntu PPA setup and required GitHub secrets
+├── SNAP_STORE_SETUP.md              # Snap Store publish setup and required GitHub secret
 ├── VERSION                          # Base version string, currently "1.0"
 │
 ├── src/
@@ -511,6 +512,11 @@ File association notes:
 - Desktop launcher metadata: `packaging/snap/gui/lumyn.desktop`
 - Build wrapper: `scripts/build-snap.sh` stages `packaging/snap/snapcraft.yaml` into Snapcraft's expected root-level `snap/` path, runs `snapcraft`, then removes the temporary root `snap/` directory
 - GitHub Actions stage the same temporary root `snap/snapcraft.yaml` and build via `canonical/action-build@v1`; the resulting `*.snap` is uploaded as `lumyn-linux-amd64-snap`
+- The release workflow publishes the snap to the Snap Store with `snapcraft upload --release="$SNAP_CHANNEL"` when `SNAPCRAFT_STORE_CREDENTIALS` is configured
+- Snap Store target: registered snap name `lumyn`
+- Release channel mapping: stable versions like `1.2.3` publish to `stable`; prerelease versions like `1.2.3-beta.1` or `0.0.0-dev` publish to `edge`
+- Required GitHub secret: `SNAPCRAFT_STORE_CREDENTIALS` generated with `snapcraft export-login --snaps=lumyn --channels=stable,edge snapcraft-login`
+- Setup details are documented in `SNAP_STORE_SETUP.md`
 - Uses `base: core24`, `confinement: strict`, and self-contained `dotnet publish`
 - Build installs .NET 10 via `dotnet-install.sh` inside the Snapcraft build part so the snap is not blocked by host SDK availability
 - Stages `libmpv2` and desktop/audio/OpenGL runtime libraries through `stage-packages`
@@ -545,6 +551,7 @@ All jobs install .NET 10.0 SDK.
 
 - Runs same build jobs as `build-artifacts.yml`
 - Additional `github-release` job: attaches all artifacts to a GitHub Release
+- `linux-snap` also publishes the built snap to the Snap Store using the `SNAPCRAFT_STORE_CREDENTIALS` secret
 
 ### `static.yml` — triggered on push to `main`
 
@@ -659,6 +666,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | Date | Change |
 |---|---|
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `PPA_SETUP.md` with required GitHub secrets. |
+| 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |
 | 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
 | 2026-05 | macOS packaging now emits `CFBundleDocumentTypes` in `Info.plist` for common audio/video Finder/Open With support. File-association notes updated in this agent reference. |
 | 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |

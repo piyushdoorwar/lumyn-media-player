@@ -369,7 +369,7 @@
     <Border
         Name="CastStatusBar"
         VerticalAlignment="Bottom"
-        Margin="14,0,14,74"
+        Margin="14,0,14,88"
         Padding="10,7"
         CornerRadius="6"
         Background="#E51B1B1B"
@@ -544,6 +544,7 @@
             </Button>
 
             <Button Classes="ctrl" Name="CastButton"
+                    Classes.dim="{Binding !IsCasting}"
                     Click="CastButton_Click" ToolTip.Tip="Cast">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
             </Button>

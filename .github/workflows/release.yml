@@ -77,8 +77,9 @@ jobs:
 
       - name: Stage snapcraft project
         run: |
-          mkdir -p snap
+          mkdir -p snap/gui
           cp packaging/snap/snapcraft.yaml snap/snapcraft.yaml
+          cp src/Lumyn.App/Assets/Icons/lumyn.svg snap/gui/icon.svg
           python3 - <<'PY'
           import json
           import os

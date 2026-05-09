@@ -10,8 +10,9 @@ if ! command -v snapcraft >/dev/null 2>&1; then
   exit 1
 fi
 
-mkdir -p snap
+mkdir -p snap/gui
 cp "packaging/snap/snapcraft.yaml" "snap/snapcraft.yaml"
+cp "src/Lumyn.App/Assets/Icons/lumyn.svg" "snap/gui/icon.svg"
 trap 'rm -rf "${REPO_ROOT}/snap"' EXIT
 
 snapcraft "$@"

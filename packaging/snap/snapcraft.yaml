@@ -1,5 +1,6 @@
 name: lumyn
 adopt-info: lumyn
+icon: snap/gui/icon.svg
 summary: A clean desktop media player
 description: |
   Lumyn is a quiet, fast local video and audio player with a focused

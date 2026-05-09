@@ -54,28 +54,6 @@
                   Command="{Binding TogglePlaylistCommand}" ToolTip.Tip="Queue (Q)">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Playlist}" />
           </Button>
-          <Button Classes="icon ctrl" Name="CastButton"
-                  Click="CastButton_Click" ToolTip.Tip="Cast">
-            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" />
-          </Button>
-          <Button Classes="icon ctrl"
-                  Width="54"
-                  Command="{Binding CycleSeekStepCommand}"
-                  ToolTip.Tip="Seek step - click to cycle (5s / 10s / 30s)">
-            <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
-              <PathIcon Width="13" Height="13" Data="{StaticResource Icon.SeekForward}" />
-              <TextBlock Text="{Binding SeekStepLabel}" FontSize="10"
-                         FontWeight="SemiBold" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button Classes="icon ctrl" Name="BookmarksButton"
-                  Click="BookmarksButton_Click" ToolTip.Tip="Bookmarks (B)">
-            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.BookmarkOutline}" />
-          </Button>
-          <Button Classes="icon ctrl"
-                  Command="{Binding TakeScreenshotCommand}" ToolTip.Tip="Screenshot (Alt+I)">
-            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Screenshot}" />
-          </Button>
         </StackPanel>
 
         <!-- Centre: drag region + title -->
@@ -429,15 +407,16 @@
 
         <!-- Seek row -->
         <Grid ColumnDefinitions="Auto,*,Auto"
-              ColumnSpacing="12"
-              Margin="66,0,66,4">
+              ColumnSpacing="10"
+              Margin="28,0,28,4"
+              MinHeight="24">
           <TextBlock Grid.Column="0"
                      Text="{Binding PositionText}"
                      VerticalAlignment="Center"
                      HorizontalAlignment="Left"
                      FontSize="12"
                      Foreground="#C8C3C2"
-                     MinWidth="54" />
+                     MinWidth="50" />
 
           <controls:SeekBar
               Grid.Column="1"
@@ -456,13 +435,52 @@
                      TextAlignment="Right"
                      FontSize="12"
                      Foreground="#C8C3C2"
-                     MinWidth="54" />
+                     MinWidth="50" />
         </Grid>
 
         <!-- Transport row -->
         <Grid ColumnDefinitions="*,Auto,*"
-              Margin="66,0,66,0"
+              Margin="28,0,28,0"
               MinHeight="42">
+
+          <StackPanel Grid.Column="0"
+                      Orientation="Horizontal"
+                      Spacing="2"
+                      HorizontalAlignment="Left">
+            <Button Classes="ctrl"
+                    Command="{Binding StopCommand}"
+                    ToolTip.Tip="Stop">
+              <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
+            </Button>
+
+            <Button Classes="ctrl"
+                    Classes.dim="{Binding !IsLooping}"
+                    Command="{Binding ToggleLoopCommand}"
+                    ToolTip.Tip="Loop">
+              <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
+            </Button>
+
+            <Button Classes="ctrl"
+                    Width="54"
+                    Command="{Binding CycleSeekStepCommand}"
+                    ToolTip.Tip="Seek step - click to cycle (5s / 10s / 30s)">
+              <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
+                <PathIcon Width="13" Height="13" Data="{StaticResource Icon.SeekForward}" />
+                <TextBlock Text="{Binding SeekStepLabel}" FontSize="10"
+                           FontWeight="SemiBold" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Classes="ctrl" Name="BookmarksButton"
+                    Click="BookmarksButton_Click" ToolTip.Tip="Bookmarks (B)">
+              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.BookmarkOutline}" />
+            </Button>
+
+            <Button Classes="ctrl"
+                    Command="{Binding TakeScreenshotCommand}" ToolTip.Tip="Screenshot (Alt+I)">
+              <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
+            </Button>
+          </StackPanel>
 
           <StackPanel Grid.Column="1"
                       Orientation="Horizontal"
@@ -482,14 +500,13 @@
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.SeekBack}" />
             </Button>
 
-            <Button Classes="ctrl"
-                    Width="48"
-                    Height="38"
+            <Button Classes="ctrl play-primary"
                     Command="{Binding TogglePlayPauseCommand}">
               <Panel>
-                <PathIcon Width="22" Height="22" Data="{StaticResource Icon.Play}"
+                <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Play}"
+                          Margin="3,0,0,0"
                           IsVisible="{Binding !IsPlaying}" />
-                <PathIcon Width="22" Height="22" Data="{StaticResource Icon.Pause}"
+                <PathIcon Width="20" Height="20" Data="{StaticResource Icon.Pause}"
                           IsVisible="{Binding IsPlaying}" />
               </Panel>
             </Button>
@@ -522,17 +539,9 @@
               </Border>
             </Button>
 
-            <Button Classes="ctrl"
-                    Classes.dim="{Binding !IsLooping}"
-                    Command="{Binding ToggleLoopCommand}"
-                    ToolTip.Tip="Loop">
-              <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
-            </Button>
-
-            <Button Classes="ctrl"
-                    Command="{Binding StopCommand}"
-                    ToolTip.Tip="Stop">
-              <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Stop}" />
+            <Button Classes="ctrl" Name="CastButton"
+                    Click="CastButton_Click" ToolTip.Tip="Cast">
+              <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
             </Button>
 
             <Button Classes="ctrl"

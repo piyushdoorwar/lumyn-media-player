@@ -104,6 +104,23 @@
     <Setter Property="Background" Value="#1AFFFFFF" />
   </Style>
 
+  <Style Selector="Button.play-primary">
+    <Setter Property="Background" Value="#3A9B4B" />
+    <Setter Property="CornerRadius" Value="22" />
+    <Setter Property="Width" Value="44" />
+    <Setter Property="MinWidth" Value="44" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="MinHeight" Value="44" />
+  </Style>
+
+  <Style Selector="Button.play-primary:pointerover">
+    <Setter Property="Background" Value="#43AD56" />
+  </Style>
+
+  <Style Selector="Button.play-primary:pressed">
+    <Setter Property="Background" Value="#2F7D3D" />
+  </Style>
+
   <Style Selector="PathIcon">
     <Setter Property="Foreground" Value="#F7F5F3" />
   </Style>

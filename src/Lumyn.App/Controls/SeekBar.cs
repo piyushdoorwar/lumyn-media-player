@@ -11,7 +11,6 @@ public sealed class SeekBar : Control
 {
     private const double HitTargetHeight = 32.0;
     private const double TrackHeight = 5.0;
-    private const double TrackBottomInset = 6.5;
 
     private static readonly IBrush HitTestBrush = new SolidColorBrush(Colors.Transparent);
     private static readonly IBrush TrackBrush   = new SolidColorBrush(Color.Parse("#554A4A4A"));
@@ -106,7 +105,7 @@ public sealed class SeekBar : Control
         var height = Bounds.Height;
         if (width <= 0 || height <= 0) return;
 
-        var trackY = Math.Max(0, height - TrackHeight - TrackBottomInset);
+        var trackY = Math.Max(0, (height - TrackHeight) / 2);
         var track = new Rect(0, trackY, width, TrackHeight);
         var radius = TrackHeight / 2;
         var ratio = GetRatio();

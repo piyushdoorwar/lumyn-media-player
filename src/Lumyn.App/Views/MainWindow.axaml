@@ -349,20 +349,52 @@
                  TextWrapping="Wrap" HorizontalAlignment="Center" />
     </Border>
 
-    <!-- ── OSD toast (bottom-right) ─────────────────────────────────────── -->
+    <!-- ── OSD toast ────────────────────────────────────────────────────── -->
     <Border
         HorizontalAlignment="Left"
-        VerticalAlignment="Top"
-        Margin="16,10,0,0"
-        Padding="14,8"
-        CornerRadius="6"
-        Background="#DD1A1A1A"
-        BorderBrush="#44FFFFFF"
+        VerticalAlignment="Bottom"
+        Margin="16,0,16,92"
+        MinHeight="42"
+        MaxWidth="520"
+        CornerRadius="7"
+        Background="#F0161718"
+        BorderBrush="#553A9B4B"
         BorderThickness="1"
         IsVisible="{Binding HasOsd}"
         IsHitTestVisible="False">
-      <TextBlock Text="{Binding OsdMessage}" FontSize="13" FontWeight="SemiBold"
-                 Foreground="#F7F5F3" />
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="18" OffsetX="0" OffsetY="8" Color="#000000" Opacity="0.45" />
+      </Border.Effect>
+      <Grid ColumnDefinitions="4,Auto,*">
+        <Border Grid.Column="0"
+                Background="#3A9B4B"
+                CornerRadius="7,0,0,7" />
+        <Border Grid.Column="1"
+                Width="26"
+                Height="26"
+                Margin="12,8,9,8"
+                CornerRadius="13"
+                Background="#263A9B4B"
+                BorderBrush="#553A9B4B"
+                BorderThickness="1">
+          <PathIcon Width="13"
+                    Height="13"
+                    Data="{StaticResource Icon.Info}"
+                    Foreground="#6FE282"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center" />
+        </Border>
+        <TextBlock Grid.Column="2"
+                   Text="{Binding OsdMessage}"
+                   Margin="0,10,14,10"
+                   FontSize="13"
+                   FontWeight="SemiBold"
+                   Foreground="#F8F4EF"
+                   TextWrapping="Wrap"
+                   TextTrimming="CharacterEllipsis"
+                   MaxLines="2"
+                   VerticalAlignment="Center" />
+      </Grid>
     </Border>
 
     <!-- ── Bottom control bar overlay ────────────────────────────────────── -->

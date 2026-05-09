@@ -332,48 +332,34 @@ function Copy-Notices {
         }
 }
 
-function New-PlaceholderImage {
-    param(
-        [string]$OutputPath,
-        [int]$Width,
-        [int]$Height
-    )
-
-    # Use System.Drawing to produce a real valid PNG.
-    # MakeAppx strictly validates PNG structure; hand-crafted byte arrays are fragile.
-    Add-Type -AssemblyName System.Drawing
-    $bmp = New-Object System.Drawing.Bitmap(1, 1, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
-    $bmp.SetPixel(0, 0, [System.Drawing.Color]::Transparent)
-    $bmp.Save($OutputPath, [System.Drawing.Imaging.ImageFormat]::Png)
-    $bmp.Dispose()
-    Write-Host "Generated placeholder image: $OutputPath (${Width}x${Height})"
-}
-
-function Ensure-MsixAssets {
+function Validate-MsixAssets {
     param(
         [string]$AssetsDir
     )
 
-    New-Item -ItemType Directory -Force -Path $AssetsDir | Out-Null
-
     $requiredImages = @(
-        @{ Name = "square44x44logo.png"; Width = 44; Height = 44 }
-        @{ Name = "square71x71logo.png"; Width = 71; Height = 71 }
-        @{ Name = "square150x150logo.png"; Width = 150; Height = 150 }
-        @{ Name = "wide310x150logo.png"; Width = 310; Height = 150 }
-        @{ Name = "square310x310logo.png"; Width = 310; Height = 310 }
-        @{ Name = "StoreLogo.png"; Width = 50; Height = 50 }
-        @{ Name = "SplashScreen.png"; Width = 620; Height = 300 }
+        "square44x44logo.png",
+        "square71x71logo.png",
+        "square150x150logo.png",
+        "wide310x150logo.png",
+        "square310x310logo.png",
+        "StoreLogo.png",
+        "SplashScreen.png"
     )
 
-    foreach ($image in $requiredImages) {
-        $imagePath = Join-Path $AssetsDir $image.Name
+    $missingImages = @()
+    foreach ($imageName in $requiredImages) {
+        $imagePath = Join-Path $AssetsDir $imageName
         if (-not (Test-Path $imagePath)) {
-            New-PlaceholderImage -OutputPath $imagePath -Width $image.Width -Height $image.Height
+            $missingImages += $imageName
         }
     }
 
-    Write-Host "MSIX assets verified in: $AssetsDir"
+    if ($missingImages.Count -gt 0) {
+        throw "Missing required MSIX assets in $AssetsDir : $($missingImages -join ', ')"
+    }
+
+    Write-Host "✓ MSIX assets validated in: $AssetsDir"
 }
 
 function New-MsixPackage {
@@ -416,7 +402,7 @@ function New-MsixPackage {
         New-Item -ItemType Directory -Force -Path $assetsSource | Out-Null
     }
 
-    Ensure-MsixAssets -AssetsDir $assetsSource
+    Validate-MsixAssets -AssetsDir $assetsSource
     Copy-Item $assetsSource $assetsTarget -Recurse -Force -ErrorAction Stop
     Write-Host "Assets copied to: $assetsTarget"
 

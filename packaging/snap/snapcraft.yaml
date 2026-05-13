@@ -7,7 +7,7 @@ description: |
   interface, mpv-powered playback, subtitle tools, playlists, bookmarks,
   screenshots, Chromecast support, and practical keyboard controls.
 
-base: core24
+base: core26
 grade: stable
 confinement: strict
 
@@ -51,7 +51,7 @@ parts:
       - libicu-dev
 
     stage-packages:
-      - libicu74
+      - libicu78
       - libmpv2
       - libglib2.0-0t64
       - libfreetype6

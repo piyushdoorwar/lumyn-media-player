@@ -86,6 +86,12 @@ jobs:
             exit 1
           }
 
+          echo "Checking launcher exports BLAS/LAPACK library paths..."
+          unsquashfs -cat "${{ steps.build-snap.outputs.snap }}" opt/lumyn/lumyn | grep 'blas' || {
+            echo "launcher does not export BLAS library paths." >&2
+            exit 1
+          }
+
       - name: Upload snap
         uses: actions/upload-artifact@v5
         with:

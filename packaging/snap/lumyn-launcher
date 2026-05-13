@@ -13,6 +13,8 @@ if [ -n "$arch_triplet" ]; then
   for dir in \
     "$SNAP/usr/lib/$arch_triplet" \
     "$SNAP/lib/$arch_triplet" \
+    "$SNAP/usr/lib/$arch_triplet/blas" \
+    "$SNAP/usr/lib/$arch_triplet/lapack" \
     "$SNAP/usr/lib/$arch_triplet/pulseaudio" \
     "$SNAP/usr/lib/$arch_triplet/dri"; do
     if [ -d "$dir" ]; then

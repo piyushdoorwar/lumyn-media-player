@@ -36,7 +36,7 @@ apps:
       - wayland
       - x11
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/lumyn:$SNAP/opt/lumyn/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/opt/lumyn:$SNAP/opt/lumyn/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/x86_64-linux-gnu/blas:$SNAP/usr/lib/x86_64-linux-gnu/lapack:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu/blas:$SNAP/usr/lib/aarch64-linux-gnu/lapack:$SNAP/usr/lib:$LD_LIBRARY_PATH
 
 parts:
   lumyn:
@@ -145,7 +145,7 @@ parts:
         *) echo "Unsupported snap architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
       esac
 
-      prime_library_path="$PWD/opt/lumyn/lib:$PWD/usr/lib/$arch_triplet:$PWD/lib/$arch_triplet:$PWD/usr/lib/$arch_triplet/pulseaudio:$PWD/usr/lib"
+      prime_library_path="$PWD/opt/lumyn/lib:$PWD/usr/lib/$arch_triplet:$PWD/lib/$arch_triplet:$PWD/usr/lib/$arch_triplet/blas:$PWD/usr/lib/$arch_triplet/lapack:$PWD/usr/lib/$arch_triplet/pulseaudio:$PWD/usr/lib"
 
       echo "Checking for libmpv in usr/lib/$arch_triplet"
 

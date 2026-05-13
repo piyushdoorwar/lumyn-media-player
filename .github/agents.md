@@ -661,6 +661,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
 | 2026-05 | Hardened Linux `libmpv` loading: launcher now exports app-local and architecture library paths, `PlaybackService` prefers bundled mpv paths before system lookup, and CI validates bundled snap mpv files before upload/publish. |
 | 2026-05 | Snap `libmpv` diagnostics tightened: runtime now reports exact bundled library load failures, and Snapcraft verifies `libmpv.so.2` dependency resolution using the snap's staged library paths so host libraries cannot mask missing sandbox dependencies. |
+| 2026-05 | Snap runtime library path includes architecture `blas` and `lapack` subdirectories because `libblas3`/`liblapack3` stage their shared objects there; workflow verification checks the packaged launcher keeps those paths. |
 | 2026-05 | Moved release setup guides under `docs/release/` so PPA and Snap Store publishing notes are grouped away from the repo root. |
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |
 | 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |

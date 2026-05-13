@@ -306,6 +306,8 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Chromecast (Google Cast v2) device discovery via mDNS (`_googlecast._tcp`)
 - Cast to Chromecast devices
 - Built-in HTTP server to serve local files to cast devices (byte-range support for seeking)
+- Windows installer adds a private/domain inbound Windows Firewall rule for `Lumyn.exe` named `Lumyn Cast`; MSIX declares `internetClient` and `privateNetworkClientServer`.
+- Cast server chooses an active multicast-capable IPv4 LAN interface, preferring adapters with a gateway and Ethernet/Wi-Fi over virtual adapters.
 - SRT/VTT subtitle files converted to WebVTT and passed as `tracks[]` in Cast load request
 - Playback control (play, pause, seek, volume) over Google Cast protocol
 - **Supported formats**: MP4 (`video/mp4`), WebM (`video/webm`), and audio formats (MP3/AAC/FLAC/Opus/WAV)
@@ -493,7 +495,8 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 File association notes:
 - Inno Setup registers common audio/video extensions in `packaging/windows/lumyn.iss`.
-- MSIX file type declarations live in `packaging/windows/AppxManifest.xml`.
+- Inno Setup also adds/removes the `Lumyn Cast` Windows Firewall rule. Keep it scoped to domain/private profiles.
+- MSIX file type declarations and private-network capabilities live in `packaging/windows/AppxManifest.xml`.
 - The portable registration helper in `scripts/build-windows.ps1` writes `Register-FileAssociations.ps1`, but the main installer/MSIX path should be checked first before changing that helper.
 
 **Dependencies needed on build machine**: Inno Setup, 7-Zip
@@ -658,6 +661,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |
 | 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
 | 2026-05 | Removed the discontinued desktop platform support from packaging, release workflows, runtime platform code, website downloads, and documentation. |
+| 2026-05 | Windows casting hardening: installer adds a private/domain inbound firewall rule, MSIX declares private-network access, and Chromecast HTTP serving prefers real LAN adapters over virtual/tunnel interfaces. |
 | 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, and Windows shows Microsoft Store + standalone `.exe`. |
 | 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
 | 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |

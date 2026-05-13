@@ -86,6 +86,8 @@
   </Applications>
 
   <Capabilities>
+    <Capability Name="internetClient" />
+    <uap:Capability Name="privateNetworkClientServer" />
     <rescap:Capability Name="runFullTrust" />
   </Capabilities>
 

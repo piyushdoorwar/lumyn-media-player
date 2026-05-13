@@ -605,18 +605,36 @@ public sealed class ChromecastCastService : IDisposable
 
     private static IPAddress? GetLanAddress()
     {
-        foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
-        {
-            if (ni.OperationalStatus != OperationalStatus.Up ||
-                ni.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
-                continue;
-            foreach (var unicast in ni.GetIPProperties().UnicastAddresses)
+        return NetworkInterface.GetAllNetworkInterfaces()
+            .Where(ni =>
+                ni.OperationalStatus == OperationalStatus.Up &&
+                ni.SupportsMulticast &&
+                ni.NetworkInterfaceType is not NetworkInterfaceType.Loopback and not NetworkInterfaceType.Tunnel)
+            .Select(ni => new
             {
-                if (unicast.Address.AddressFamily == AddressFamily.InterNetwork &&
+                Interface = ni,
+                Properties = ni.GetIPProperties()
+            })
+            .SelectMany(item => item.Properties.UnicastAddresses
+                .Where(unicast =>
+                    unicast.Address.AddressFamily == AddressFamily.InterNetwork &&
                     !IPAddress.IsLoopback(unicast.Address))
-                    return unicast.Address;
-            }
-        }
-        return null;
+                .Select(unicast => new
+                {
+                    unicast.Address,
+                    HasGateway = item.Properties.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork),
+                    Score = GetInterfaceScore(item.Interface.NetworkInterfaceType)
+                }))
+            .OrderByDescending(item => item.HasGateway)
+            .ThenByDescending(item => item.Score)
+            .Select(item => item.Address)
+            .FirstOrDefault();
     }
+
+    private static int GetInterfaceScore(NetworkInterfaceType type) => type switch
+    {
+        NetworkInterfaceType.Ethernet => 30,
+        NetworkInterfaceType.Wireless80211 => 20,
+        _ => 10
+    };
 }

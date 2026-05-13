@@ -63,7 +63,12 @@ Name: "{autoprograms}\Lumyn"; Filename: "{app}\Lumyn.exe"
 Name: "{autodesktop}\Lumyn"; Filename: "{app}\Lumyn.exe"; Tasks: desktopicon
 
 [Run]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Lumyn Cast"" program=""{app}\Lumyn.exe"""; Flags: runhidden; StatusMsg: "Updating Windows Firewall rules..."
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""Lumyn Cast"" dir=in action=allow program=""{app}\Lumyn.exe"" enable=yes profile=domain,private"; Flags: runhidden; StatusMsg: "Allowing Lumyn Cast on private networks..."
 Filename: "{app}\Lumyn.exe"; Description: "{cm:LaunchProgram,Lumyn}"; Flags: nowait postinstall skipifsilent
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Lumyn Cast"" program=""{app}\Lumyn.exe"""; Flags: runhidden
 
 [Registry]
 ; ── ProgId ──────────────────────────────────────────────────────────────────

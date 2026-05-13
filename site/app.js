@@ -1,7 +1,5 @@
 const linuxLink = document.querySelector("#linuxDownloadLink");
 const windowsLink = document.querySelector("#windowsDownloadLink");
-const macosArmLink = document.querySelector("#macosArmDownloadLink");
-const macosIntelLink = document.querySelector("#macosIntelDownloadLink");
 const heroDownloadLink = document.querySelector("#downloadLink");
 const downloadTabs = Array.from(document.querySelectorAll("[data-download-tab]"));
 const downloadPanels = Array.from(document.querySelectorAll("[data-download-panel]"));
@@ -33,7 +31,6 @@ function detectedDownloadOS() {
   ].filter(Boolean).join(" ").toLowerCase();
 
   if (platform.includes("win")) return "windows";
-  if (platform.includes("mac")) return "macos";
   return "linux";
 }
 
@@ -66,14 +63,6 @@ function windowsAsset(release) {
   return release.assets.find((asset) => /win-x64.*_setup\.exe$/i.test(asset.name));
 }
 
-function macosArmAsset(release) {
-  return release.assets.find((asset) => /macos-arm64\.dmg$/i.test(asset.name));
-}
-
-function macosIntelAsset(release) {
-  return release.assets.find((asset) => /macos-x64\.dmg$/i.test(asset.name));
-}
-
 function latestAssetWithInstaller(releases, findAsset) {
   for (const release of releases) {
     const asset = findAsset(release);
@@ -94,8 +83,6 @@ async function hydrateDownloadLinks() {
 
     const linux = latestAssetWithInstaller(stableReleases, linuxAsset);
     const windows = latestAssetWithInstaller(stableReleases, windowsAsset);
-    const macosArm = latestAssetWithInstaller(stableReleases, macosArmAsset);
-    const macosIntel = latestAssetWithInstaller(stableReleases, macosIntelAsset);
 
     if (linux?.browser_download_url) {
       enableDownload(linuxLink, linux.browser_download_url);
@@ -112,21 +99,6 @@ Invoke-WebRequest $url -OutFile $out
 Start-Process $out`;
     }
 
-    if (macosArm?.browser_download_url) {
-      enableDownload(macosArmLink, macosArm.browser_download_url);
-      const u = macosArm.browser_download_url;
-      const fname = u.split("/").pop();
-      document.getElementById("macos-arm-cmd").textContent =
-        `curl -fL "${u}" -o ~/Downloads/${fname} && open ~/Downloads/${fname}`;
-    }
-
-    if (macosIntel?.browser_download_url) {
-      enableDownload(macosIntelLink, macosIntel.browser_download_url);
-      const u = macosIntel.browser_download_url;
-      const fname = u.split("/").pop();
-      document.getElementById("macos-intel-cmd").textContent =
-        `curl -fL "${u}" -o ~/Downloads/${fname} && open ~/Downloads/${fname}`;
-    }
   } catch {
     // Keep the buttons disabled if GitHub is unreachable or matching assets are absent.
   }

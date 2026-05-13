@@ -910,9 +910,7 @@ internal static partial class MpvNative
 
         var candidates = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
             ? new[] { "mpv-2.dll", "libmpv-2.dll", "mpv.dll" }
-            : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
-                ? new[] { "libmpv.2.dylib", "libmpv.dylib" }
-                : new[] { "libmpv.so.2", "libmpv.so" };
+            : new[] { "libmpv.so.2", "libmpv.so" };
 
         foreach (var candidate in candidates)
         {

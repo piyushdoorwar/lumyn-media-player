@@ -53,8 +53,6 @@ public partial class AboutDialog : Window
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             return $"Windows ({Environment.OSVersion.Version})";
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            return $"macOS ({Environment.OSVersion.Version})";
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             // Try to get a friendly distro name from /etc/os-release.
@@ -218,8 +216,6 @@ public partial class AboutDialog : Window
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                System.Diagnostics.Process.Start("open", url);
             else
                 System.Diagnostics.Process.Start("xdg-open", url);
         }

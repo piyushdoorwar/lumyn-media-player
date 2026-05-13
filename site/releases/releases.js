@@ -43,22 +43,11 @@
       release.assets.find(a => /win-x64\.zip$/i.test(a.name))
     );
   }
-  function macosAsset(release) {
-    return (
-      release.assets.find(a => /macos-arm64\.dmg$/i.test(a.name)) ??
-      release.assets.find(a => /macos-x64\.dmg$/i.test(a.name)) ??
-      release.assets.find(a => /osx.*\.dmg$/i.test(a.name)) ??
-      release.assets.find(a => /macos-arm64\.zip$/i.test(a.name)) ??
-      release.assets.find(a => /macos-x64\.zip$/i.test(a.name)) ??
-      release.assets.find(a => /osx.*\.zip$/i.test(a.name))
-    );
-  }
 
   function hasOsAsset(release, os) {
     if (os === "all") return true;
     if (os === "linux")   return !!linuxAsset(release);
     if (os === "windows") return !!windowsAsset(release);
-    if (os === "macos")   return !!macosAsset(release);
     return true;
   }
 
@@ -104,19 +93,17 @@
       const isLatest  = latestStable?.id === release.id;
       const linux   = linuxAsset(release);
       const windows = windowsAsset(release);
-      const macos   = macosAsset(release);
 
       const tagName   = release.tag_name;
       const published = release.published_at;
 
       const showLinux   = currentOS === "all" || currentOS === "linux";
       const showWindows = currentOS === "all" || currentOS === "windows";
-      const showMacos   = currentOS === "all" || currentOS === "macos";
 
       function dlBtn(asset, imgSrc) {
         if (!asset) return "";
         const ext = asset.name.split(".").pop().toLowerCase();
-        const label = ext === "exe" ? ".exe" : ext === "dmg" ? ".dmg" : ext === "deb" ? ".deb" : "." + ext;
+        const label = ext === "exe" ? ".exe" : ext === "deb" ? ".deb" : "." + ext;
         return `<a class="button secondary release-dl-btn" href="${escHtml(asset.browser_download_url)}" download title="Download ${escHtml(asset.name)}">
           <img src="${imgSrc}" alt="" /><span>${label}</span>
         </a>`;
@@ -125,7 +112,6 @@
       const downloads = [
         showLinux   ? dlBtn(linux,   "../assets/ubuntu.svg")  : "",
         showWindows ? dlBtn(windows, "../assets/windows.svg") : "",
-        showMacos   ? dlBtn(macos,   "../assets/apple.svg")   : "",
       ].join("");
 
       return `<article class="release-item">

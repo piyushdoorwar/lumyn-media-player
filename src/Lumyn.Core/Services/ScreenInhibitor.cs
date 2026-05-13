@@ -8,7 +8,6 @@ namespace Lumyn.Core.Services;
 /// Prevents the OS from dimming the screen, locking, or sleeping while media is playing.
 ///
 /// - Windows : SetThreadExecutionState (kernel32)
-/// - macOS   : IOPMAssertion (IOKit framework)
 /// - Linux   : org.freedesktop.ScreenSaver.Inhibit via dbus-send (D-Bus session bus)
 /// </summary>
 public sealed partial class ScreenInhibitor : IDisposable
@@ -18,9 +17,6 @@ public sealed partial class ScreenInhibitor : IDisposable
     // ── Linux ─────────────────────────────────────────────────────────────────
     private uint _linuxCookie;
 
-    // ── macOS ─────────────────────────────────────────────────────────────────
-    private uint _macAssertionId;
-
     // ── Windows P/Invoke ──────────────────────────────────────────────────────
     [LibraryImport("kernel32.dll")]
     private static partial uint SetThreadExecutionState(uint esFlags);
@@ -28,21 +24,6 @@ public sealed partial class ScreenInhibitor : IDisposable
     private const uint ES_CONTINUOUS       = 0x80000000u;
     private const uint ES_SYSTEM_REQUIRED  = 0x00000001u;
     private const uint ES_DISPLAY_REQUIRED = 0x00000002u;
-
-    // ── macOS IOKit P/Invoke ──────────────────────────────────────────────────
-    [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit",
-        StringMarshalling = StringMarshalling.Utf8)]
-    private static partial int IOPMAssertionCreateWithName(
-        string assertionType,
-        int    assertionLevel,
-        string assertionName,
-        out uint assertionID);
-
-    [LibraryImport("/System/Library/Frameworks/IOKit.framework/IOKit")]
-    private static partial int IOPMAssertionRelease(uint assertionID);
-
-    private const string kIOPMAssertionTypeNoDisplaySleep = "PreventUserIdleDisplaySleep";
-    private const int    kIOPMAssertionLevelOn             = 255;
 
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -55,7 +36,6 @@ public sealed partial class ScreenInhibitor : IDisposable
         try
         {
             if      (OperatingSystem.IsWindows()) InhibitWindows();
-            else if (OperatingSystem.IsMacOS())   InhibitMacOS();
             else if (OperatingSystem.IsLinux())   InhibitLinux();
         }
         catch { /* best-effort — never crash the player */ }
@@ -70,7 +50,6 @@ public sealed partial class ScreenInhibitor : IDisposable
         try
         {
             if      (OperatingSystem.IsWindows()) UninhibitWindows();
-            else if (OperatingSystem.IsMacOS())   UninhibitMacOS();
             else if (OperatingSystem.IsLinux())   UninhibitLinux();
         }
         catch { /* best-effort */ }
@@ -85,22 +64,6 @@ public sealed partial class ScreenInhibitor : IDisposable
 
     private static void UninhibitWindows()
         => SetThreadExecutionState(ES_CONTINUOUS);
-
-    // ── macOS ─────────────────────────────────────────────────────────────────
-
-    private void InhibitMacOS()
-        => IOPMAssertionCreateWithName(
-            kIOPMAssertionTypeNoDisplaySleep,
-            kIOPMAssertionLevelOn,
-            "Lumyn media playback",
-            out _macAssertionId);
-
-    private void UninhibitMacOS()
-    {
-        if (_macAssertionId == 0) return;
-        IOPMAssertionRelease(_macAssertionId);
-        _macAssertionId = 0;
-    }
 
     // ── Linux (org.freedesktop.ScreenSaver via dbus-send) ────────────────────
     // dbus-send uses type:value tokens (no spaces), avoiding argv-splitting issues.

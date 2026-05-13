@@ -27,7 +27,7 @@
 
 ## 1. Project Overview
 
-**Lumyn** is a clean, minimal desktop media player built on .NET 10 + Avalonia UI + mpv. It targets Windows x64, Ubuntu Linux amd64/arm64, and macOS (Apple Silicon + Intel).
+**Lumyn** is a clean, minimal desktop media player built on .NET 10 + Avalonia UI + mpv. It targets Windows x64 and Ubuntu Linux amd64/arm64.
 
 - **Repo**: `lumyn-media-player`
 - **Owner/Author**: Piyush Doorwar
@@ -49,7 +49,7 @@ Design philosophy: quiet, distraction-free interface. No bloat. Let the media pl
 | UI Theme | Fluent (Windows 11 style, dark) |
 | Media Engine | mpv / libmpv (P/Invoke native bindings) |
 | Rendering | OpenGL via mpv render context |
-| Packaging | dpkg (Linux .deb), Inno Setup (Windows .exe), native .app/.dmg (macOS) |
+| Packaging | dpkg (Linux .deb), Snapcraft (Linux snap), Inno Setup / MSIX (Windows) |
 | Build System | .NET CLI (`dotnet build / publish`) |
 | Package Manager | NuGet (centralized via `Directory.Packages.props`) |
 | CI/CD | GitHub Actions |
@@ -116,7 +116,6 @@ lumyn-media-player/
 ├── scripts/
 │   ├── build-linux.sh               # Linux .deb packaging (266 lines)
 │   ├── build-windows.ps1            # Windows installer via Inno Setup (363 lines, PowerShell)
-│   ├── build-macos.sh               # macOS .app + .dmg packaging
 │   └── build-snap.sh                # Snap / Ubuntu App Center packaging wrapper
 │
 ├── packaging/
@@ -316,7 +315,6 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - `ScreenInhibitor` service (`Lumyn.Core/Services/ScreenInhibitor.cs`) prevents screen dim, lock, and system sleep while media is playing
 - Driven automatically by `IsPlaying` property setter in `MainViewModel`
 - Windows: `SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED)` via kernel32 P/Invoke
-- macOS: `IOPMAssertionCreateWithName("PreventUserIdleDisplaySleep")` via IOKit P/Invoke
 - Linux: `org.freedesktop.ScreenSaver.Inhibit` on D-Bus session bus via `dbus-send` subprocess (cookie-based; works on GNOME, KDE, and freedesktop-compliant desktops)
 - Inhibition released on pause, stop, end-of-file, or app close
 
@@ -329,7 +327,6 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Sidebar playlist panel (toggle with Q)
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
 - Windows file associations through Inno Setup registry entries (`packaging/windows/lumyn.iss`) and MSIX declarations (`packaging/windows/AppxManifest.xml`); `scripts/build-windows.ps1` also contains a portable `Register-FileAssociations.ps1` generator helper.
-- macOS Finder/Open With document declarations are generated in `scripts/build-macos.sh` under `CFBundleDocumentTypes`.
 - Command-line startup file support: `App.axaml.cs` accepts normal file paths and `file://` URIs from `desktop.Args`, then calls `OpenFileWhenReadyAsync()`.
 - Chromecast/cast icon uses the Font Awesome style filled cast silhouette in `MediaIcons.axaml` and `site/assets/ic-cast.svg`; app cast accents should use Lumyn green (`#49B35C` / `#3A9B4B`), not blue.
 
@@ -356,7 +353,7 @@ video-aspect-override, loop-file
 track-list, chapter-list, metadata
 ```
 
-**Library name resolution** handles DLL (Windows), `.so.2` (Linux), `.dylib` (macOS) variants at runtime.
+**Library name resolution** handles DLL (Windows) and `.so.2` / `.so` (Linux) variants at runtime.
 
 **Unsafe code** is enabled in both projects for performance-critical native pointer work.
 
@@ -382,7 +379,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 
 ### Settings Persistence
 
-- **Location**: `~/.config/Lumyn/settings.json` (Linux); equivalent on Windows/macOS
+- **Location**: `~/.config/Lumyn/settings.json` (Linux); equivalent app-data location on Windows
 - **Format**: JSON, auto-saved on changes
 - **Contents**:
   - Resume positions (key = SHA256 of normalized file path)
@@ -501,15 +498,6 @@ File association notes:
 
 **Dependencies needed on build machine**: Inno Setup, 7-Zip
 
-### macOS — `.dmg` bundle (`scripts/build-macos.sh`)
-
-1. `dotnet publish -c Release -r osx-arm64 (or osx-x64) --self-contained true`
-2. `brew install mpv ffmpeg` — ffmpeg provides libav* dylibs that mpv links against
-3. Bundle `libmpv.dylib` + libav* dylibs (via `copy_dylib_closure`) into `.app/Contents/MacOS/`; fix `@loader_path` rpath
-4. The ffmpeg **binary** is NOT bundled — only its shared libraries are needed
-5. Generate `Info.plist`, including `CFBundleDocumentTypes` for common audio/video Finder/Open With support
-6. Create `.dmg` disk image → `Lumyn.dmg`
-
 ### Linux — Snap / Ubuntu App Center (`packaging/snap/snapcraft.yaml`)
 
 - Snapcraft project file: `packaging/snap/snapcraft.yaml`
@@ -548,8 +536,6 @@ lumyn
 | `linux-deb` | ubuntu-latest | `lumyn-linux-amd64-deb` (*.deb) |
 | `linux-snap` | ubuntu-latest | `lumyn-linux-amd64-snap` (*.snap) |
 | `windows-installer` | windows-latest | `lumyn-windows-x64-installer` (*_setup.exe) |
-| `macos-arm64` | macos-15 | `lumyn-macos-osx-arm64` (*.dmg) |
-| `macos-x64` | macos-15-intel | `lumyn-macos-osx-x64` (*.dmg) |
 
 All jobs install .NET 10.0 SDK.
 
@@ -581,7 +567,7 @@ All jobs install .NET 10.0 SDK.
 - **CI builds** (`build-artifacts.yml` on push to main): Use `VERSION=0.0.0-dev` — for build validation only, not releases
 - **Manual trigger**: `release.yml` supports `workflow_dispatch` with an explicit version input for testing
 - **VERSION file**: Deleted — no longer needed
-- **Artifact names**: e.g., `lumyn_1.2.3_amd64.deb`, `lumyn_1.2.3_win-x64_setup.exe`, `lumyn_1.2.3_macos-arm64.dmg`
+- **Artifact names**: e.g., `lumyn_1.2.3_amd64.deb`, `lumyn_1.2.3_win-x64_setup.exe`
 
 ### Release checklist
 
@@ -598,7 +584,7 @@ All jobs install .NET 10.0 SDK.
 - Deployed automatically to GitHub Pages via `static.yml` on every push to `main`
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
 - Contains: landing page, download links, documentation
-- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, Windows shows Microsoft Store + standalone `.exe`, and macOS shows Apple Silicon + Intel `.dmg`.
+- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, and Windows shows Microsoft Store + standalone `.exe`.
 
 ### Releases page (`/site/releases/`)
 
@@ -606,11 +592,11 @@ All jobs install .NET 10.0 SDK.
 - `releases.js` — fetches all non-draft releases from GitHub API, renders paginated list
 
 **Filters:**
-- **OS tabs** — All / Linux / Windows / macOS (filters by asset type)
+- **OS tabs** — All / Linux / Windows (filters by asset type)
 - **Stable only toggle** — pill toggle, checked by default; hides pre-releases when on; unchecking reveals pre-releases (shown with `badge-pre` badge)
 
 **JS state variables in `releases.js`:**
-- `currentOS` — active OS tab value (`"all"`, `"linux"`, `"windows"`, `"macos"`)
+- `currentOS` — active OS tab value (`"all"`, `"linux"`, `"windows"`)
 - `stableOnly` — boolean, `true` by default; toggled by `#stableOnlyToggle` checkbox
 - `currentPage` — current pagination page (resets to 1 on any filter change)
 
@@ -639,13 +625,6 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 - Download `mpv-2.dll` from mpv builds and place in project output or set `MPV_BIN_DIR`
 - Run via VS / `dotnet run`
 
-### macOS
-
-```bash
-brew install dotnet mpv
-dotnet run --project src/Lumyn.App/Lumyn.App.csproj
-```
-
 ---
 
 ## 15. Conventions & Patterns
@@ -657,7 +636,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 - **No mocks in architecture**: Services are concrete classes, injected via constructor. No DI container — manual injection in `App.axaml.cs`.
 - **File path hashing**: SHA256 used for all per-file storage keys to avoid storing raw paths in settings JSON.
 - **Unsafe code**: Allowed in both projects for mpv P/Invoke and OpenGL interop.
-- **Platform detection**: Runtime OS check for library name variants (`.dll` / `.so.2` / `.dylib`).
+- **Platform detection**: Runtime OS check for library name variants (`.dll` / `.so.2`).
 - **Settings path**: `Environment.GetFolderPath(SpecialFolder.ApplicationData)` + `Lumyn/settings.json`.
 - **Avalonia resources**: Icons and styles defined in `App.axaml` as `Application.Resources`. Referenced in XAML as `StaticResource`.
 - **Custom controls**: Placed in `Lumyn.App/Controls/`. Inherit from Avalonia primitives (e.g., `Control`, `Slider`).
@@ -678,14 +657,14 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |
 | 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |
 | 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
-| 2026-05 | macOS packaging now emits `CFBundleDocumentTypes` in `Info.plist` for common audio/video Finder/Open With support. File-association notes updated in this agent reference. |
-| 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, Windows shows Microsoft Store + standalone `.exe`, and macOS shows separate Apple Silicon/Intel downloads. |
+| 2026-05 | Removed the discontinued desktop platform support from packaging, release workflows, runtime platform code, website downloads, and documentation. |
+| 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, and Windows shows Microsoft Store + standalone `.exe`. |
 | 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
 | 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |
 | 2026-05 | Seek bar hit target increased while keeping the visible timeline slim, making nearby clicks update seek position more forgivingly. |
 | 2026-05 | Cast icon refreshed to a filled Font Awesome-style Chromecast silhouette across app resources and website asset; cast accents standardized to Lumyn green. |
 | 2026-05 | Git tag–based versioning — `VERSION` file removed, version now sourced from git tag (`v1.2.3`), baked into assembly via `-p:InformationalVersion`, read from `AssemblyInformationalVersionAttribute` at runtime. Pre-release tags (containing `-`) auto-marked on GitHub. Local dev shows `0.0.0-dev`. |
-| 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`, macOS: `IOPMAssertion`, Linux: `org.freedesktop.ScreenSaver.Inhibit` via `dbus-send` (uses `ArgumentList` to avoid argv-splitting issues with typed values). Driven by `IsPlaying` setter in `MainViewModel`. |
+| 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`; Linux: `org.freedesktop.ScreenSaver.Inhibit` via `dbus-send` (uses `ArgumentList` to avoid argv-splitting issues with typed values). Driven by `IsPlaying` setter in `MainViewModel`. |
 | 2026-05 | Full-screen / maximize conflict fix (`386f746`) |
 | 2026-05 | Top bar visibility fix in non-fullscreen mode (`e214ef9`) |
 | 2026-05 | Video rendering optimization (`6d349ee`) |
@@ -693,4 +672,4 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 | 2026-05 | Media controls via DLNA cast (`a750c3b`) |
 | 2026-05 | Switch cast from DLNA/UPnP to Google Cast (Chromecast) — `DlnaCastService` replaced by `ChromecastCastService` using `GoogleCast` NuGet (mDNS discovery, Cast v2 protocol, SRT→WebVTT subtitle tracks). Format support is best-effort (no transcoding). |
 | 2026-05 | Casting: removed experimental remux-to-temp-file approach (too slow/unreliable). Unsupported formats (MKV, AVI, etc.) now show a clear "not supported" message in the Cast dialog and disable the Cast button. MP4/WebM + subtitle casting fully working. |
-| 2026-05 | Packaging: removed `Depends: ffmpeg` from Linux `.deb` control (app doesn't invoke the ffmpeg binary at runtime). Removed ffmpeg binary bundling from macOS `.app` (only libav* dylibs needed by mpv are kept). |
+| 2026-05 | Packaging: removed `Depends: ffmpeg` from Linux `.deb` control (app doesn't invoke the ffmpeg binary at runtime). |

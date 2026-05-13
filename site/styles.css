@@ -508,7 +508,7 @@ h3 {
 
 .download-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   padding: 6px;
   border: 1px solid var(--line);
@@ -521,7 +521,7 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  min-height: 44px;
+  min-height: 54px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: 6px;

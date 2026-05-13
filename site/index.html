@@ -224,7 +224,7 @@
       <section class="download" id="download">
         <div data-reveal>
           <p class="eyebrow">Latest release</p>
-          <h2>Get Lumyn for Ubuntu, Windows, and macOS</h2>
+          <h2>Get Lumyn for Ubuntu and Windows</h2>
           <p>
             Pick the installer that matches your desktop. Ubuntu and Windows users can install from their app stores or download a standalone package.
           </p>
@@ -238,10 +238,6 @@
             <button class="download-tab" id="download-tab-windows" type="button" role="tab" aria-selected="false" aria-controls="download-panel-windows" data-download-tab="windows" tabindex="-1">
               <img src="assets/windows.svg" alt="" />
               <span>Windows</span>
-            </button>
-            <button class="download-tab" id="download-tab-macos" type="button" role="tab" aria-selected="false" aria-controls="download-panel-macos" data-download-tab="macos" tabindex="-1">
-              <img src="assets/apple.svg" alt="" />
-              <span>macOS</span>
             </button>
           </div>
 
@@ -324,45 +320,6 @@ sudo apt install lumyn</code>
             </details>
           </article>
 
-          <article class="download-panel" id="download-panel-macos" role="tabpanel" aria-labelledby="download-tab-macos" data-download-panel="macos" hidden>
-            <div class="download-panel-copy">
-              <h3>macOS</h3>
-              <p>Choose the build that matches your Mac chip.</p>
-            </div>
-            <div class="download-options">
-              <a class="button primary platform-download disabled" id="macosArmDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Apple Silicon Macs">
-                <img src="assets/apple.svg" alt="" />
-                <span>Apple Silicon</span>
-              </a>
-              <a class="button secondary platform-download disabled" id="macosIntelDownloadLink" aria-disabled="true" aria-label="Download Lumyn for Intel Macs">
-                <img src="assets/apple.svg" alt="" />
-                <span>Intel Mac</span>
-              </a>
-            </div>
-
-            <details class="terminal-install">
-              <summary>
-                <svg class="terminal-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Install via terminal
-              </summary>
-              <div class="terminal-install-body">
-                <div class="terminal-option">
-                  <p class="terminal-option-label">Apple Silicon (arm64)</p>
-                  <div class="code-block">
-                    <code id="macos-arm-cmd">Fetching download URL…</code>
-                    <button class="copy-btn" aria-label="Copy Apple Silicon install command" data-copy="macos-arm-cmd">Copy</button>
-                  </div>
-                </div>
-                <div class="terminal-option">
-                  <p class="terminal-option-label">Intel (x64)</p>
-                  <div class="code-block">
-                    <code id="macos-intel-cmd">Fetching download URL…</code>
-                    <button class="copy-btn" aria-label="Copy Intel Mac install command" data-copy="macos-intel-cmd">Copy</button>
-                  </div>
-                </div>
-              </div>
-            </details>
-          </article>
           </div>
         </div>
       </section>

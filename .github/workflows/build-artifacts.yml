@@ -57,7 +57,7 @@ jobs:
         id: build-snap
         uses: canonical/action-build@v1
         with:
-          snapcraft-channel: 9.x/stable
+          snapcraft-channel: 9.x/candidate
 
       - name: Verify bundled libmpv
         run: |

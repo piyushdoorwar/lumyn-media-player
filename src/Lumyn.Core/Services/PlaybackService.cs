@@ -914,14 +914,33 @@ internal static partial class MpvNative
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
+            var loadErrors = new List<string>();
+
             foreach (var candidate in candidates)
             {
                 foreach (var directory in GetLinuxBundledLibraryDirectories())
                 {
                     var path = Path.Combine(directory, candidate);
-                    if (NativeLibrary.TryLoad(path, out var handle))
-                        return handle;
+                    if (!File.Exists(path))
+                    {
+                        loadErrors.Add($"{path}: file not found");
+                        continue;
+                    }
+
+                    try
+                    {
+                        return NativeLibrary.Load(path);
+                    }
+                    catch (Exception ex) when (ex is DllNotFoundException or BadImageFormatException)
+                    {
+                        loadErrors.Add($"{path}: {ex.Message}");
+                    }
                 }
+            }
+
+            if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("SNAP")) && loadErrors.Count > 0)
+            {
+                throw new DllNotFoundException("Unable to load bundled libmpv from the snap. " + string.Join(Environment.NewLine, loadErrors));
             }
         }
 

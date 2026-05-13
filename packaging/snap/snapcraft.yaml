@@ -139,6 +139,8 @@ parts:
         *) echo "Unsupported snap architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
       esac
 
+      prime_library_path="$PWD/opt/lumyn/lib:$PWD/usr/lib/$arch_triplet:$PWD/lib/$arch_triplet:$PWD/usr/lib"
+
       echo "Checking for libmpv in usr/lib/$arch_triplet"
 
       if [ -f "usr/lib/$arch_triplet/libmpv.so.2" ] || [ -L "usr/lib/$arch_triplet/libmpv.so.2" ]; then
@@ -198,7 +200,7 @@ parts:
             copy_library "$current" opt/lumyn/lib
           fi
 
-          ldd "$resolved" | awk '/=> \// { print $3 } /^[[:space:]]*\// { print $1 }' |
+          LD_LIBRARY_PATH="$prime_library_path" ldd "$resolved" | awk '/=> \// { print $3 } /^[[:space:]]*\// { print $1 }' |
             while IFS= read -r dep; do
               if [ -n "$dep" ] && [ -f "$dep" ]; then
                 if should_bundle_library "$dep"; then
@@ -227,6 +229,14 @@ parts:
 
       echo "Bundled libmpv files:"
       find opt/lumyn/lib -name "libmpv*" -print
+
+      echo "Checking bundled libmpv dependency resolution:"
+      ldd_output="$(LD_LIBRARY_PATH="$prime_library_path" ldd opt/lumyn/lib/libmpv.so.2)"
+      printf '%s\n' "$ldd_output"
+      if printf '%s\n' "$ldd_output" | grep -q 'not found'; then
+        echo "ERROR: bundled libmpv has unresolved dependencies in the snap." >&2
+        exit 1
+      fi
 
       echo "Checking Lumyn launcher library paths:"
       grep 'LD_LIBRARY_PATH' opt/lumyn/lumyn

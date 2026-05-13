@@ -12,6 +12,7 @@ public partial class BookmarksDialog : Window
 {
     private readonly MainViewModel _vm;
     private List<BookmarkEntry> _entries = [];
+    private IReadOnlyList<ChapterInfo> _chapters = [];
 
     public BookmarksDialog(MainViewModel vm)
     {
@@ -30,22 +31,41 @@ public partial class BookmarksDialog : Window
     private void Refresh()
     {
         _entries = [.. _vm.GetBookmarksForCurrentFile()];
+        _chapters = _vm.Chapters;
 
-        var empty = this.FindControl<TextBlock>("EmptyText");
-        var list  = this.FindControl<ItemsControl>("BookmarksList");
+        var empty = this.FindControl<TextBlock>("EmptyBookmarksText");
+        var list = this.FindControl<ItemsControl>("BookmarksList");
 
         if (empty is not null) empty.IsVisible = _entries.Count == 0;
-        if (list is null) return;
-
-        list.Items.Clear();
-        foreach (var (entry, idx) in _entries.Select((e, i) => (e, i)))
+        if (list is not null)
         {
-            var row = BuildRow(entry, idx);
-            list.Items.Add(row);
+            list.Items.Clear();
+            foreach (var (entry, idx) in _entries.Select((e, i) => (e, i)))
+                list.Items.Add(BuildBookmarkRow(entry, idx));
         }
+
+        RefreshChapters();
     }
 
-    private Grid BuildRow(BookmarkEntry entry, int index, bool startEditing = false)
+    private void RefreshChapters()
+    {
+        var hasChapters = _chapters.Count > 0;
+
+        if (this.FindControl<Border>("ChaptersDivider") is { } divider)
+            divider.IsVisible = hasChapters;
+        if (this.FindControl<TextBlock>("ChaptersHeader") is { } header)
+            header.IsVisible = hasChapters;
+
+        var list = this.FindControl<ItemsControl>("ChaptersList");
+        if (list is null) return;
+
+        list.IsVisible = hasChapters;
+        list.Items.Clear();
+        foreach (var chapter in _chapters)
+            list.Items.Add(BuildChapterRow(chapter));
+    }
+
+    private Grid BuildBookmarkRow(BookmarkEntry entry, int index, bool startEditing = false)
     {
         // Columns: [timestamp pill] [label / edit box] [pencil] [jump] [delete]
         var grid = new Grid
@@ -220,6 +240,76 @@ public partial class BookmarksDialog : Window
         return grid;
     }
 
+    private Grid BuildChapterRow(ChapterInfo chapter)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+            ColumnSpacing = 8,
+            Margin = new Avalonia.Thickness(0, 3),
+            MinHeight = 34
+        };
+
+        var timeBorder = new Border
+        {
+            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#242424")),
+            CornerRadius = new Avalonia.CornerRadius(4),
+            Padding = new Avalonia.Thickness(8, 4),
+            Margin = new Avalonia.Thickness(0, 0, 10, 0),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = chapter.FormattedTime,
+                FontSize = 12,
+                FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A9B6F"))
+            }
+        };
+        Grid.SetColumn(timeBorder, 0);
+
+        var title = new TextBlock
+        {
+            Text = chapter.Title,
+            FontSize = 12,
+            Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#C8C3C2")),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis
+        };
+        Grid.SetColumn(title, 1);
+
+        var jumpContent = new StackPanel
+        {
+            Orientation = Avalonia.Layout.Orientation.Horizontal,
+            Spacing = 5,
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
+        };
+        if (Application.Current?.Resources.TryGetResource("Icon.Play", Avalonia.Styling.ThemeVariant.Default, out var playIcon) == true
+            && playIcon is Avalonia.Media.StreamGeometry playGeom)
+            jumpContent.Children.Add(new PathIcon { Data = playGeom, Width = 10, Height = 10, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")) });
+        jumpContent.Children.Add(new TextBlock { Text = "Jump", FontSize = 11, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+
+        var jumpBtn = new Button
+        {
+            Content = jumpContent,
+            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A3A2E")),
+            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A5A40")),
+            BorderThickness = new Avalonia.Thickness(1),
+            CornerRadius = new Avalonia.CornerRadius(4),
+            Padding = new Avalonia.Thickness(10, 5),
+            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            Tag = chapter
+        };
+        jumpBtn.Click += ChapterJumpBtn_Click;
+        Grid.SetColumn(jumpBtn, 2);
+
+        grid.Children.Add(timeBorder);
+        grid.Children.Add(title);
+        grid.Children.Add(jumpBtn);
+
+        return grid;
+    }
+
     private void JumpBtn_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: BookmarkEntry entry })
@@ -243,7 +333,7 @@ public partial class BookmarksDialog : Window
         _vm.AddBookmarkAtCurrentPosition("");
         // Refresh and immediately put the new row into edit mode
         _entries = [.. _vm.GetBookmarksForCurrentFile()];
-        var empty = this.FindControl<TextBlock>("EmptyText");
+        var empty = this.FindControl<TextBlock>("EmptyBookmarksText");
         var list  = this.FindControl<ItemsControl>("BookmarksList");
         if (empty is not null) empty.IsVisible = _entries.Count == 0;
         if (list is null) return;
@@ -251,11 +341,16 @@ public partial class BookmarksDialog : Window
         for (int i = 0; i < _entries.Count; i++)
         {
             var isNew = i == _entries.Count - 1;
-            list.Items.Add(BuildRow(_entries[i], i, startEditing: isNew));
+            list.Items.Add(BuildBookmarkRow(_entries[i], i, startEditing: isNew));
         }
     }
 
-    // These are referenced by AXAML but implemented via code-behind BuildRow above.
-    private void JumpButton_Click(object? sender, RoutedEventArgs e) { }
-    private void DeleteButton_Click(object? sender, RoutedEventArgs e) { }
+    private void ChapterJumpBtn_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ChapterInfo chapter })
+        {
+            _vm.JumpToChapter(chapter);
+            Close();
+        }
+    }
 }

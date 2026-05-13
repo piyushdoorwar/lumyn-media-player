@@ -643,6 +643,30 @@ public sealed class PlaybackService : IDisposable
         return [.. positions];
     }
 
+    public MediaChapter[] GetChapters()
+    {
+        if (_mpv == IntPtr.Zero) return [];
+
+        var count = GetInt64("chapter-list/count");
+        if (count <= 0) return [];
+
+        var chapters = new List<MediaChapter>((int)count);
+        for (var i = 0; i < count; i++)
+        {
+            var seconds = GetDouble($"chapter-list/{i}/time");
+            if (double.IsNaN(seconds) || seconds < 0)
+                continue;
+
+            var title = GetString($"chapter-list/{i}/title");
+            if (string.IsNullOrWhiteSpace(title))
+                title = $"Chapter {i + 1}";
+
+            chapters.Add(new MediaChapter(i, title.Trim(), TimeSpan.FromSeconds(seconds)));
+        }
+
+        return [.. chapters];
+    }
+
     public void SeekToChapter(int direction)
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
@@ -828,6 +852,8 @@ public sealed class PlaybackService : IDisposable
 }
 
 public sealed record MediaTrack(int Id, string Name, bool IsSelected = false);
+
+public sealed record MediaChapter(int Index, string Title, TimeSpan Position);
 
 internal enum MpvFormat
 {

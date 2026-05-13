@@ -12,6 +12,13 @@ namespace Lumyn.App.ViewModels;
 
 public sealed record TrackInfo(int Id, string Name, bool IsSelected = false);
 
+public sealed record ChapterInfo(int Index, string Title, TimeSpan Position)
+{
+    public string FormattedTime => Position.TotalHours >= 1
+        ? Position.ToString(@"h\:mm\:ss")
+        : Position.ToString(@"mm\:ss");
+}
+
 /// <summary>One entry in the playlist / queue shown in the sidebar.</summary>
 public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent)
 {
@@ -92,6 +99,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string? _currentSubtitleText;
     private int _seekStep = 5;   // seconds; 5 | 10 | 30
     private IReadOnlyList<double> _chapterPositions = [];
+    private IReadOnlyList<ChapterInfo> _chapters = [];
 
     // ── Subtitle overlay (Avalonia-rendered to avoid duplicate native subtitles) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
@@ -271,6 +279,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         JumpTo(position);
         ShowOsd($"Jumped to {(position.TotalHours >= 1 ? $"{(int)position.TotalHours}:{position.Minutes:D2}:{position.Seconds:D2}" : $"{position.Minutes}:{position.Seconds:D2}")}");
+    }
+
+    public void JumpToChapter(ChapterInfo chapter)
+    {
+        JumpTo(chapter.Position);
+        ShowOsd($"{chapter.Title}  {chapter.FormattedTime}");
     }
 
     // ── Bindable properties ──────────────────────────────────────────────────
@@ -542,6 +556,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         get => _chapterPositions;
         private set => SetField(ref _chapterPositions, value);
     }
+
+    public IReadOnlyList<ChapterInfo> Chapters
+    {
+        get => _chapters;
+        private set
+        {
+            if (SetField(ref _chapters, value))
+                OnPropertyChanged(nameof(HasChapters));
+        }
+    }
+
+    public bool HasChapters => _chapters.Count > 0;
 
     public bool IsLooping
     {
@@ -1321,6 +1347,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         TrackAlbum    = null;
         SetCoverArt(null, false);
         ChapterPositions = [];
+        Chapters = [];
         // Leave the playlist intact so the user can resume or navigate.
         NotifyPlaylistState();
         RefreshState();
@@ -1522,7 +1549,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SubtitleTracks = [.. _playback.GetSubtitleTracks()
             .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name, t.IsSelected))];
 
-        ChapterPositions = _playback.GetChapterPositions();
+        var chapters = _playback.GetChapters();
+        ChapterPositions = [.. chapters.Select(c => c.Position.TotalSeconds)];
+        Chapters = [.. chapters.Select(c => new ChapterInfo(c.Index, c.Title, c.Position))];
     }
 
     private void RefreshTracksIfNeeded()

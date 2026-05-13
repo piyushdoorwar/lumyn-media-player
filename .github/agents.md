@@ -296,7 +296,8 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 ### Navigation & Persistence
 - Recent files list (last 12 files) with resume percentage labels and miniature progress bars
 - Resume playback position per file (SHA256-hashed path for privacy)
-- Bookmarks / chapter markers with custom labels per file
+- Markers dialog combines editable user bookmarks with read-only embedded video chapters
+- Bookmarks support add/edit/remove/jump per file; embedded chapters support jump only
 - Jump-to-time dialog
 - Configurable seek step: 5 / 10 / 30 seconds
 - Volume and speed persisted across sessions
@@ -438,7 +439,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 | `SubtitleSettingsDialog` | Font, size, color, delay |
 | `VideoAdjustmentsDialog` | Brightness/contrast/saturation/rotation/zoom/aspect |
 | `CastDialog` | Chromecast device selection |
-| `BookmarksDialog` | Manage chapter bookmarks per file |
+| `BookmarksDialog` | Markers dialog: manage user bookmarks and jump to embedded chapters |
 
 ---
 

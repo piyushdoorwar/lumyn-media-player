@@ -63,6 +63,7 @@ public partial class KeyboardShortcutsDialog : Window
     [
         ("O",            "Open file"),
         ("Q",            "Toggle queue / playlist"),
+        ("B",            "Open markers"),
         ("Ctrl + G",     "Jump to time"),
         ("Alt + I",      "Take screenshot"),
     ];

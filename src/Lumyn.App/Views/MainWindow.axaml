@@ -459,7 +459,6 @@
               Minimum="0"
               Maximum="1000"
               Value="{Binding SeekValue}"
-              ChapterPositions="{Binding ChapterPositions}"
               VerticalAlignment="Center"
               SeekCommitted="SeekSlider_OnSeekCommitted" />
 
@@ -622,7 +621,7 @@
         <MenuItem Header="Cast..." Click="Cast_Click" />
         <MenuItem Header="Keyboard Shortcuts" Click="KeyboardShortcuts_Click" />
         <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
-        <MenuItem Header="Bookmarks…" Click="Bookmarks_Click" InputGesture="B" />
+        <MenuItem Header="Markers…" Click="Bookmarks_Click" InputGesture="B" />
         <Separator />
 
         <!-- Speed sub-menu -->

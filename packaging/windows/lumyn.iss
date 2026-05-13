@@ -68,7 +68,7 @@ Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=""L
 Filename: "{app}\Lumyn.exe"; Description: "{cm:LaunchProgram,Lumyn}"; Flags: nowait postinstall skipifsilent
 
 [UninstallRun]
-Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Lumyn Cast"" program=""{app}\Lumyn.exe"""; Flags: runhidden
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=""Lumyn Cast"" program=""{app}\Lumyn.exe"""; Flags: runhidden; RunOnceId: "LumynCastFirewallRule"
 
 [Registry]
 ; ── ProgId ──────────────────────────────────────────────────────────────────

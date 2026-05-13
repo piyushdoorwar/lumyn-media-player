@@ -507,6 +507,7 @@ File association notes:
 - Desktop launcher metadata: `packaging/snap/gui/lumyn.desktop`
 - Build wrapper: `scripts/build-snap.sh` stages `packaging/snap/snapcraft.yaml` into Snapcraft's expected root-level `snap/` path, runs `snapcraft`, then removes the temporary root `snap/` directory
 - GitHub Actions stage the same temporary root `snap/snapcraft.yaml` and build via `canonical/action-build@v1`; the resulting `*.snap` is uploaded as `lumyn-linux-amd64-snap`
+- Core26 snap builds must pass `snapcraft-channel: 9.x/stable` to `canonical/action-build@v1`; the action's default stable track can use an older Snapcraft schema that rejects `base: core26` stable snaps.
 - Release workflow injects the resolved `VERSION` into staged `snap/snapcraft.yaml` as a part `build-environment` entry before `canonical/action-build@v1`; this is required because Snapcraft's managed build instance does not reliably inherit the outer GitHub job environment
 - Release workflow verifies `meta/snap.yaml` inside the packed snap before publishing, and fails if the snap version does not match the release version
 - Both build and release workflows verify that the packed snap contains `opt/lumyn/lib/libmpv.so.2`, the app-local compatibility symlink, and a launcher that exports `opt/lumyn/lib` in `LD_LIBRARY_PATH`.
@@ -657,6 +658,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | GitHub snap builds now pin `canonical/action-build@v1` to `snapcraft-channel: 9.x/stable`, required for stable `base: core26` snaps. |
 | 2026-05 | Snap runtime base moved to `core26` so sandboxed releases report Ubuntu Core 26 / Ubuntu 26.04-era runtime libraries instead of Ubuntu Core 24; ICU staging updated to `libicu78`. |
 | 2026-05 | Website Linux download panel now promotes Ubuntu App Center / Snapcraft first with a Snapcraft icon, keeping the `.deb` package as the secondary option. |
 | 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |

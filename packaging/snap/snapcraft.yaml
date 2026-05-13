@@ -36,7 +36,7 @@ apps:
       - wayland
       - x11
     environment:
-      LD_LIBRARY_PATH: $SNAP/opt/lumyn/lib:$SNAP/usr/lib/$CRAFT_ARCH_TRIPLET:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib:$SNAP/lib/$CRAFT_ARCH_TRIPLET:$LD_LIBRARY_PATH
+      LD_LIBRARY_PATH: $SNAP/opt/lumyn:$SNAP/opt/lumyn/lib:$SNAP/usr/lib/x86_64-linux-gnu:$SNAP/usr/lib/aarch64-linux-gnu:$SNAP/usr/lib:$LD_LIBRARY_PATH
 
 parts:
   lumyn:
@@ -227,3 +227,6 @@ parts:
 
       echo "Bundled libmpv files:"
       find opt/lumyn/lib -name "libmpv*" -print
+
+      echo "Checking Lumyn launcher library paths:"
+      grep 'LD_LIBRARY_PATH' opt/lumyn/lumyn

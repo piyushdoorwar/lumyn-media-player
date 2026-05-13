@@ -509,6 +509,7 @@ File association notes:
 - GitHub Actions stage the same temporary root `snap/snapcraft.yaml` and build via `canonical/action-build@v1`; the resulting `*.snap` is uploaded as `lumyn-linux-amd64-snap`
 - Release workflow injects the resolved `VERSION` into staged `snap/snapcraft.yaml` as a part `build-environment` entry before `canonical/action-build@v1`; this is required because Snapcraft's managed build instance does not reliably inherit the outer GitHub job environment
 - Release workflow verifies `meta/snap.yaml` inside the packed snap before publishing, and fails if the snap version does not match the release version
+- Both build and release workflows verify that the packed snap contains `opt/lumyn/lib/libmpv.so.2`, the app-local compatibility symlink, and a launcher that exports `opt/lumyn/lib` in `LD_LIBRARY_PATH`.
 - The release workflow publishes the snap to the Snap Store with `snapcraft upload --release="$SNAP_CHANNEL"` when `SNAPCRAFT_STORE_CREDENTIALS` is configured
 - Snap Store target: registered snap name `lumyn`
 - Release channel mapping: stable versions like `1.2.3` publish to `stable`; prerelease versions like `1.2.3-beta.1` or `0.0.0-dev` publish to `edge`
@@ -517,6 +518,8 @@ File association notes:
 - Uses `base: core24`, `confinement: strict`, and self-contained `dotnet publish`
 - Build installs .NET 10 via `dotnet-install.sh` inside the Snapcraft build part so the snap is not blocked by host SDK availability
 - Stages `libmpv2` and desktop/audio/OpenGL runtime libraries through `stage-packages`
+- `packaging/snap/lumyn-launcher` constructs runtime library paths from `$SNAP`, `uname -m`, and the architecture triplet. Keep `$SNAP/opt/lumyn` and `$SNAP/opt/lumyn/lib` first so bundled `libmpv` wins over host libraries.
+- On Linux, `PlaybackService` intentionally tries app-local bundled `libmpv` paths before generic system names. This prevents `.deb` installs from silently masking packaging bugs with host libraries and is required for strict snap confinement.
 - Declared plugs include `home`, `removable-media`, `audio-playback`, `opengl`, `network`, `network-bind`, `screen-inhibit-control`, `wayland`, and `x11`
 - `removable-media` and Chromecast/mDNS-related access may need store review or manual connection depending on final Snap Store policy and interface behavior
 
@@ -656,6 +659,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 |---|---|
 | 2026-05 | Website Linux download panel now promotes Ubuntu App Center / Snapcraft first with a Snapcraft icon, keeping the `.deb` package as the secondary option. |
 | 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
+| 2026-05 | Hardened Linux `libmpv` loading: launcher now exports app-local and architecture library paths, `PlaybackService` prefers bundled mpv paths before system lookup, and CI validates bundled snap mpv files before upload/publish. |
 | 2026-05 | Moved release setup guides under `docs/release/` so PPA and Snap Store publishing notes are grouped away from the repo root. |
 | 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |
 | 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |

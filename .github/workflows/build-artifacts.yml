@@ -57,6 +57,35 @@ jobs:
         id: build-snap
         uses: canonical/action-build@v1
 
+      - name: Verify bundled libmpv
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools
+
+          echo "Checking bundled libmpv files..."
+          unsquashfs -ll "${{ steps.build-snap.outputs.snap }}" | grep 'libmpv' || {
+            echo "libmpv was not bundled in the snap." >&2
+            exit 1
+          }
+
+          echo "Checking expected Lumyn libmpv location..."
+          unsquashfs -ll "${{ steps.build-snap.outputs.snap }}" | grep 'opt/lumyn/lib/libmpv.so.2' || {
+            echo "opt/lumyn/lib/libmpv.so.2 is missing." >&2
+            exit 1
+          }
+
+          echo "Checking app-local libmpv compatibility symlink..."
+          unsquashfs -ll "${{ steps.build-snap.outputs.snap }}" | grep 'opt/lumyn/libmpv.so.2' || {
+            echo "opt/lumyn/libmpv.so.2 compatibility symlink is missing." >&2
+            exit 1
+          }
+
+          echo "Checking launcher exports bundled library paths..."
+          unsquashfs -cat "${{ steps.build-snap.outputs.snap }}" opt/lumyn/lumyn | grep 'opt/lumyn/lib' || {
+            echo "launcher does not export opt/lumyn/lib in LD_LIBRARY_PATH." >&2
+            exit 1
+          }
+
       - name: Upload snap
         uses: actions/upload-artifact@v5
         with:

@@ -1,12 +1,30 @@
 #!/bin/sh
 set -eu
 
-arch_lib_dir="$(find "$SNAP/usr/lib" -maxdepth 1 -type d -name '*-linux-gnu' | head -n 1 || true)"
+case "$(uname -m)" in
+  x86_64) arch_triplet="x86_64-linux-gnu" ;;
+  aarch64|arm64) arch_triplet="aarch64-linux-gnu" ;;
+  *) arch_triplet="" ;;
+esac
 
-export LD_LIBRARY_PATH="$SNAP/opt/lumyn/lib${arch_lib_dir:+:$arch_lib_dir}:$SNAP/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+library_path="$SNAP/opt/lumyn:$SNAP/opt/lumyn/lib:$SNAP/usr/lib"
 
-if [ -n "$arch_lib_dir" ] && [ -d "$arch_lib_dir/dri" ]; then
-  export LIBGL_DRIVERS_PATH="$arch_lib_dir/dri"
+if [ -n "$arch_triplet" ]; then
+  for dir in \
+    "$SNAP/usr/lib/$arch_triplet" \
+    "$SNAP/lib/$arch_triplet" \
+    "$SNAP/usr/lib/$arch_triplet/pulseaudio" \
+    "$SNAP/usr/lib/$arch_triplet/dri"; do
+    if [ -d "$dir" ]; then
+      library_path="$library_path:$dir"
+    fi
+  done
+
+  if [ -d "$SNAP/usr/lib/$arch_triplet/dri" ]; then
+    export LIBGL_DRIVERS_PATH="$SNAP/usr/lib/$arch_triplet/dri"
+  fi
 fi
+
+export LD_LIBRARY_PATH="$library_path${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 exec "$SNAP/opt/lumyn/Lumyn" "$@"

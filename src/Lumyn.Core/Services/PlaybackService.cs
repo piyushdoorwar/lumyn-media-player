@@ -97,9 +97,9 @@ public sealed class PlaybackService : IDisposable
             };
             _eventThread.Start();
         }
-        catch (DllNotFoundException)
+        catch (DllNotFoundException ex)
         {
-            InitializationError = "libmpv is not installed. Install mpv/libmpv and restart Lumyn.";
+            InitializationError = $"libmpv could not be loaded: {ex.Message}";
         }
         catch (Exception ex)
         {
@@ -912,6 +912,19 @@ internal static partial class MpvNative
             ? new[] { "mpv-2.dll", "libmpv-2.dll", "mpv.dll" }
             : new[] { "libmpv.so.2", "libmpv.so" };
 
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        {
+            foreach (var candidate in candidates)
+            {
+                foreach (var directory in GetLinuxBundledLibraryDirectories())
+                {
+                    var path = Path.Combine(directory, candidate);
+                    if (NativeLibrary.TryLoad(path, out var handle))
+                        return handle;
+                }
+            }
+        }
+
         foreach (var candidate in candidates)
         {
             if (NativeLibrary.TryLoad(candidate, assembly, searchPath, out var handle))
@@ -923,6 +936,19 @@ internal static partial class MpvNative
         }
 
         return IntPtr.Zero;
+    }
+
+    private static IEnumerable<string> GetLinuxBundledLibraryDirectories()
+    {
+        yield return AppContext.BaseDirectory;
+        yield return Path.Combine(AppContext.BaseDirectory, "lib");
+
+        var snap = Environment.GetEnvironmentVariable("SNAP");
+        if (!string.IsNullOrWhiteSpace(snap))
+        {
+            yield return Path.Combine(snap, "opt", "lumyn");
+            yield return Path.Combine(snap, "opt", "lumyn", "lib");
+        }
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]

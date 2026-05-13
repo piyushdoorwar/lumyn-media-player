@@ -53,8 +53,12 @@ parts:
     stage-packages:
       - libicu74
       - libmpv2
+      - libglib2.0-0t64
+      - libfreetype6
       - libgl1
       - libglu1-mesa
+      - libdrm2
+      - libxkbcommon0
       - libx11-6
       - libxcb1
       - libxext6
@@ -68,6 +72,8 @@ parts:
       - libsm6
       - libasound2t64
       - libpulse0
+      - libblas3
+      - liblapack3
       - fontconfig
       - fonts-inter
       - dbus
@@ -139,7 +145,7 @@ parts:
         *) echo "Unsupported snap architecture: $CRAFT_ARCH_BUILD_FOR" >&2; exit 1 ;;
       esac
 
-      prime_library_path="$PWD/opt/lumyn/lib:$PWD/usr/lib/$arch_triplet:$PWD/lib/$arch_triplet:$PWD/usr/lib"
+      prime_library_path="$PWD/opt/lumyn/lib:$PWD/usr/lib/$arch_triplet:$PWD/lib/$arch_triplet:$PWD/usr/lib/$arch_triplet/pulseaudio:$PWD/usr/lib"
 
       echo "Checking for libmpv in usr/lib/$arch_triplet"
 

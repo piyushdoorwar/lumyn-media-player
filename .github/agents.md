@@ -660,6 +660,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 |---|---|
 | 2026-05 | GitHub snap builds now pin `canonical/action-build@v1` to `snapcraft-channel: 9.x/candidate`, required for stable `base: core26` snaps until the Snapcraft 9 stable track is available. |
 | 2026-05 | Snap runtime base moved to `core26` so sandboxed releases report Ubuntu Core 26 / Ubuntu 26.04-era runtime libraries instead of Ubuntu Core 24; ICU staging updated to `libicu78`. |
+| 2026-05 | Snap input polish: video right-click now opens the root context menu explicitly, and snap packaging stages Yaru/Adwaita/DMZ cursor themes with `XCURSOR_*` launcher fallbacks so the cursor does not shrink inside the sandbox. |
 | 2026-05 | Website Linux download panel now promotes Ubuntu App Center / Snapcraft first with a Snapcraft icon, keeping the `.deb` package as the secondary option. |
 | 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
 | 2026-05 | Hardened Linux `libmpv` loading: launcher now exports app-local and architecture library paths, `PlaybackService` prefers bundled mpv paths before system lookup, and CI validates bundled snap mpv files before upload/publish. |

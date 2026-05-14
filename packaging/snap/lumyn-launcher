@@ -7,6 +7,10 @@ case "$(uname -m)" in
   *) arch_triplet="" ;;
 esac
 
+export XCURSOR_PATH="$SNAP/usr/share/icons:$SNAP/usr/share/pixmaps${XCURSOR_PATH:+:$XCURSOR_PATH}"
+export XCURSOR_THEME="${XCURSOR_THEME:-Yaru}"
+export XCURSOR_SIZE="${XCURSOR_SIZE:-24}"
+
 library_path="$SNAP/opt/lumyn:$SNAP/opt/lumyn/lib:$SNAP/usr/lib"
 
 if [ -n "$arch_triplet" ]; then

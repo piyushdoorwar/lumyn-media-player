@@ -605,7 +605,7 @@
 
     <!-- ── Right-click context menu ──────────────────────────────────────── -->
     <Panel.ContextMenu>
-      <ContextMenu Opening="RootContextMenu_Opening">
+      <ContextMenu Name="RootContextMenu" Opening="RootContextMenu_Opening">
 
         <!-- Recent files (populated in code-behind) -->
         <MenuItem Name="RecentFilesMenuItem" Header="Open Recent" />

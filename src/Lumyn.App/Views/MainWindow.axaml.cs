@@ -117,7 +117,15 @@ public partial class MainWindow : Window
     private void VideoClickLayer_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
         var props = e.GetCurrentPoint(this).Properties;
-        if (!props.IsLeftButtonPressed) return; // right-click → context menu handles it
+
+        if (props.IsRightButtonPressed)
+        {
+            OpenRootContextMenu();
+            e.Handled = true;
+            return;
+        }
+
+        if (!props.IsLeftButtonPressed) return;
 
         e.Handled = true;
         if (e.ClickCount >= 2)
@@ -131,6 +139,15 @@ public partial class MainWindow : Window
             else
                 ViewModel?.TogglePlayPauseCommand.Execute(null);
         }
+    }
+
+    private void OpenRootContextMenu()
+    {
+        var menu = this.FindControl<ContextMenu>("RootContextMenu");
+        if (menu is null) return;
+
+        ShowControls();
+        menu.Open(this);
     }
 
     // ── Seek slider ──────────────────────────────────────────────────────────

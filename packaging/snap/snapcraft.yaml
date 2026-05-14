@@ -76,6 +76,10 @@ parts:
       - liblapack3
       - fontconfig
       - fonts-inter
+      - yaru-theme-icon
+      - adwaita-icon-theme
+      - dmz-cursor-theme
+      - xcursor-themes
       - dbus
 
     override-build: |

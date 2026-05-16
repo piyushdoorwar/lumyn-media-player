@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
+  <defs>
+    <radialGradient id="glow-rp-1" cx="40%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#3a9b4b" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#080808" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-rp-2" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#4b7a9b" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#080808" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-rp-3" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="#9b5a3a" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#080808" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ctrl-grad-rp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </linearGradient>
+  </defs>
+
+  <!-- window -->
+  <rect width="320" height="220" rx="8" fill="#101010" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+  <!-- title bar -->
+  <rect width="320" height="38" rx="8" fill="#141414"/>
+  <rect y="30" width="320" height="8" fill="#141414"/>
+  <rect y="37" width="320" height="1" fill="rgba(255,255,255,0.06)"/>
+  <g transform="translate(12,9) scale(0.078125)" fill="none"><path d="M22 71.5L135 19" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 103.5L234 5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 135.5L234 37" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 167.5L234 69" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M155 118L229 83.5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M96 118V181H62L67 207H189L194 181H159V130" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M71 217L184 197" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M75 239L176 221" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M112 150C112 147.7 114.5 146.3 116.5 147.5L142.5 163.2C145.5 165 145.5 170 142.5 171.8L116.5 187.5C114.5 188.7 112 187.3 112 185V150Z" fill="#D8D4CF"/></g>
+  <!-- no file open — just app name -->
+  <text x="40" y="24" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#DEDAD5">Lumyn</text>
+  <circle cx="272" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="286" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="300" cy="19" r="5.5" fill="#4c4c4c"/>
+
+  <!-- start screen background -->
+  <rect x="0" y="38" width="320" height="182" fill="#0C0C0C"/>
+
+  <!-- section heading -->
+  <text x="14" y="58" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#DEDAD5">Recently Played</text>
+  <line x1="14" y1="64" x2="306" y2="64" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <!-- ── Card 1 – video, 72% ──────────────────────────── -->
+  <rect x="12" y="70" width="92" height="88" rx="5" fill="#151515" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- thumbnail -->
+  <rect x="12" y="70" width="92" height="56" rx="5" fill="#0E1A0E"/>
+  <rect x="12" y="70" width="92" height="56" rx="5" fill="url(#glow-rp-1)"/>
+  <!-- scene suggestion -->
+  <ellipse cx="50" cy="98" rx="12" ry="15" fill="rgba(255,255,255,0.06)"/>
+  <rect x="40" y="111" width="20" height="14" rx="2" fill="rgba(255,255,255,0.04)"/>
+  <!-- progress bar (72%) at bottom of thumbnail -->
+  <rect x="12" y="123" width="92" height="3" fill="#1F1F1F"/>
+  <rect x="12" y="123" width="66" height="3" fill="#3a9b4b"/>
+  <!-- progress % badge -->
+  <rect x="16" y="74" width="22" height="13" rx="3" fill="rgba(0,0,0,0.65)"/>
+  <text x="27" y="84" text-anchor="middle" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#3a9b4b">72%</text>
+  <!-- filename -->
+  <text x="18" y="143" font-family="system-ui,sans-serif" font-size="8" font-weight="600" fill="#C8C4C0">YC</text>
+  <text x="18" y="153" font-family="system-ui,sans-serif" font-size="7" fill="#605C59">S02E13.mp4</text>
+
+  <!-- ── Card 2 – video, 31% ──────────────────────────── -->
+  <rect x="112" y="70" width="92" height="88" rx="5" fill="#151515" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <rect x="112" y="70" width="92" height="56" rx="5" fill="#0E0E1A"/>
+  <rect x="112" y="70" width="92" height="56" rx="5" fill="url(#glow-rp-2)"/>
+  <!-- scene -->
+  <ellipse cx="148" cy="92" rx="10" ry="12" fill="rgba(255,255,255,0.05)"/>
+  <rect x="140" y="103" width="16" height="20" rx="2" fill="rgba(255,255,255,0.03)"/>
+  <rect x="163" y="96" width="24" height="30" rx="3" fill="rgba(255,255,255,0.025)"/>
+  <!-- progress bar (31%) -->
+  <rect x="112" y="123" width="92" height="3" fill="#1F1F1F"/>
+  <rect x="112" y="123" width="29" height="3" fill="#3a9b4b"/>
+  <!-- badge -->
+  <rect x="116" y="74" width="22" height="13" rx="3" fill="rgba(0,0,0,0.65)"/>
+  <text x="127" y="84" text-anchor="middle" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#3a9b4b">31%</text>
+  <!-- filename -->
+  <text x="118" y="143" font-family="system-ui,sans-serif" font-size="8" font-weight="600" fill="#C8C4C0">documentary</text>
+  <text x="118" y="153" font-family="system-ui,sans-serif" font-size="7" fill="#605C59">.mkv</text>
+
+  <!-- ── Card 3 – audio / cover art ──────────────────── -->
+  <rect x="212" y="70" width="92" height="88" rx="5" fill="#151515" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- cover-art style thumbnail (square, warm gradient) -->
+  <rect x="212" y="70" width="92" height="56" rx="5" fill="#1A100E"/>
+  <rect x="212" y="70" width="92" height="56" rx="5" fill="url(#glow-rp-3)"/>
+  <!-- music note symbol -->
+  <text x="258" y="103" text-anchor="middle" font-family="system-ui,sans-serif" font-size="22" fill="rgba(255,255,255,0.13)">♪</text>
+  <!-- progress bar (8%) -->
+  <rect x="212" y="123" width="92" height="3" fill="#1F1F1F"/>
+  <rect x="212" y="123" width="7" height="3" fill="#3a9b4b"/>
+  <!-- badge -->
+  <rect x="216" y="74" width="19" height="13" rx="3" fill="rgba(0,0,0,0.65)"/>
+  <text x="225" y="84" text-anchor="middle" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="#3a9b4b">8%</text>
+  <!-- filename -->
+  <text x="218" y="143" font-family="system-ui,sans-serif" font-size="8" font-weight="600" fill="#C8C4C0">Favorite Album</text>
+  <text x="218" y="153" font-family="system-ui,sans-serif" font-size="7" fill="#605C59">.flac</text>
+
+  <!-- subtle "more" hint -->
+  <text x="160" y="175" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#403C3A">+ 9 more files</text>
+
+  <!-- controls bar (inactive — no video playing) -->
+  <rect x="0" y="184" width="320" height="36" fill="url(#ctrl-grad-rp)"/>
+  <rect x="14" y="192" width="292" height="4" rx="2" fill="#222222"/>
+  <text x="14" y="214" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#383430">--:--</text>
+  <rect x="134" y="205" width="14" height="14" rx="2" fill="#282828" opacity="0.9"/>
+  <rect x="153" y="205" width="14" height="14" rx="2" fill="#282828" opacity="0.9"/>
+  <rect x="172" y="205" width="14" height="14" rx="2" fill="#282828" opacity="0.9"/>
+  <rect x="191" y="205" width="14" height="14" rx="2" fill="#282828" opacity="0.9"/>
+  <text x="294" y="214" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#383430" text-anchor="end">--:--</text>
+</svg>

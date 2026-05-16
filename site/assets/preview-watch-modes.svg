@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
+  <defs>
+    <radialGradient id="glow-wm-bg" cx="30%" cy="50%" r="55%">
+      <stop offset="0%" stop-color="#3a9b4b" stop-opacity="0.14"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ctrl-grad-wm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </linearGradient>
+    <filter id="panel-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- window -->
+  <rect width="320" height="220" rx="8" fill="#101010" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+  <!-- title bar -->
+  <rect width="320" height="38" rx="8" fill="#141414"/>
+  <rect y="30" width="320" height="8" fill="#141414"/>
+  <rect y="37" width="320" height="1" fill="rgba(255,255,255,0.06)"/>
+  <g transform="translate(12,9) scale(0.078125)" fill="none"><path d="M22 71.5L135 19" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 103.5L234 5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 135.5L234 37" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 167.5L234 69" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M155 118L229 83.5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M96 118V181H62L67 207H189L194 181H159V130" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M71 217L184 197" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M75 239L176 221" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M112 150C112 147.7 114.5 146.3 116.5 147.5L142.5 163.2C145.5 165 145.5 170 142.5 171.8L116.5 187.5C114.5 188.7 112 187.3 112 185V150Z" fill="#D8D4CF"/></g>
+  <text x="40" y="24" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#DEDAD5">sample-video.mp4 — Lumyn</text>
+  <circle cx="272" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="286" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="300" cy="19" r="5.5" fill="#4c4c4c"/>
+
+  <!-- video background (dimmed while settings open) -->
+  <rect x="0" y="38" width="320" height="130" fill="#0A0A0A"/>
+  <rect x="0" y="38" width="320" height="130" fill="url(#glow-wm-bg)"/>
+  <!-- vague scene elements -->
+  <ellipse cx="60" cy="115" rx="20" ry="26" fill="rgba(255,255,255,0.03)"/>
+  <ellipse cx="270" cy="108" rx="14" ry="18" fill="rgba(255,255,255,0.025)"/>
+
+  <!-- ── Settings panel overlay ──────────────────────── -->
+  <rect x="40" y="48" width="240" height="112" rx="7" fill="#1C1C1C" stroke="rgba(255,255,255,0.1)" stroke-width="1" filter="url(#panel-shadow)"/>
+
+  <!-- panel header -->
+  <text x="56" y="66" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#DEDAD5">Watch Mode</text>
+  <line x1="41" y1="73" x2="279" y2="73" stroke="rgba(255,255,255,0.07)" stroke-width="1"/>
+
+  <!-- mode buttons row -->
+  <!-- Cinema (selected) -->
+  <rect x="52" y="80" width="58" height="22" rx="4" fill="#1E3320" stroke="#3a9b4b" stroke-width="1.5"/>
+  <text x="81" y="95" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#3a9b4b">Cinema</text>
+  <!-- Theatre -->
+  <rect x="118" y="80" width="60" height="22" rx="4" fill="#252525" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="148" y="95" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#807C79">Theatre</text>
+  <!-- TV -->
+  <rect x="186" y="80" width="36" height="22" rx="4" fill="#252525" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <text x="204" y="95" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#807C79">TV</text>
+
+  <!-- divider -->
+  <line x1="41" y1="111" x2="279" y2="111" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+
+  <!-- audio clarity row -->
+  <text x="56" y="127" font-family="system-ui,sans-serif" font-size="9" fill="#A8A4A0">Audio Clarity</text>
+  <!-- "On" toggle pill -->
+  <rect x="232" y="118" width="36" height="16" rx="8" fill="#3a9b4b"/>
+  <circle cx="259" cy="126" r="6" fill="#FFFFFF"/>
+  <text x="241" y="130" font-family="system-ui,sans-serif" font-size="7" font-weight="700" fill="rgba(255,255,255,0.75)">On</text>
+
+  <!-- brightness row -->
+  <text x="56" y="148" font-family="system-ui,sans-serif" font-size="9" fill="#605C59">Brightness</text>
+  <rect x="130" y="143" width="110" height="3" rx="1.5" fill="#303030"/>
+  <rect x="130" y="143" width="68" height="3" rx="1.5" fill="#3a9b4b" opacity="0.7"/>
+  <circle cx="198" cy="144.5" r="4" fill="#3a9b4b" opacity="0.9"/>
+
+  <!-- ── Controls bar ──────────────────────────────────── -->
+  <rect x="0" y="168" width="320" height="52" fill="url(#ctrl-grad-wm)"/>
+  <rect x="14" y="174" width="292" height="5" rx="2.5" fill="#2C2C2C"/>
+  <rect x="14" y="174" width="140" height="5" rx="2.5" fill="#3a9b4b"/>
+  <text x="14" y="198" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#6A6560">28:14</text>
+  <rect x="134" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="153" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="172" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="191" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <text x="294" y="198" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#6A6560" text-anchor="end">1:28:04</text>
+</svg>

@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220" width="320" height="220">
+  <defs>
+    <radialGradient id="glow-st-bg" cx="60%" cy="35%" r="55%">
+      <stop offset="0%" stop-color="#3a9b4b" stop-opacity="0.16"/>
+      <stop offset="100%" stop-color="#0a0a0a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glow-st-card" cx="38%" cy="48%" r="65%">
+      <stop offset="0%" stop-color="#3a9b4b" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#080808" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ctrl-grad-st" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#111111"/>
+      <stop offset="100%" stop-color="#050505"/>
+    </linearGradient>
+    <filter id="popup-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000000" flood-opacity="0.55"/>
+    </filter>
+  </defs>
+
+  <!-- window -->
+  <rect width="320" height="220" rx="8" fill="#101010" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+  <!-- title bar -->
+  <rect width="320" height="38" rx="8" fill="#141414"/>
+  <rect y="30" width="320" height="8" fill="#141414"/>
+  <rect y="37" width="320" height="1" fill="rgba(255,255,255,0.06)"/>
+  <g transform="translate(12,9) scale(0.078125)" fill="none"><path d="M22 71.5L135 19" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 103.5L234 5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 135.5L234 37" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M22 167.5L234 69" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M155 118L229 83.5" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round"/><path d="M96 118V181H62L67 207H189L194 181H159V130" stroke="#3A9B4B" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M71 217L184 197" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M75 239L176 221" stroke="#3A9B4B" stroke-width="12" stroke-linecap="round"/><path d="M112 150C112 147.7 114.5 146.3 116.5 147.5L142.5 163.2C145.5 165 145.5 170 142.5 171.8L116.5 187.5C114.5 188.7 112 187.3 112 185V150Z" fill="#D8D4CF"/></g>
+  <text x="40" y="24" font-family="system-ui,sans-serif" font-size="11" font-weight="700" fill="#DEDAD5">sample-video.mp4 — Lumyn</text>
+  <circle cx="272" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="286" cy="19" r="5.5" fill="#4c4c4c"/>
+  <circle cx="300" cy="19" r="5.5" fill="#4c4c4c"/>
+
+  <!-- video background -->
+  <rect x="0" y="38" width="320" height="130" fill="#0E0E0E"/>
+  <rect x="0" y="38" width="320" height="130" fill="url(#glow-st-bg)"/>
+  <!-- background scene silhouettes -->
+  <ellipse cx="230" cy="108" rx="16" ry="20" fill="rgba(255,255,255,0.04)"/>
+  <rect x="216" y="126" width="28" height="28" rx="4" fill="rgba(255,255,255,0.03)"/>
+  <ellipse cx="80" cy="120" rx="12" ry="15" fill="rgba(255,255,255,0.025)"/>
+  <!-- subtitle text -->
+  <text x="160" y="156" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="600" fill="#F7F5F3" opacity="0.7">I think we'll be happy.</text>
+
+  <!-- ── Seek thumbnail popup ─────────────────────────── -->
+  <!-- stem: dashed line from popup bottom-center to cursor -->
+  <line x1="186" y1="167" x2="186" y2="174" stroke="#3a9b4b" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>
+
+  <!-- popup outer card -->
+  <rect x="144" y="99" width="84" height="68" rx="5" fill="#181818" stroke="rgba(255,255,255,0.22)" stroke-width="1" filter="url(#popup-shadow)"/>
+  <!-- thumbnail image area -->
+  <rect x="147" y="102" width="78" height="44" rx="3" fill="#0C0C0C"/>
+  <rect x="147" y="102" width="78" height="44" rx="3" fill="url(#glow-st-card)"/>
+  <!-- scene in popup (different moment) -->
+  <ellipse cx="170" cy="124" rx="11" ry="13" fill="rgba(255,255,255,0.07)"/>
+  <rect x="161" y="135" width="18" height="10" rx="2" fill="rgba(255,255,255,0.04)"/>
+  <ellipse cx="200" cy="120" rx="8" ry="10" fill="rgba(255,255,255,0.05)"/>
+  <!-- divider -->
+  <line x1="145" y1="147" x2="227" y2="147" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <!-- timestamp text -->
+  <text x="186" y="160" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="700" fill="#F0EDE9">7:35</text>
+
+  <!-- ── Controls bar ──────────────────────────────────── -->
+  <rect x="0" y="168" width="320" height="52" fill="url(#ctrl-grad-st)"/>
+  <!-- seek track -->
+  <rect x="14" y="174" width="292" height="5" rx="2.5" fill="#2C2C2C"/>
+  <!-- progress ~57% -->
+  <rect x="14" y="174" width="172" height="5" rx="2.5" fill="#3a9b4b"/>
+  <!-- cursor: outer green ring + white centre -->
+  <circle cx="186" cy="176.5" r="6" fill="#3a9b4b"/>
+  <circle cx="186" cy="176.5" r="2.5" fill="#F7F5F3"/>
+
+  <text x="14" y="198" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#6A6560">7:30</text>
+  <rect x="134" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="153" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="172" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <rect x="191" y="189" width="14" height="14" rx="2" fill="#807C79" opacity="0.82"/>
+  <text x="294" y="198" font-family="system-ui,sans-serif" font-size="9" font-weight="700" fill="#6A6560" text-anchor="end">1:05:26</text>
+</svg>

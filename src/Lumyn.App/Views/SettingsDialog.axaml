@@ -19,63 +19,76 @@
               BorderBrush="#2A2A2A"
               BorderThickness="0,0,1,0"
               Padding="10,12">
-        <StackPanel Spacing="6">
-          <TextBlock Text="SETTINGS"
-                     FontSize="10"
-                     FontWeight="SemiBold"
-                     Foreground="#807C79"
-                     Margin="4,0,0,8" />
+        <Grid RowDefinitions="*,Auto">
+          <StackPanel Grid.Row="0" Spacing="6">
+            <TextBlock Text="SETTINGS"
+                       FontSize="10"
+                       FontWeight="SemiBold"
+                       Foreground="#807C79"
+                       Margin="4,0,0,8" />
 
-          <Button Name="WatchModesNavButton"
+            <Button Name="WatchModesNavButton"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Click="WatchModesNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="◐" Width="15" FontSize="13" HorizontalAlignment="Center" />
+                <TextBlock Text="Watch Modes" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Name="VideoNavButton"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Click="VideoNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
+                <TextBlock Text="Video" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Name="AudioClarityNavButton"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Click="AudioClarityNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AudioTrack}" />
+                <TextBlock Text="Audio Clarity" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Name="InterfaceNavButton"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Click="InterfaceNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Settings}" />
+                <TextBlock Text="Interface" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+
+            <Button Name="ShortcutsNavButton"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Left"
+                    Click="ShortcutsNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
+                <TextBlock Text="Shortcuts" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+
+          <Button Grid.Row="1"
+                  Name="TransmuxNavButton"
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Left"
-                  Click="WatchModesNavButton_Click">
+                  Click="TransmuxNavButton_Click">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="◐" Width="15" FontSize="13" HorizontalAlignment="Center" />
-              <TextBlock Text="Watch Modes" VerticalAlignment="Center" />
+              <Image Width="15" Height="15" Source="{StaticResource Icon.TransmuxLogo}" />
+              <TextBlock Text="Transmux" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
-
-          <Button Name="VideoNavButton"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left"
-                  Click="VideoNavButton_Click">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
-              <TextBlock Text="Video" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-
-          <Button Name="AudioClarityNavButton"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left"
-                  Click="AudioClarityNavButton_Click">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AudioTrack}" />
-              <TextBlock Text="Audio Clarity" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-
-          <Button Name="InterfaceNavButton"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left"
-                  Click="InterfaceNavButton_Click">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Settings}" />
-              <TextBlock Text="Interface" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-
-          <Button Name="ShortcutsNavButton"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left"
-                  Click="ShortcutsNavButton_Click">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
-              <TextBlock Text="Shortcuts" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
+        </Grid>
       </Border>
 
       <Grid Grid.Column="1" Margin="18,14,18,0" MinHeight="0">
@@ -278,6 +291,56 @@
             <TextBlock Text="FILE &amp; DIALOGS" FontSize="10" FontWeight="SemiBold"
                        Foreground="#807C79" Margin="0,16,0,8" />
             <Grid Name="FileGroup" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer Name="TransmuxPanel"
+                      VerticalScrollBarVisibility="Auto"
+                      IsVisible="False">
+          <StackPanel Spacing="0">
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+              <Image Width="42" Height="42" Source="{StaticResource Icon.TransmuxLogo}" />
+              <StackPanel Spacing="2" VerticalAlignment="Center">
+                <TextBlock Text="Transmux"
+                           FontSize="20"
+                           FontWeight="SemiBold"
+                           Foreground="#F7F5F3" />
+                <TextBlock Text="Video format conversion"
+                           FontSize="12"
+                           Foreground="#9D9B98" />
+              </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="Lumyn stays focused on playback. For converting video and audio files, use Transmux."
+                       FontSize="13"
+                       Foreground="#DEDAD5"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,18" />
+
+            <StackPanel Spacing="8">
+              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                <TextBlock Text="Convert MP4, WebM, MKV, AVI, MOV, MP3, AAC, FLAC, OGG, WAV, and Opus."
+                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              </Border>
+              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                <TextBlock Text="Use fast stream copy when possible, or full re-encode when you need a compatible output."
+                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              </Border>
+              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                <TextBlock Text="Include subtitles, extract them to SRT or ASS, or strip subtitle tracks from the output."
+                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              </Border>
+              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
+                <TextBlock Text="Inspect media streams and follow live conversion progress with speed and ETA."
+                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              </Border>
+            </StackPanel>
+
+            <Button Content="Open Transmux website"
+                    Classes="accent"
+                    HorizontalAlignment="Left"
+                    Margin="0,18,0,0"
+                    Click="OpenTransmuxWebsite_Click" />
           </StackPanel>
         </ScrollViewer>
       </Grid>

@@ -19,7 +19,7 @@
     All layers stacked in a Panel. mpv renders video into an OpenGL surface
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
-  <Border Background="#111111">
+  <Border Name="RootBorder" Background="#111111" BorderThickness="2">
   <Grid RowDefinitions="Auto,*">
 
     <!-- ── Top bar (own row – no mpv surface behind it) ─────────────────── -->

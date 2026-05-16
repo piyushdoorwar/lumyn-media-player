@@ -1611,6 +1611,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ShowOsd(_playback.IsLooping ? "Loop: On" : "Loop: Off");
     }
 
+    public bool TakeGlowSnapshot(string path) => HasMedia && _playback.TakeSnapshot(path);
+
     private void TakeScreenshot()
     {
         if (!HasMedia) return;

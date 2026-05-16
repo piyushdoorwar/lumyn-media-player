@@ -42,6 +42,41 @@
     </DrawingImage.Drawing>
   </DrawingImage>
 
+  <!-- Transmux clapperboard mark, based on the Transmux website SVG. -->
+  <DrawingImage x:Key="Icon.TransmuxLogo">
+    <DrawingImage.Drawing>
+      <DrawingGroup>
+        <GeometryDrawing Brush="#3A6E9B" Geometry="M32 102H222V234H32Z" />
+        <GeometryDrawing Geometry="M32 102H222V234H32Z">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="12" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#DEDAD5" Geometry="M30 92H224V124H30Z" />
+        <GeometryDrawing Geometry="M30 92H224V124H30Z">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="10" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#DEDAD5" Geometry="M28 49L216 21L222 52L31 80Z" />
+        <GeometryDrawing Geometry="M28 49L216 21L222 52L31 80Z">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="10" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Brush="#111111" Geometry="M28 49L67 78L31 83Z" />
+        <GeometryDrawing Brush="#111111" Geometry="M66 39L111 73L148 67L101 33Z" />
+        <GeometryDrawing Brush="#111111" Geometry="M143 28L188 62L222 56L180 22Z" />
+        <GeometryDrawing Brush="#111111" Geometry="M29 124L67 88L108 88L71 124Z" />
+        <GeometryDrawing Brush="#111111" Geometry="M149 124L188 88H224L187 124Z" />
+        <GeometryDrawing Brush="#DEDAD5" Geometry="M68 160H186V214H68Z" />
+        <GeometryDrawing Geometry="M68 160H186V214H68Z">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="8" LineJoin="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Geometry="M84 178H166">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="8" LineCap="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+        <GeometryDrawing Geometry="M84 195H130">
+          <GeometryDrawing.Pen><Pen Brush="#111111" Thickness="8" LineCap="Round" /></GeometryDrawing.Pen>
+        </GeometryDrawing>
+      </DrawingGroup>
+    </DrawingImage.Drawing>
+  </DrawingImage>
+
   <!--
     Compact mark for small sizes (top bar, taskbar) — no stand legs.
   -->

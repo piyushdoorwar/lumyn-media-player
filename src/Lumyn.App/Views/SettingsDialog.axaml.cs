@@ -8,6 +8,8 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Lumyn.App.Models;
 using Lumyn.Core.Services;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace Lumyn.App.Views;
 
@@ -17,7 +19,8 @@ public enum SettingsSection
     Video,
     AudioClarity,
     Interface,
-    Shortcuts
+    Shortcuts,
+    Transmux
 }
 
 public sealed record SettingsDialogResult(
@@ -272,6 +275,11 @@ public partial class SettingsDialog : Window
 
     private void ShortcutsNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Shortcuts);
 
+    private void TransmuxNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Transmux);
+
+    private void OpenTransmuxWebsite_Click(object? sender, RoutedEventArgs e)
+        => OpenUrl("https://piyushdoorwar.github.io/transmux/");
+
     private void BrightnessSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_suppressCallbacks) return;
@@ -355,16 +363,19 @@ public partial class SettingsDialog : Window
         var isVideo = section == SettingsSection.Video;
         var isAudioClarity = section == SettingsSection.AudioClarity;
         var isInterface = section == SettingsSection.Interface;
+        var isTransmux = section == SettingsSection.Transmux;
         SetVisible("WatchModesPanel", isWatchModes);
         SetVisible("VideoPanel", isVideo);
         SetVisible("AudioClarityPanel", isAudioClarity);
         SetVisible("InterfacePanel", isInterface);
         SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
+        SetVisible("TransmuxPanel", isTransmux);
         MarkNavSelected("WatchModesNavButton", isWatchModes);
         MarkNavSelected("VideoNavButton", isVideo);
         MarkNavSelected("AudioClarityNavButton", isAudioClarity);
         MarkNavSelected("InterfaceNavButton", isInterface);
         MarkNavSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
+        MarkNavSelected("TransmuxNavButton", isTransmux);
     }
 
     private void PopulateWatchModes()
@@ -902,6 +913,29 @@ public partial class SettingsDialog : Window
 
         Close(null);
         e.Handled = true;
+    }
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                Process.Start("open", url);
+            }
+            else
+            {
+                Process.Start("xdg-open", url);
+            }
+        }
+        catch
+        {
+            // Opening the external browser is best-effort only.
+        }
     }
 
     private static string FormatOffset(int value) =>

@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
@@ -14,8 +15,16 @@ public partial class MainWindow : Window
 {
     private readonly DispatcherTimer _positionTimer;
     private readonly DispatcherTimer _hideControlsTimer;
+    private readonly DispatcherTimer _glowTimer;
+    private readonly DispatcherTimer _glowLerpTimer;
+    private readonly SolidColorBrush _glowBrush = new(Colors.Transparent);
+    private Color _targetGlowColor = GlowOff;
+    private bool _glowSampling;
     private bool _isApplyingFullscreenState;
     private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
+
+    private static readonly Color GlowOff = Color.FromArgb(0, 0, 0, 0);
+    private static readonly Color AudioGlowColor = Color.FromArgb(80, 0x49, 0xB3, 0x5C);
 
     public MainWindow()
     {
@@ -28,6 +37,14 @@ public partial class MainWindow : Window
         _hideControlsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _hideControlsTimer.Tick += (_, _) => HideControls();
 
+        _glowTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
+        _glowTimer.Tick += GlowTimer_Tick;
+        _glowTimer.Start();
+
+        _glowLerpTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
+        _glowLerpTimer.Tick += GlowLerpTimer_Tick;
+        _glowLerpTimer.Start();
+
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -37,6 +54,8 @@ public partial class MainWindow : Window
         Opened += (_, _) =>
         {
             Focus();
+            var rb = this.FindControl<Border>("RootBorder");
+            if (rb is not null) rb.BorderBrush = _glowBrush;
             // Wire playlist reorder DragDrop after visual tree is ready.
             var pic = this.FindControl<ItemsControl>("PlaylistItemsControl");
             if (pic is not null)
@@ -46,7 +65,12 @@ public partial class MainWindow : Window
             }
         };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
-        Closed += (_, _) => ViewModel?.Dispose();
+        Closed += (_, _) =>
+        {
+            _glowTimer.Stop();
+            _glowLerpTimer.Stop();
+            ViewModel?.Dispose();
+        };
         PropertyChanged += (_, e) =>
         {
             if (e.Property == WindowStateProperty)
@@ -623,13 +647,15 @@ public partial class MainWindow : Window
         else if (result.WatchMode is { } mode)
         {
             await ViewModel.ApplyWatchModeAsync(mode);
-            ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
+            if (result.AudioClarityMode != ViewModel.CurrentAudioClarityMode)
+                ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
             ViewModel.ApplyUiVisibility(result.UiVisibility);
         }
         else
         {
             ViewModel.ApplyVideoAdjustments(result.VideoAdjustments);
-            ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
+            if (result.AudioClarityMode != ViewModel.CurrentAudioClarityMode)
+                ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
             ViewModel.ApplyUiVisibility(result.UiVisibility);
         }
         Focus();
@@ -808,6 +834,155 @@ public partial class MainWindow : Window
 
     private async void PlaylistCtx_AddFolder(object? sender, RoutedEventArgs e)
         => await OpenFolderAsync();
+
+    // ── Ambient border glow ──────────────────────────────────────────────────
+
+    private async void GlowTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_glowSampling) return;
+        _glowSampling = true;
+        try
+        {
+            var vm = ViewModel;
+            if (vm is null || !vm.HasMedia)
+            {
+                _targetGlowColor = GlowOff;
+                return;
+            }
+
+            if (vm.IsAudioMode)
+            {
+                _targetGlowColor = AudioGlowColor;
+                return;
+            }
+
+            if (!vm.IsPlaying) return;
+
+            var tmpPath = Path.Combine(Path.GetTempPath(), "lumyn_glow.ppm");
+            var ok = await Task.Run(() => vm.TakeGlowSnapshot(tmpPath));
+            if (!ok) return;
+
+            var color = await Task.Run(() => SamplePpmEdgeColor(tmpPath));
+            _targetGlowColor = color;
+            try { File.Delete(tmpPath); } catch { }
+        }
+        finally
+        {
+            _glowSampling = false;
+        }
+    }
+
+    private void GlowLerpTimer_Tick(object? sender, EventArgs e)
+    {
+        var current = _glowBrush.Color;
+        var target = _targetGlowColor;
+        if (current == target) return;
+
+        static byte Lerp(byte from, byte to)
+            => (byte)Math.Round(from + (to - from) * 0.18);
+
+        var next = Color.FromArgb(
+            Lerp(current.A, target.A),
+            Lerp(current.R, target.R),
+            Lerp(current.G, target.G),
+            Lerp(current.B, target.B));
+
+        // Snap to target when close enough to avoid infinite micro-steps
+        if (Math.Abs(next.A - target.A) <= 1 &&
+            Math.Abs(next.R - target.R) <= 1 &&
+            Math.Abs(next.G - target.G) <= 1 &&
+            Math.Abs(next.B - target.B) <= 1)
+            next = target;
+
+        _glowBrush.Color = next;
+    }
+
+    private static Color SamplePpmEdgeColor(string path)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read,
+                                           FileShare.Read, 4096, useAsync: false);
+            if (ReadPpmLine(fs) != "P6") return GlowOff;
+
+            // Skip any comment lines
+            string line;
+            do { line = ReadPpmLine(fs); } while (line.StartsWith('#'));
+
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 2
+                || !int.TryParse(parts[0], out var width)  || width  <= 0
+                || !int.TryParse(parts[1], out var height) || height <= 0)
+                return GlowOff;
+
+            if (!int.TryParse(ReadPpmLine(fs), out var maxVal) || maxVal != 255)
+                return GlowOff;
+
+            long dataStart = fs.Position;
+            long stride = (long)width * 3;
+
+            var topRow = ReadPpmRow(fs, dataStart, stride, 0,          width);
+            var botRow = ReadPpmRow(fs, dataStart, stride, height - 1, width);
+
+            long rSum = 0, gSum = 0, bSum = 0;
+            int count = 0;
+            const int step = 10;
+
+            foreach (var row in new[] { topRow, botRow })
+            {
+                for (int x = 0; x < width; x += step)
+                {
+                    int off = x * 3;
+                    if (off + 2 >= row.Length) break;
+                    rSum += row[off];
+                    gSum += row[off + 1];
+                    bSum += row[off + 2];
+                    count++;
+                }
+            }
+
+            if (count == 0) return GlowOff;
+
+            var r = (byte)(rSum / count);
+            var g = (byte)(gSum / count);
+            var b = (byte)(bSum / count);
+            (r, g, b) = BoostSaturation(r, g, b, 1.6f);
+            return Color.FromArgb(150, r, g, b);
+        }
+        catch { return GlowOff; }
+    }
+
+    private static byte[] ReadPpmRow(FileStream fs, long dataStart, long stride, int row, int width)
+    {
+        var buf = new byte[width * 3];
+        fs.Seek(dataStart + row * stride, SeekOrigin.Begin);
+        int read = 0;
+        while (read < buf.Length)
+        {
+            int n = fs.Read(buf, read, buf.Length - read);
+            if (n == 0) break;
+            read += n;
+        }
+        return buf;
+    }
+
+    private static string ReadPpmLine(Stream s)
+    {
+        var sb = new System.Text.StringBuilder();
+        int b;
+        while ((b = s.ReadByte()) >= 0 && b != '\n')
+            if (b != '\r') sb.Append((char)b);
+        return sb.ToString().Trim();
+    }
+
+    private static (byte r, byte g, byte b) BoostSaturation(byte r, byte g, byte b, float factor)
+    {
+        float mid = (r + g + b) / 3f;
+        return (
+            (byte)Math.Clamp((int)(mid + (r - mid) * factor), 0, 255),
+            (byte)Math.Clamp((int)(mid + (g - mid) * factor), 0, 255),
+            (byte)Math.Clamp((int)(mid + (b - mid) * factor), 0, 255));
+    }
 
     // ── Fullscreen ───────────────────────────────────────────────────────────
 

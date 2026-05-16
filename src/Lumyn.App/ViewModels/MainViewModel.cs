@@ -228,6 +228,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ErrorMessage = _playback.InitializationError;
 
         Task.Run(BackfillRecentThumbnails);
+        Task.Run(_settings.PruneOrphanedThumbnails);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

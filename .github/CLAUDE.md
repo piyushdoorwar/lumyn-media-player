@@ -267,6 +267,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.App/Controls/MpvVideoSurface.cs` | — | Avalonia OpenGL surface for mpv rendering |
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
 | `src/Lumyn.App/Controls/MiniProgressBar.cs` | — | Custom 3px recent-card progress indicator; avoid default `ProgressBar` template for tiny bars |
+| `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Pre-generates 100 evenly-spaced JPEG frames in a background Task using `"exact"` seek. Frames cached as `byte[]?[]`. |
 
 ---
 
@@ -309,7 +310,10 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Cover art detection and display
 
 ### Navigation & Persistence
-- Recent files list (last 12 files) with resume percentage labels and miniature progress bars
+- Recent files list (last 12 files) with resume percentage badge (top-left), full-bleed thumbnail, and miniature progress bar at card bottom
+- Video thumbnails cached per file (`~/.config/Lumyn/thumbs/{sha256_16}.jpg`) extracted via ffmpeg at the resume position (or 30% fallback). Re-extracted on stop at the exact stopped position. Backfilled at startup for all recent files with no cached thumbnail.
+- Audio cover art for recently played cards uses the external sidecar image (same basename + `.png`/`.jpg`/etc., or `cover.jpg`/`folder.jpg` in the same directory) — same source as the audio player cover art display. Falls back to ffmpeg `-map 0:v:0` for embedded cover art if no sidecar file exists.
+- `SettingsService.GetThumbnailPath(filePath)` / `GetExistingThumbnail(filePath)` manage the thumbnail cache directory.
 - Resume playback position per file (SHA256-hashed path for privacy)
 - Markers dialog combines editable user bookmarks with read-only embedded video chapters
 - Bookmarks support add/edit/remove/jump per file; embedded chapters support jump only
@@ -341,7 +345,8 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Always-on-top toggle
 - Drag-to-move via title bar
 - Keyboard shortcuts (full list in KeyboardShortcutsDialog)
-- OSD messages
+- OSD toast: top-left, translucent (`#99` opacity), subtle border, small bare icon — intentionally unobtrusive so it doesn't pull attention from the video. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap instead of overflowing the pill.
+- Scrollbar: 6px wide/tall, green-tinted thumb (`#3A9B4B`), opacity-based hover (0.35 → 0.75 → 1.0), no arrow buttons, applied globally via `Lumyn.axaml`.
 - Sidebar playlist panel (toggle with Q)
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
 - Windows file associations through Inno Setup registry entries (`packaging/windows/lumyn.iss`) and MSIX declarations (`packaging/windows/AppxManifest.xml`); `scripts/build-windows.ps1` also contains a portable `Register-FileAssociations.ps1` generator helper.
@@ -398,13 +403,15 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 ### Settings Persistence
 
 - **Location**: `~/.config/Lumyn/settings.json` (Linux); equivalent app-data location on Windows
+- **Thumbnail cache**: `~/.config/Lumyn/thumbs/{sha256_16chars}.jpg` — one JPEG per file, keyed by first 16 hex chars of SHA256(normalized path). Created by the app on startup.
 - **Format**: JSON, auto-saved on changes
 - **Contents**:
   - Resume positions (key = SHA256 of normalized file path)
   - Bookmarks per file
   - Subtitle settings per file (font, size, color, delay)
+  - Audio clarity mode per file
   - Recent files list (max 12)
-  - Global: volume, speed, seek step preference
+  - Global: volume, speed, seek step preference, UI visibility toggles
 
 ---
 
@@ -436,11 +443,14 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 
 ### Recent Files Start Screen
 
-- Recent files are exposed as `RecentFileItem` records from `MainViewModel.RecentFileItems`.
+- Recent files are exposed as `RecentFileItem` records from `MainViewModel.RecentFileItems`. Both video and audio items use one shared 200×120 card template.
 - `SettingsService.GetResumeInfo()` returns resume position plus progress percentage (`0–100`), or `-1` when no resume state exists.
-- The recent-card percentage label is `RecentFileItem.ProgressLabel`, rounded and clamped to `0%`–`100%`.
-- The tiny green progress indicator uses `Controls/MiniProgressBar.cs`, not Avalonia's built-in `ProgressBar`. The default template can render incorrectly in a 3px-high card bar, so keep this custom-drawn control for recent cards.
-- Card progress rows are bottom-aligned inside the card content, with a shortened bottom padding so the bar sits near the card bottom without crowding the border.
+- The progress percentage is shown as a small badge (`ProgressLabel`) in the top-left corner of each card, visible only when a resume position exists.
+- The tiny green progress bar at the card bottom uses `Controls/MiniProgressBar.cs`, not Avalonia's built-in `ProgressBar`. The default template renders incorrectly at 3px height.
+- **Thumbnail image** (`RecentFileItem.ThumbnailBitmap`) is loaded lazily from the thumbnail cache path (`ThumbnailPath`). `HasThumbnail` controls visibility. The `_cachedBitmap` field is mutable on a `record` — this is intentional for lazy loading.
+- **Thumbnail extraction** is triggered in three places: (1) during active playback in `RefreshState()` once per file; (2) on `Stop()` at the exact stopped position using the captured `CurrentMediaPosition`; (3) backfill at startup via `BackfillRecentThumbnails()` for all recent files without a cached thumbnail. All extraction is `Task.Run()` off the UI thread; completion posts `NotifyRecentFilesChanged` to `Dispatcher.UIThread`.
+- **ffmpeg extraction** uses `-ss {seek} -i {file} -vframes 1 -vf scale=320:-2 -f image2 {tempPath}`. The `-f image2` flag is required on ffmpeg 8+ for non-image extensions (`.tmp` fails without it). Temp file is written to `outputPath + ".tmp"` then atomically moved.
+- **Audio cover art** uses `FindCoverArtPath()` first (sidecar files), then falls back to `ffmpeg -map 0:v:0` for embedded cover art.
 - Stop/end/cast-stop paths must call `NotifyRecentFilesChanged()` after saving or clearing resume state so recent-card percentages refresh immediately without requiring app restart.
 
 ### Dialogs
@@ -679,7 +689,11 @@ dotnet test Lumyn.sln
 
 | Date | Change |
 |---|---|
-| 2026-05 | Seek thumbnail preview: hovering the seek bar shows a 164×~115px popup with a JPEG video frame and timestamp. `ThumbnailExtractor` (Lumyn.Core) runs a secondary silent mpv instance (`vo=null ao=null screenshot-sw=yes`) to pre-generate 40 evenly-spaced JPEG frames in a background Task. Frames are stored as `byte[]?[]` in Core and lazily decoded to `Avalonia.Media.Imaging.Bitmap` in `MainWindow.axaml.cs` (`GetCachedThumbBitmap`). SeekBar `PointerMoved`/`PointerExited` events drive `UpdateSeekThumbnail` / `HideSeekThumbnailPopup`. Popup is `HorizontalAlignment="Left" VerticalAlignment="Bottom"` inside VideoPanel; left margin is clamped to window bounds. Bitmap cache is invalidated on file change and disposed on window close. |
+| 2026-05 | Seek thumbnail preview: hovering the seek bar shows a 164×~115px popup with a JPEG video frame and timestamp. `ThumbnailExtractor` (Lumyn.Core) runs a secondary silent mpv instance (`vo=null ao=null screenshot-sw=yes`) to pre-generate 100 evenly-spaced JPEG frames (was 40) in a background Task using `"exact"` seek mode (was `"keyframes"`) for frame-accurate thumbnails. The popup time label shows the thumbnail's actual capture time (not the raw cursor position) so the label and frame are always in sync. Frames stored as `byte[]?[]`, lazily decoded to `Avalonia.Media.Imaging.Bitmap` via `GetCachedThumbBitmap`. SeekBar `PointerMoved`/`PointerExited` drive `UpdateSeekThumbnail` / `HideSeekThumbnailPopup`. |
+| 2026-05 | Recently played video thumbnail cards: each card shows a full-bleed video frame thumbnail (200×120px) with a dark gradient overlay, filename, resume label, 3px progress bar, and a `%` badge top-left. Thumbnails extracted via ffmpeg (`-f image2` required on ffmpeg 8+, `.tmp` atomic write). Extraction triggered during playback, on stop (at exact stopped position), and backfilled at startup. Audio cards show cover art (external sidecar → embedded ffmpeg extract). Cache in `~/.config/Lumyn/thumbs/`. `RecentFileItem` record has lazy `ThumbnailBitmap` property. |
+| 2026-05 | OSD toast redesigned: moved from bottom-left to top-left (52px top margin). Style simplified — translucent `#99` background, near-invisible white border, small bare icon, regular-weight muted text, reduced shadow. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap correctly (StackPanel gave infinite width, disabling TextWrapping). |
+| 2026-05 | Scrollbar theme: globally styled in `Lumyn.axaml` to 6px wide/tall, green-tinted (`#3A9B4B`) thumb with opacity-based states (0.35 normal / 0.75 hover / 1.0 pressed). Arrow buttons hidden. Uses `Opacity` rather than `Background` for state changes because Fluent theme's Thumb template overrides Background internally. |
+| 2026-05 | Right-click context menu crash fixed: `ContextMenu.Open(control)` requires the control it is attached to in AXAML (`VideoPanel`), not the Window. Changed `OpenRootContextMenu()` to find and pass `VideoPanel`. |
 | 2026-05 | Ambient border glow: `RootBorder` (2px) animated to the dominant edge color of the current video frame, sampled via PPM screenshot every 2.5s. Lerp timer (80ms) smoothly transitions the `SolidColorBrush`. Audio-only mode glows Lumyn green; no media fades to transparent. All logic in `MainWindow.axaml.cs` (`GlowTimer_Tick`, `GlowLerpTimer_Tick`, `SamplePpmEdgeColor`). `MainViewModel.TakeGlowSnapshot` delegates to `PlaybackService.TakeSnapshot`. |
 | 2026-05 | Added a bottom-pinned Transmux section in Settings for video/audio format conversion handoff, using the Transmux site SVG asset and linking to the Transmux website with a summary of supported conversion, subtitle, and progress features. |
 | 2026-05 | Added Interface visibility settings for hiding Screenshot, Always on Top, Cast, Seek Step, Queue, Loop, and Markers controls. Visibility preferences persist globally, and the queue sidebar header now has a close button next to clear. |

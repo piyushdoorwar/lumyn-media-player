@@ -343,44 +343,30 @@
     <!-- ── OSD toast ────────────────────────────────────────────────────── -->
     <Border
         HorizontalAlignment="Left"
-        VerticalAlignment="Bottom"
-        Margin="16,0,16,92"
-        MinHeight="42"
-        MaxWidth="520"
-        CornerRadius="7"
-        Background="#F0161718"
-        BorderBrush="#553A9B4B"
+        VerticalAlignment="Top"
+        Margin="16,52,16,0"
+        Padding="10,7,14,7"
+        MaxWidth="480"
+        CornerRadius="6"
+        Background="#99101214"
+        BorderBrush="#1AFFFFFF"
         BorderThickness="1"
         IsVisible="{Binding HasOsd}"
         IsHitTestVisible="False">
       <Border.Effect>
-        <DropShadowEffect BlurRadius="18" OffsetX="0" OffsetY="8" Color="#000000" Opacity="0.45" />
+        <DropShadowEffect BlurRadius="8" OffsetX="0" OffsetY="3" Color="#000000" Opacity="0.25" />
       </Border.Effect>
-      <Grid ColumnDefinitions="4,Auto,*">
-        <Border Grid.Column="0"
-                Background="#3A9B4B"
-                CornerRadius="7,0,0,7" />
-        <Border Grid.Column="1"
-                Width="26"
-                Height="26"
-                Margin="12,8,9,8"
-                CornerRadius="13"
-                Background="#263A9B4B"
-                BorderBrush="#553A9B4B"
-                BorderThickness="1">
-          <PathIcon Width="13"
-                    Height="13"
-                    Data="{StaticResource Icon.Info}"
-                    Foreground="#6FE282"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center" />
-        </Border>
-        <TextBlock Grid.Column="2"
+      <Grid ColumnDefinitions="Auto,*" VerticalAlignment="Center">
+        <PathIcon Grid.Column="0"
+                  Width="11" Height="11"
+                  Data="{StaticResource Icon.Info}"
+                  Foreground="#5A9B6A"
+                  VerticalAlignment="Center" />
+        <TextBlock Grid.Column="1"
                    Text="{Binding OsdMessage}"
-                   Margin="0,10,14,10"
-                   FontSize="13"
-                   FontWeight="SemiBold"
-                   Foreground="#F8F4EF"
+                   Margin="8,0,0,0"
+                   FontSize="12"
+                   Foreground="#C8C4C0"
                    TextWrapping="Wrap"
                    TextTrimming="CharacterEllipsis"
                    MaxLines="2"

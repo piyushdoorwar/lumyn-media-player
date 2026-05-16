@@ -191,4 +191,48 @@
   <Style Selector="TextBlock">
     <Setter Property="Foreground" Value="#F7F5F3" />
   </Style>
+
+  <!-- ── Scrollbar ──────────────────────────────────────────────────────── -->
+
+  <!-- Thin track -->
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Margin" Value="0,2,1,2" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Margin" Value="2,0,2,1" />
+  </Style>
+
+  <!-- Hide line buttons (up/down arrows) -->
+  <Style Selector="ScrollBar /template/ RepeatButton">
+    <Setter Property="IsVisible" Value="False" />
+    <Setter Property="Height" Value="0" />
+    <Setter Property="Width" Value="0" />
+  </Style>
+
+  <!-- Green thumb — opacity drives hover/press since Fluent overrides Background internally -->
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="#3A9B4B" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="MinHeight" Value="20" />
+    <Setter Property="MinWidth" Value="4" />
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+
+  <Style Selector="ScrollBar /template/ Thumb:pointerover">
+    <Setter Property="Opacity" Value="0.75" />
+  </Style>
+
+  <Style Selector="ScrollBar /template/ Thumb:pressed">
+    <Setter Property="Opacity" Value="1.0" />
+  </Style>
+
+  <!-- Track area behind the thumb -->
+  <Style Selector="ScrollBar /template/ Border#PART_TrackBorder">
+    <Setter Property="Background" Value="#0DFFFFFF" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
 </Styles>

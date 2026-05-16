@@ -215,6 +215,28 @@ public sealed class SettingsService
         return File.Exists(path) ? path : null;
     }
 
+    /// <summary>
+    /// Deletes any thumbnail files in the thumbs directory that no longer
+    /// correspond to a file in the current recent-files list.
+    /// Safe to call on a background thread.
+    /// </summary>
+    public void PruneOrphanedThumbnails()
+    {
+        try
+        {
+            var kept = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var f in _recentFiles)
+                kept.Add(GetThumbnailPath(f));
+
+            foreach (var file in Directory.EnumerateFiles(_thumbsDir, "*.jpg"))
+            {
+                if (!kept.Contains(file))
+                    try { File.Delete(file); } catch { }
+            }
+        }
+        catch { }
+    }
+
     private static string KeyForFile(string filePath)
     {
         var normalized = Path.GetFullPath(filePath);

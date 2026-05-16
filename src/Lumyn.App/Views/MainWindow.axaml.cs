@@ -21,9 +21,11 @@ public partial class MainWindow : Window
     private Color _targetGlowColor = GlowOff;
     private bool _glowSampling;
 
-    // Seek thumbnail preview
-    private readonly Avalonia.Media.Imaging.Bitmap?[] _thumbBitmapCache =
-        new Avalonia.Media.Imaging.Bitmap?[Lumyn.Core.Services.ThumbnailExtractor.FrameCount];
+    // Seek thumbnail preview — keyed by coarse progress bucket (0–1999).
+    // Each entry also stores the source JPEG reference so Phase 2 upgrades
+    // are detected automatically: if GetNearest returns a different byte[]
+    // the cached Bitmap is disposed and the new frame decoded in its place.
+    private readonly Dictionary<int, (byte[] Src, Avalonia.Media.Imaging.Bitmap Bmp)> _thumbBitmapCache = new();
     private string? _thumbCacheForFile;
 
     private bool _isApplyingFullscreenState;
@@ -85,11 +87,8 @@ public partial class MainWindow : Window
         {
             _glowTimer.Stop();
             _glowLerpTimer.Stop();
-            for (int i = 0; i < _thumbBitmapCache.Length; i++)
-            {
-                _thumbBitmapCache[i]?.Dispose();
-                _thumbBitmapCache[i] = null;
-            }
+            foreach (var (_, bmp) in _thumbBitmapCache.Values) bmp.Dispose();
+            _thumbBitmapCache.Clear();
             ViewModel?.Dispose();
         };
         PropertyChanged += (_, e) =>
@@ -202,11 +201,12 @@ public partial class MainWindow : Window
 
     private void OpenRootContextMenu()
     {
-        var menu = this.FindControl<ContextMenu>("RootContextMenu");
-        if (menu is null) return;
+        var menu       = this.FindControl<ContextMenu>("RootContextMenu");
+        var videoPanel = this.FindControl<Panel>("VideoPanel");
+        if (menu is null || videoPanel is null) return;
 
         ShowControls();
-        menu.Open(this);
+        menu.Open(videoPanel);
     }
 
     // ── Seek slider ──────────────────────────────────────────────────────────
@@ -1037,6 +1037,8 @@ public partial class MainWindow : Window
         var bmp = GetCachedThumbBitmap(progress, vm);
         if (bmp is null) return;
 
+        // Label always shows the cursor position — that is exactly where the
+        // video will seek on click, so label and seek destination always match.
         thumbImg.Source = bmp;
         timeText.Text   = FormatSeekTime(TimeSpan.FromSeconds(progress * duration.TotalSeconds));
 
@@ -1051,29 +1053,35 @@ public partial class MainWindow : Window
 
     private Avalonia.Media.Imaging.Bitmap? GetCachedThumbBitmap(double progress, MainViewModel vm)
     {
+        // On file change, dispose and clear every cached Bitmap.
         if (!string.Equals(_thumbCacheForFile, vm.CurrentFilePath, StringComparison.Ordinal))
         {
-            for (int i = 0; i < _thumbBitmapCache.Length; i++)
-            {
-                _thumbBitmapCache[i]?.Dispose();
-                _thumbBitmapCache[i] = null;
-            }
+            foreach (var (_, bmp) in _thumbBitmapCache.Values) bmp.Dispose();
+            _thumbBitmapCache.Clear();
             _thumbCacheForFile = vm.CurrentFilePath;
         }
-
-        var idx = (int)Math.Round(Math.Clamp(progress, 0, 1)
-                      * (Lumyn.Core.Services.ThumbnailExtractor.FrameCount - 1));
-
-        if (_thumbBitmapCache[idx] is { } cached) return cached;
 
         var bytes = vm.Thumbnails.GetNearest(progress);
         if (bytes is null) return null;
 
+        // 2 000-bucket key gives ~0.05 % progress resolution — plenty for hover.
+        var key = (int)(Math.Clamp(progress, 0.0, 1.0) * 1999);
+
+        if (_thumbBitmapCache.TryGetValue(key, out var entry))
+        {
+            // Phase 2 may have inserted a closer frame for this bucket.
+            // If the byte[] reference changed, dispose the stale Bitmap and re-decode.
+            if (ReferenceEquals(entry.Src, bytes)) return entry.Bmp;
+            entry.Bmp.Dispose();
+            _thumbBitmapCache.Remove(key);
+        }
+
         try
         {
-            using var ms = new System.IO.MemoryStream(bytes);
+            using var ms  = new System.IO.MemoryStream(bytes);
             var bmp = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(ms, 160);
-            return _thumbBitmapCache[idx] = bmp;
+            _thumbBitmapCache[key] = (bytes, bmp);
+            return bmp;
         }
         catch { return null; }
     }

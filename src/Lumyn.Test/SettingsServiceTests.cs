@@ -84,6 +84,21 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void AudioSettings_PersistPerFileAndCanBeCleared()
+    {
+        var settings = CreateSettings();
+        var file = Path.Combine(_settingsDir, "movie.mp4");
+
+        settings.SaveAudioSettings(file, new AudioSettingsEntry { Mode = "VoiceBoost" });
+
+        Assert.Equal("VoiceBoost", CreateSettings().GetAudioSettings(file)?.Mode);
+
+        settings.ClearAudioSettings(file);
+
+        Assert.Null(CreateSettings().GetAudioSettings(file));
+    }
+
+    [Fact]
     public void Bookmarks_AreSortedRenamedAndFormatted()
     {
         var settings = CreateSettings();

@@ -115,6 +115,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private IBrush _subtitleForeground = Brushes.White;
     // ── Video adjustments ───────────────────────────────────────────────
     private Lumyn.App.Models.VideoAdjustments _videoAdjustments = Lumyn.App.Models.VideoAdjustments.Default;
+    private AudioClarityMode _audioClarityMode = AudioClarityMode.Off;
 
     // ── Audio mode ──────────────────────────────────────────────────────
     private bool _isAudioOnly;
@@ -377,6 +378,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasVideoAdjustments => !_videoAdjustments.IsDefault;
+
+    public AudioClarityMode CurrentAudioClarityMode
+    {
+        get => _audioClarityMode;
+        private set => SetField(ref _audioClarityMode, value);
+    }
 
     // ── Audio mode properties ────────────────────────────────────────────
 
@@ -1154,6 +1161,43 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ShowOsd($"Watch mode: {preset.Name}");
     }
 
+    public void ApplyAudioClarityMode(AudioClarityMode mode)
+    {
+        CurrentAudioClarityMode = mode;
+        _playback.SetAudioFilter(AudioFilterForMode(mode));
+
+        if (!string.IsNullOrWhiteSpace(CurrentFilePath))
+        {
+            if (mode == AudioClarityMode.Off)
+                _settings.ClearAudioSettings(CurrentFilePath);
+            else
+                _settings.SaveAudioSettings(CurrentFilePath, new AudioSettingsEntry { Mode = mode.ToString() });
+        }
+
+        ShowOsd(mode == AudioClarityMode.Off
+            ? "Audio clarity off"
+            : $"Audio clarity: {AudioClarityLabel(mode)}");
+    }
+
+    private static string? AudioFilterForMode(AudioClarityMode mode) => mode switch
+    {
+        AudioClarityMode.VoiceBoost =>
+            "lavfi=[equalizer=f=180:t=q:w=1:g=-2,equalizer=f=1000:t=q:w=1.2:g=4,equalizer=f=3000:t=q:w=1:g=3]",
+        AudioClarityMode.LoudnessNormalize =>
+            "lavfi=[dynaudnorm=f=250:g=15:p=0.9:m=10]",
+        AudioClarityMode.QuietMode =>
+            "lavfi=[acompressor=threshold=-24dB:ratio=4:attack=20:release=250:makeup=4,equalizer=f=1000:t=q:w=1.2:g=2]",
+        _ => null
+    };
+
+    private static string AudioClarityLabel(AudioClarityMode mode) => mode switch
+    {
+        AudioClarityMode.VoiceBoost => "Voice boost",
+        AudioClarityMode.LoudnessNormalize => "Loudness normalize",
+        AudioClarityMode.QuietMode => "Quiet mode",
+        _ => "Off"
+    };
+
     public void EndSeek()
     {
         _isSeeking = false;
@@ -1818,6 +1862,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             }
         }
 
+        var audioSettings = _settings.GetAudioSettings(filePath);
+        if (audioSettings is not null &&
+            TryParseAudioClarityMode(audioSettings.Mode, out var audioMode))
+        {
+            ApplyAudioClarityMode(audioMode);
+        }
+        else
+        {
+            CurrentAudioClarityMode = AudioClarityMode.Off;
+            _playback.SetAudioFilter(null);
+        }
+
         if (audioOnly)
         {
             await Task.Delay(600);
@@ -1924,4 +1980,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SubtitleColor SubtitleColor,
         float Speed,
         int SeekStep);
+
+    private static bool TryParseAudioClarityMode(string value, out AudioClarityMode mode)
+    {
+        if (Enum.TryParse(value, out mode))
+            return true;
+
+        if (string.Equals(value, "NightClarity", StringComparison.OrdinalIgnoreCase))
+        {
+            mode = AudioClarityMode.QuietMode;
+            return true;
+        }
+
+        return false;
+    }
 }

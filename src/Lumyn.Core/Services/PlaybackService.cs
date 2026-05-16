@@ -258,6 +258,11 @@ public sealed class PlaybackService : IDisposable
     public void SetVideoZoom(double zoom) => SetDouble("video-zoom", Math.Clamp(zoom, -2.0, 2.0));
     public void SetVideoAspect(string aspect) => SetPropertyString("video-aspect-override", aspect);
 
+    // ── Audio clarity ──────────────────────────────────────────────────────
+
+    public void SetAudioFilter(string? filter)
+        => SetPropertyString("af", string.IsNullOrWhiteSpace(filter) ? "" : filter);
+
     // ── Metadata / track info ──────────────────────────────────────────────
 
     /// <summary>Reads a metadata tag by key (e.g. "title", "artist", "album"). Returns null if unavailable.</summary>

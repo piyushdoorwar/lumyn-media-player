@@ -86,6 +86,7 @@ lumyn-media-player/
 │   │   │   ├── VolumeSlider.cs      # Volume slider control
 │   │   │   └── AudioBars.cs         # Audio visualization bars
 │   │   ├── Models/
+│   │   │   ├── AudioClarityMode.cs # Audio clarity preset enum
 │   │   │   ├── VideoAdjustments.cs  # Record for brightness/contrast/saturation/rotation/zoom/aspect
 │   │   │   ├── SubtitleSettings.cs  # Subtitle appearance config
 │   │   │   └── WatchMode.cs         # Watch mode presets
@@ -678,6 +679,7 @@ dotnet test Lumyn.sln
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added Audio Clarity settings with Off, Voice Boost, Loudness Normalize, and Quiet Mode presets. Presets use mpv audio filters, are remembered per file, and display tidy icon/value summaries in Settings. |
 | 2026-05 | Added Watch Modes as the first Settings section. Cinema, Lecture, Language Learning, Night, and Music Video presets preview video adjustments and apply speed, seek-step, and subtitle style choices on Apply, with each row showing its concrete effects. |
 | 2026-05 | Added a top-bar Settings button with a two-column settings modal. Video adjustments and keyboard shortcuts now live as the first two settings sections, with context-menu and F1/? shortcut routes opening the relevant section. |
 | 2026-05 | Duration text in the seek row now toggles between total duration and remaining time when clicked, matching Netflix-style `-mm:ss` behavior. |

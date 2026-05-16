@@ -611,6 +611,7 @@ public partial class MainWindow : Window
         var prev = ViewModel.CurrentVideoAdjustments;
         var dialog = new SettingsDialog(
             prev,
+            ViewModel.CurrentAudioClarityMode,
             adj => ViewModel.ApplyVideoAdjustments(adj),
             section);
         var result = await dialog.ShowDialog<SettingsDialogResult?>(this);
@@ -621,10 +622,12 @@ public partial class MainWindow : Window
         else if (result.WatchMode is { } mode)
         {
             await ViewModel.ApplyWatchModeAsync(mode);
+            ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
         }
         else
         {
             ViewModel.ApplyVideoAdjustments(result.VideoAdjustments);
+            ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
         }
         Focus();
     }

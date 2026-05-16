@@ -13,6 +13,7 @@ public sealed class SettingsService
     private readonly Dictionary<string, double> _resumeDurations;
     private readonly List<string> _recentFiles;
     private readonly Dictionary<string, SubtitleEntry> _subtitleSettings;
+    private readonly Dictionary<string, AudioSettingsEntry> _audioSettings;
     private readonly Dictionary<string, List<BookmarkEntry>> _bookmarks;
 
     // ── Session-level preferences ─────────────────────────────────────────
@@ -34,6 +35,7 @@ public sealed class SettingsService
         _resumeDurations  = settings.ResumeDurations;
         _recentFiles      = settings.RecentFiles;
         _subtitleSettings = settings.SubtitleSettings;
+        _audioSettings    = settings.AudioSettings;
         _bookmarks        = settings.Bookmarks;
         LastVolume        = settings.LastVolume;
         LastSpeed         = settings.LastSpeed;
@@ -175,6 +177,7 @@ public sealed class SettingsService
             ResumeDurations  = _resumeDurations,
             RecentFiles      = _recentFiles,
             SubtitleSettings = _subtitleSettings,
+            AudioSettings    = _audioSettings,
             Bookmarks        = _bookmarks,
             LastVolume       = LastVolume,
             LastSpeed        = LastSpeed,
@@ -211,17 +214,44 @@ public sealed class SettingsService
             Save();
     }
 
+    // ── Audio settings per file ─────────────────────────────────────────────
+
+    public AudioSettingsEntry? GetAudioSettings(string filePath)
+    {
+        _audioSettings.TryGetValue(KeyForFile(filePath), out var entry);
+        return entry;
+    }
+
+    public void SaveAudioSettings(string filePath, AudioSettingsEntry entry)
+    {
+        _audioSettings[KeyForFile(filePath)] = entry;
+        Save();
+    }
+
+    public void ClearAudioSettings(string filePath)
+    {
+        if (_audioSettings.Remove(KeyForFile(filePath)))
+            Save();
+    }
+
     private sealed class SettingsFile
     {
         public Dictionary<string, double> ResumePositions { get; set; } = [];
         public Dictionary<string, double> ResumeDurations { get; set; } = [];
         public List<string> RecentFiles { get; set; } = [];
         public Dictionary<string, SubtitleEntry> SubtitleSettings { get; set; } = [];
+        public Dictionary<string, AudioSettingsEntry> AudioSettings { get; set; } = [];
         public Dictionary<string, List<BookmarkEntry>> Bookmarks { get; set; } = [];
         public int   LastVolume { get; set; } = 80;
         public float LastSpeed  { get; set; } = 1.0f;
         public int   SeekStep   { get; set; } = 5;
     }
+}
+
+/// <summary>Audio clarity mode cached per media file.</summary>
+public sealed class AudioSettingsEntry
+{
+    public string Mode { get; set; } = "Off";
 }
 
 /// <summary>Subtitle configuration cached per media file.</summary>

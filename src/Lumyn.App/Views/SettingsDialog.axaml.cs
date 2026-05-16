@@ -14,10 +14,14 @@ public enum SettingsSection
 {
     WatchModes,
     Video,
+    AudioClarity,
     Shortcuts
 }
 
-public sealed record SettingsDialogResult(VideoAdjustments VideoAdjustments, WatchMode? WatchMode);
+public sealed record SettingsDialogResult(
+    VideoAdjustments VideoAdjustments,
+    WatchMode? WatchMode,
+    AudioClarityMode AudioClarityMode);
 
 public partial class SettingsDialog : Window
 {
@@ -102,6 +106,41 @@ public partial class SettingsDialog : Window
             ])
     ];
 
+    private static readonly AudioClarityChoice[] AudioClarityModes =
+    [
+        new(
+            AudioClarityMode.Off,
+            "Off",
+            [
+                new("Icon.VolumeHigh", "Original mix"),
+                new("Icon.AudioTrack", "No filter")
+            ]),
+        new(
+            AudioClarityMode.VoiceBoost,
+            "Voice Boost",
+            [
+                new("Icon.VolumeHigh", "Low rumble -2dB"),
+                new("Icon.SpeedGauge", "No compression"),
+                new("Icon.AudioTrack", "Dialogue +4dB")
+            ]),
+        new(
+            AudioClarityMode.LoudnessNormalize,
+            "Loudness Normalize",
+            [
+                new("Icon.VolumeHigh", "Even volume"),
+                new("Icon.SpeedGauge", "Dynamic normalize"),
+                new("Icon.AudioTrack", "Best for mixed sources")
+            ]),
+        new(
+            AudioClarityMode.QuietMode,
+            "Quiet Mode",
+            [
+                new("Icon.VolumeHigh", "Softer peaks"),
+                new("Icon.SpeedGauge", "Compression"),
+                new("Icon.AudioTrack", "Voice lift")
+            ])
+    ];
+
     private static readonly (string Key, string Action)[] Playback =
     [
         ("Space", "Play / Pause"),
@@ -170,13 +209,18 @@ public partial class SettingsDialog : Window
     private int _zoomSlider;
     private VideoAspect _aspect;
     private WatchMode? _selectedWatchMode;
+    private AudioClarityMode _selectedAudioClarityMode;
 
     public SettingsDialog()
-        : this(VideoAdjustments.Default, null, SettingsSection.WatchModes)
+        : this(VideoAdjustments.Default, AudioClarityMode.Off, null, SettingsSection.WatchModes)
     {
     }
 
-    public SettingsDialog(VideoAdjustments current, Action<VideoAdjustments>? onPreview, SettingsSection initialSection)
+    public SettingsDialog(
+        VideoAdjustments current,
+        AudioClarityMode currentAudioClarityMode,
+        Action<VideoAdjustments>? onPreview,
+        SettingsSection initialSection)
     {
         AvaloniaXamlLoader.Load(this);
 
@@ -187,11 +231,13 @@ public partial class SettingsDialog : Window
         _rotation = current.Rotation;
         _zoomSlider = ZoomToSlider(current.Zoom);
         _aspect = current.Aspect;
+        _selectedAudioClarityMode = currentAudioClarityMode;
 
         var aspectCombo = this.FindControl<ComboBox>("AspectCombo")!;
         aspectCombo.ItemsSource = AspectChoices;
 
         PopulateWatchModes();
+        PopulateAudioClarityModes();
         PopulateShortcuts();
         RefreshAll();
         ShowSection(initialSection);
@@ -201,6 +247,8 @@ public partial class SettingsDialog : Window
     private void WatchModesNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.WatchModes);
 
     private void VideoNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Video);
+
+    private void AudioClarityNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.AudioClarity);
 
     private void ShortcutsNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Shortcuts);
 
@@ -262,7 +310,7 @@ public partial class SettingsDialog : Window
     }
 
     private void OkButton_Click(object? sender, RoutedEventArgs e) =>
-        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode));
+        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode, _selectedAudioClarityMode));
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e) => Close(null);
 
@@ -285,11 +333,14 @@ public partial class SettingsDialog : Window
         _section = section;
         var isWatchModes = section == SettingsSection.WatchModes;
         var isVideo = section == SettingsSection.Video;
+        var isAudioClarity = section == SettingsSection.AudioClarity;
         SetVisible("WatchModesPanel", isWatchModes);
         SetVisible("VideoPanel", isVideo);
+        SetVisible("AudioClarityPanel", isAudioClarity);
         SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
         MarkNavSelected("WatchModesNavButton", isWatchModes);
         MarkNavSelected("VideoNavButton", isVideo);
+        MarkNavSelected("AudioClarityNavButton", isAudioClarity);
         MarkNavSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
     }
 
@@ -327,6 +378,89 @@ public partial class SettingsDialog : Window
             button.Click += WatchModeButton_Click;
             list.Children.Add(button);
         }
+    }
+
+    private void PopulateAudioClarityModes()
+    {
+        var list = this.FindControl<StackPanel>("AudioClarityList");
+        if (list is null) return;
+
+        foreach (var mode in AudioClarityModes)
+        {
+            var button = new Button
+            {
+                Tag = mode.Mode,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(12, 10),
+                Background = ModeNormalBg,
+                BorderBrush = ModeNormalBorder,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Content = new Grid
+                {
+                    RowDefinitions =
+                    {
+                        new RowDefinition(GridLength.Auto),
+                        new RowDefinition(GridLength.Auto)
+                    },
+                    Children =
+                    {
+                        BuildAudioClarityText(mode),
+                        BuildAudioClarityEffects(mode)
+                    }
+                }
+            };
+            button.Click += AudioClarityButton_Click;
+            list.Children.Add(button);
+        }
+
+        RefreshAudioClaritySelection();
+    }
+
+    private static TextBlock BuildAudioClarityText(AudioClarityChoice mode)
+    {
+        var text = new TextBlock
+        {
+            Text = mode.Name,
+            FontSize = 14,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        Grid.SetRow(text, 0);
+        return text;
+    }
+
+    private static Grid BuildAudioClarityEffects(AudioClarityChoice mode)
+    {
+        var effects = new Grid
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+
+        for (var i = 0; i < mode.Effects.Length; i++)
+            effects.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(i == mode.Effects.Length - 1 ? 190 : 150)));
+
+        for (var i = 0; i < mode.Effects.Length; i++)
+        {
+            var effect = BuildEffect(mode.Effects[i]);
+            Grid.SetColumn(effect, i);
+            effects.Children.Add(effect);
+        }
+
+        Grid.SetRow(effects, 1);
+        return effects;
+    }
+
+    private void AudioClarityButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: AudioClarityMode mode }) return;
+
+        _selectedAudioClarityMode = mode;
+        RefreshAudioClaritySelection();
     }
 
     private static TextBlock BuildModeText(WatchModeChoice mode)
@@ -440,6 +574,19 @@ public partial class SettingsDialog : Window
         foreach (var button in list.Children.OfType<Button>())
         {
             var selected = button.Tag is WatchMode mode && _selectedWatchMode == mode;
+            button.Background = selected ? ModeSelectedBg : ModeNormalBg;
+            button.BorderBrush = selected ? ModeSelectedBorder : ModeNormalBorder;
+        }
+    }
+
+    private void RefreshAudioClaritySelection()
+    {
+        var list = this.FindControl<StackPanel>("AudioClarityList");
+        if (list is null) return;
+
+        foreach (var button in list.Children.OfType<Button>())
+        {
+            var selected = button.Tag is AudioClarityMode mode && _selectedAudioClarityMode == mode;
             button.Background = selected ? ModeSelectedBg : ModeNormalBg;
             button.BorderBrush = selected ? ModeSelectedBorder : ModeNormalBorder;
         }
@@ -630,4 +777,9 @@ public partial class SettingsDialog : Window
         WatchModeEffect[] Effects);
 
     private sealed record WatchModeEffect(string IconKey, string Text);
+
+    private sealed record AudioClarityChoice(
+        AudioClarityMode Mode,
+        string Name,
+        WatchModeEffect[] Effects);
 }

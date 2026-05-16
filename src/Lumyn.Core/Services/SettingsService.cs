@@ -15,6 +15,7 @@ public sealed class SettingsService
     private readonly Dictionary<string, SubtitleEntry> _subtitleSettings;
     private readonly Dictionary<string, AudioSettingsEntry> _audioSettings;
     private readonly Dictionary<string, List<BookmarkEntry>> _bookmarks;
+    private UiVisibilitySettings _uiVisibility;
 
     // ── Session-level preferences ─────────────────────────────────────────
     public int   LastVolume   { get; private set; } = 80;
@@ -37,12 +38,15 @@ public sealed class SettingsService
         _subtitleSettings = settings.SubtitleSettings;
         _audioSettings    = settings.AudioSettings;
         _bookmarks        = settings.Bookmarks;
+        _uiVisibility     = settings.UiVisibility;
         LastVolume        = settings.LastVolume;
         LastSpeed         = settings.LastSpeed;
         SeekStep          = settings.SeekStep;
     }
 
     public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
+
+    public UiVisibilitySettings UiVisibility => _uiVisibility.Clone();
 
     // ── Recent files ────────────────────────────────────────────────────────
 
@@ -51,6 +55,12 @@ public sealed class SettingsService
         LastVolume = Math.Clamp(volume, 0, 150);
         LastSpeed  = Math.Clamp(speed, 0.25f, 4.0f);
         SeekStep   = seekStep is 5 or 10 or 30 ? seekStep : 5;
+        Save();
+    }
+
+    public void SaveUiVisibility(UiVisibilitySettings visibility)
+    {
+        _uiVisibility = visibility.Clone();
         Save();
     }
 
@@ -179,6 +189,7 @@ public sealed class SettingsService
             SubtitleSettings = _subtitleSettings,
             AudioSettings    = _audioSettings,
             Bookmarks        = _bookmarks,
+            UiVisibility     = _uiVisibility,
             LastVolume       = LastVolume,
             LastSpeed        = LastSpeed,
             SeekStep         = SeekStep
@@ -242,10 +253,34 @@ public sealed class SettingsService
         public Dictionary<string, SubtitleEntry> SubtitleSettings { get; set; } = [];
         public Dictionary<string, AudioSettingsEntry> AudioSettings { get; set; } = [];
         public Dictionary<string, List<BookmarkEntry>> Bookmarks { get; set; } = [];
+        public UiVisibilitySettings UiVisibility { get; set; } = new();
         public int   LastVolume { get; set; } = 80;
         public float LastSpeed  { get; set; } = 1.0f;
         public int   SeekStep   { get; set; } = 5;
     }
+}
+
+/// <summary>Global controls that can be hidden for a cleaner player surface.</summary>
+public sealed class UiVisibilitySettings
+{
+    public bool ShowScreenshot { get; set; } = true;
+    public bool ShowPin { get; set; } = true;
+    public bool ShowCast { get; set; } = true;
+    public bool ShowSeekStep { get; set; } = true;
+    public bool ShowQueue { get; set; } = true;
+    public bool ShowLoop { get; set; } = true;
+    public bool ShowMarkers { get; set; } = true;
+
+    public UiVisibilitySettings Clone() => new()
+    {
+        ShowScreenshot = ShowScreenshot,
+        ShowPin = ShowPin,
+        ShowCast = ShowCast,
+        ShowSeekStep = ShowSeekStep,
+        ShowQueue = ShowQueue,
+        ShowLoop = ShowLoop,
+        ShowMarkers = ShowMarkers
+    };
 }
 
 /// <summary>Audio clarity mode cached per media file.</summary>

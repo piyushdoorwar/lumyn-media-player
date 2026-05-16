@@ -7,6 +7,7 @@ using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Lumyn.App.Models;
+using Lumyn.Core.Services;
 
 namespace Lumyn.App.Views;
 
@@ -15,13 +16,15 @@ public enum SettingsSection
     WatchModes,
     Video,
     AudioClarity,
+    Interface,
     Shortcuts
 }
 
 public sealed record SettingsDialogResult(
     VideoAdjustments VideoAdjustments,
     WatchMode? WatchMode,
-    AudioClarityMode AudioClarityMode);
+    AudioClarityMode AudioClarityMode,
+    UiVisibilitySettings UiVisibility);
 
 public partial class SettingsDialog : Window
 {
@@ -141,6 +144,17 @@ public partial class SettingsDialog : Window
             ])
     ];
 
+    private static readonly VisibilityChoice[] InterfaceOptions =
+    [
+        new("ShowQueue", "Queue button", "Icon.Playlist", "Top bar queue/playlist toggle"),
+        new("ShowPin", "Always on top", "Icon.AlwaysOnTop", "Top bar pin button"),
+        new("ShowCast", "Cast", "Icon.Cast", "Bottom bar cast button"),
+        new("ShowLoop", "Loop", "Icon.Loop", "Bottom bar loop toggle"),
+        new("ShowSeekStep", "Seek step", "Icon.SeekForward", "Bottom bar step-size control"),
+        new("ShowMarkers", "Markers", "Icon.BookmarkOutline", "Bottom bar bookmarks/chapters button"),
+        new("ShowScreenshot", "Screenshot", "Icon.Screenshot", "Bottom bar screenshot button")
+    ];
+
     private static readonly (string Key, string Action)[] Playback =
     [
         ("Space", "Play / Pause"),
@@ -210,15 +224,17 @@ public partial class SettingsDialog : Window
     private VideoAspect _aspect;
     private WatchMode? _selectedWatchMode;
     private AudioClarityMode _selectedAudioClarityMode;
+    private UiVisibilitySettings _uiVisibility;
 
     public SettingsDialog()
-        : this(VideoAdjustments.Default, AudioClarityMode.Off, null, SettingsSection.WatchModes)
+        : this(VideoAdjustments.Default, AudioClarityMode.Off, new UiVisibilitySettings(), null, SettingsSection.WatchModes)
     {
     }
 
     public SettingsDialog(
         VideoAdjustments current,
         AudioClarityMode currentAudioClarityMode,
+        UiVisibilitySettings uiVisibility,
         Action<VideoAdjustments>? onPreview,
         SettingsSection initialSection)
     {
@@ -232,12 +248,14 @@ public partial class SettingsDialog : Window
         _zoomSlider = ZoomToSlider(current.Zoom);
         _aspect = current.Aspect;
         _selectedAudioClarityMode = currentAudioClarityMode;
+        _uiVisibility = uiVisibility.Clone();
 
         var aspectCombo = this.FindControl<ComboBox>("AspectCombo")!;
         aspectCombo.ItemsSource = AspectChoices;
 
         PopulateWatchModes();
         PopulateAudioClarityModes();
+        PopulateInterfaceOptions();
         PopulateShortcuts();
         RefreshAll();
         ShowSection(initialSection);
@@ -249,6 +267,8 @@ public partial class SettingsDialog : Window
     private void VideoNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Video);
 
     private void AudioClarityNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.AudioClarity);
+
+    private void InterfaceNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Interface);
 
     private void ShortcutsNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Shortcuts);
 
@@ -310,7 +330,7 @@ public partial class SettingsDialog : Window
     }
 
     private void OkButton_Click(object? sender, RoutedEventArgs e) =>
-        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode, _selectedAudioClarityMode));
+        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode, _selectedAudioClarityMode, _uiVisibility.Clone()));
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e) => Close(null);
 
@@ -334,13 +354,16 @@ public partial class SettingsDialog : Window
         var isWatchModes = section == SettingsSection.WatchModes;
         var isVideo = section == SettingsSection.Video;
         var isAudioClarity = section == SettingsSection.AudioClarity;
+        var isInterface = section == SettingsSection.Interface;
         SetVisible("WatchModesPanel", isWatchModes);
         SetVisible("VideoPanel", isVideo);
         SetVisible("AudioClarityPanel", isAudioClarity);
+        SetVisible("InterfacePanel", isInterface);
         SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
         MarkNavSelected("WatchModesNavButton", isWatchModes);
         MarkNavSelected("VideoNavButton", isVideo);
         MarkNavSelected("AudioClarityNavButton", isAudioClarity);
+        MarkNavSelected("InterfaceNavButton", isInterface);
         MarkNavSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
     }
 
@@ -461,6 +484,91 @@ public partial class SettingsDialog : Window
 
         _selectedAudioClarityMode = mode;
         RefreshAudioClaritySelection();
+    }
+
+    private void PopulateInterfaceOptions()
+    {
+        var list = this.FindControl<StackPanel>("InterfaceOptionsList");
+        if (list is null) return;
+
+        foreach (var option in InterfaceOptions)
+            list.Children.Add(BuildVisibilityOption(option));
+    }
+
+    private Control BuildVisibilityOption(VisibilityChoice option)
+    {
+        var grid = new Grid
+        {
+            ColumnDefinitions =
+            {
+                new ColumnDefinition(GridLength.Auto),
+                new ColumnDefinition(GridLength.Star),
+                new ColumnDefinition(GridLength.Auto)
+            },
+            Background = ModeNormalBg,
+            Margin = new Thickness(0),
+        };
+
+        var border = new Border
+        {
+            Background = ModeNormalBg,
+            BorderBrush = ModeNormalBorder,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(12, 10),
+            Child = grid
+        };
+
+        if (Application.Current?.Resources.TryGetResource(option.IconKey, Avalonia.Styling.ThemeVariant.Default, out var icon) == true &&
+            icon is StreamGeometry geometry)
+        {
+            var path = new PathIcon
+            {
+                Data = geometry,
+                Width = 16,
+                Height = 16,
+                Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0)
+            };
+            Grid.SetColumn(path, 0);
+            grid.Children.Add(path);
+        }
+
+        var text = new StackPanel { Spacing = 2 };
+        text.Children.Add(new TextBlock
+        {
+            Text = option.Name,
+            FontSize = 13,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = Brushes.White
+        });
+        text.Children.Add(new TextBlock
+        {
+            Text = option.Description,
+            FontSize = 11,
+            Foreground = new SolidColorBrush(Color.Parse("#8E8A86"))
+        });
+        Grid.SetColumn(text, 1);
+        grid.Children.Add(text);
+
+        var toggle = new ToggleSwitch
+        {
+            IsChecked = GetVisibilityValue(option.PropertyName),
+            VerticalAlignment = VerticalAlignment.Center,
+            Tag = option.PropertyName
+        };
+        toggle.IsCheckedChanged += VisibilityToggle_IsCheckedChanged;
+        Grid.SetColumn(toggle, 2);
+        grid.Children.Add(toggle);
+
+        return border;
+    }
+
+    private void VisibilityToggle_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleSwitch { Tag: string propertyName } toggle) return;
+        SetVisibilityValue(propertyName, toggle.IsChecked == true);
     }
 
     private static TextBlock BuildModeText(WatchModeChoice mode)
@@ -597,6 +705,46 @@ public partial class SettingsDialog : Window
         if (_selectedWatchMode is null) return;
         _selectedWatchMode = null;
         RefreshWatchModeSelection();
+    }
+
+    private bool GetVisibilityValue(string propertyName) => propertyName switch
+    {
+        nameof(UiVisibilitySettings.ShowScreenshot) => _uiVisibility.ShowScreenshot,
+        nameof(UiVisibilitySettings.ShowPin) => _uiVisibility.ShowPin,
+        nameof(UiVisibilitySettings.ShowCast) => _uiVisibility.ShowCast,
+        nameof(UiVisibilitySettings.ShowSeekStep) => _uiVisibility.ShowSeekStep,
+        nameof(UiVisibilitySettings.ShowQueue) => _uiVisibility.ShowQueue,
+        nameof(UiVisibilitySettings.ShowLoop) => _uiVisibility.ShowLoop,
+        nameof(UiVisibilitySettings.ShowMarkers) => _uiVisibility.ShowMarkers,
+        _ => true
+    };
+
+    private void SetVisibilityValue(string propertyName, bool value)
+    {
+        switch (propertyName)
+        {
+            case nameof(UiVisibilitySettings.ShowScreenshot):
+                _uiVisibility.ShowScreenshot = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowPin):
+                _uiVisibility.ShowPin = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowCast):
+                _uiVisibility.ShowCast = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowSeekStep):
+                _uiVisibility.ShowSeekStep = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowQueue):
+                _uiVisibility.ShowQueue = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowLoop):
+                _uiVisibility.ShowLoop = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowMarkers):
+                _uiVisibility.ShowMarkers = value;
+                break;
+        }
     }
 
     private void PopulateShortcuts()
@@ -782,4 +930,10 @@ public partial class SettingsDialog : Window
         AudioClarityMode Mode,
         string Name,
         WatchModeEffect[] Effects);
+
+    private sealed record VisibilityChoice(
+        string PropertyName,
+        string Name,
+        string IconKey,
+        string Description);
 }

@@ -679,6 +679,7 @@ dotnet test Lumyn.sln
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added Interface visibility settings for hiding Screenshot, Always on Top, Cast, Seek Step, Queue, Loop, and Markers controls. Visibility preferences persist globally, and the queue sidebar header now has a close button next to clear. |
 | 2026-05 | Added Audio Clarity settings with Off, Voice Boost, Loudness Normalize, and Quiet Mode presets. Presets use mpv audio filters, are remembered per file, and display tidy icon/value summaries in Settings. |
 | 2026-05 | Added Watch Modes as the first Settings section. Cinema, Lecture, Language Learning, Night, and Music Video presets preview video adjustments and apply speed, seek-step, and subtitle style choices on Apply, with each row showing its concrete effects. |
 | 2026-05 | Added a top-bar Settings button with a two-column settings modal. Video adjustments and keyboard shortcuts now live as the first two settings sections, with context-menu and F1/? shortcut routes opening the relevant section. |

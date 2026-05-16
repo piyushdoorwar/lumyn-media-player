@@ -46,6 +46,7 @@
           </Button>
           <Button Classes="icon ctrl" Name="PlaylistButton"
                   Classes.dim="{Binding !IsPlaylistVisible}"
+                  IsVisible="{Binding ShowQueueButton}"
                   Command="{Binding TogglePlaylistCommand}">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Playlist}" />
           </Button>
@@ -75,6 +76,7 @@
           </Button>
           <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"
+                  IsVisible="{Binding ShowPinButton}"
                   Command="{Binding ToggleAlwaysOnTopCommand}">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.AlwaysOnTop}" />
           </Button>
@@ -485,12 +487,14 @@
 
             <Button Classes="ctrl"
                     Classes.dim="{Binding !IsLooping}"
+                    IsVisible="{Binding ShowLoopButton}"
                     Command="{Binding ToggleLoopCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
             </Button>
 
             <Button Classes="ctrl"
                     Width="54"
+                    IsVisible="{Binding ShowSeekStepButton}"
                     Command="{Binding CycleSeekStepCommand}">
               <StackPanel Orientation="Horizontal" Spacing="3" VerticalAlignment="Center">
                 <PathIcon Width="13" Height="13" Data="{StaticResource Icon.SeekForward}" />
@@ -500,11 +504,13 @@
             </Button>
 
             <Button Classes="ctrl" Name="BookmarksButton"
+                    IsVisible="{Binding ShowMarkersButton}"
                     Click="BookmarksButton_Click">
               <PathIcon Width="15" Height="15" Data="{StaticResource Icon.BookmarkOutline}" />
             </Button>
 
             <Button Classes="ctrl"
+                    IsVisible="{Binding ShowScreenshotButton}"
                     Command="{Binding TakeScreenshotCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Screenshot}" />
             </Button>
@@ -565,6 +571,7 @@
 
             <Button Classes="ctrl" Name="CastButton"
                     Classes.dim="{Binding !IsCasting}"
+                    IsVisible="{Binding ShowCastButton}"
                     Click="CastButton_Click">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Cast}" />
             </Button>
@@ -664,7 +671,7 @@
                 BorderBrush="#1E1E1E"
                 BorderThickness="0,0,0,1"
                 Padding="14,0,8,0">
-          <Grid ColumnDefinitions="*,Auto,Auto">
+          <Grid ColumnDefinitions="*,Auto,Auto,Auto">
             <TextBlock Grid.Column="0" Text="Queue"
                        FontSize="11" FontWeight="SemiBold"
                        Foreground="#5A5755"
@@ -676,6 +683,10 @@
             <Button Grid.Column="2" Classes="ctrl"
                     Command="{Binding ClearPlaylistCommand}" Width="28" Height="28" MinWidth="28" MinHeight="28">
               <PathIcon Width="10" Height="10" Data="{StaticResource Icon.Stop}" Foreground="#3A3836" />
+            </Button>
+            <Button Grid.Column="3" Classes="ctrl"
+                    Command="{Binding TogglePlaylistCommand}" Width="28" Height="28" MinWidth="28" MinHeight="28">
+              <PathIcon Width="10" Height="10" Data="{StaticResource Icon.WindowClose}" Foreground="#6A6560" />
             </Button>
           </Grid>
         </Border>

@@ -99,6 +99,32 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void UiVisibility_PersistsGlobalControlVisibility()
+    {
+        var settings = CreateSettings();
+
+        settings.SaveUiVisibility(new UiVisibilitySettings
+        {
+            ShowScreenshot = false,
+            ShowPin = true,
+            ShowCast = false,
+            ShowSeekStep = true,
+            ShowQueue = false,
+            ShowLoop = true,
+            ShowMarkers = false
+        });
+
+        var reloaded = CreateSettings().UiVisibility;
+        Assert.False(reloaded.ShowScreenshot);
+        Assert.True(reloaded.ShowPin);
+        Assert.False(reloaded.ShowCast);
+        Assert.True(reloaded.ShowSeekStep);
+        Assert.False(reloaded.ShowQueue);
+        Assert.True(reloaded.ShowLoop);
+        Assert.False(reloaded.ShowMarkers);
+    }
+
+    [Fact]
     public void Bookmarks_AreSortedRenamedAndFormatted()
     {
         var settings = CreateSettings();

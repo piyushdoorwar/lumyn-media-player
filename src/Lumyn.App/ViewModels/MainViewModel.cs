@@ -103,6 +103,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _seekStep = 5;   // seconds; 5 | 10 | 30
     private IReadOnlyList<double> _chapterPositions = [];
     private IReadOnlyList<ChapterInfo> _chapters = [];
+    private UiVisibilitySettings _uiVisibility;
 
     // ── Subtitle overlay (Avalonia-rendered to avoid duplicate native subtitles) ───
     private List<Lumyn.Core.Services.SubtitleLine> _subtitleLines = [];
@@ -135,6 +136,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback = playback;
         _settings = settings;
         _casting = casting ?? new ChromecastCastService();
+        _uiVisibility = _settings.UiVisibility;
 
         // Restore persisted session preferences
         _volume   = _settings.LastVolume;
@@ -584,6 +586,31 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     }
 
     public bool HasChapters => _chapters.Count > 0;
+
+    public bool ShowScreenshotButton => _uiVisibility.ShowScreenshot;
+    public bool ShowPinButton => _uiVisibility.ShowPin;
+    public bool ShowCastButton => _uiVisibility.ShowCast;
+    public bool ShowSeekStepButton => _uiVisibility.ShowSeekStep;
+    public bool ShowQueueButton => _uiVisibility.ShowQueue;
+    public bool ShowLoopButton => _uiVisibility.ShowLoop;
+    public bool ShowMarkersButton => _uiVisibility.ShowMarkers;
+
+    public UiVisibilitySettings CurrentUiVisibility => _uiVisibility.Clone();
+
+    public void ApplyUiVisibility(UiVisibilitySettings visibility)
+    {
+        _uiVisibility = visibility.Clone();
+        if (!_uiVisibility.ShowQueue)
+            IsPlaylistVisible = false;
+        _settings.SaveUiVisibility(_uiVisibility);
+        OnPropertyChanged(nameof(ShowScreenshotButton));
+        OnPropertyChanged(nameof(ShowPinButton));
+        OnPropertyChanged(nameof(ShowCastButton));
+        OnPropertyChanged(nameof(ShowSeekStepButton));
+        OnPropertyChanged(nameof(ShowQueueButton));
+        OnPropertyChanged(nameof(ShowLoopButton));
+        OnPropertyChanged(nameof(ShowMarkersButton));
+    }
 
     public bool IsLooping
     {

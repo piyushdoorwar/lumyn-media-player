@@ -95,6 +95,7 @@ lumyn-media-player/
 │   │       ├── JumpToTimeDialog.axaml / .axaml.cs
 │   │       ├── KeyboardShortcutsDialog.axaml / .axaml.cs
 │   │       ├── AboutDialog.axaml / .axaml.cs
+│   │       ├── SettingsDialog.axaml / .axaml.cs
 │   │       ├── SubtitleSearchDialog.axaml / .axaml.cs
 │   │       ├── SubtitleSettingsDialog.axaml / .axaml.cs
 │   │       ├── VideoAdjustmentsDialog.axaml / .axaml.cs
@@ -676,6 +677,8 @@ dotnet test Lumyn.sln
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added a top-bar Settings button with a two-column settings modal. Video adjustments and keyboard shortcuts now live as the first two settings sections, with context-menu and F1/? shortcut routes opening the relevant section. |
+| 2026-05 | Duration text in the seek row now toggles between total duration and remaining time when clicked, matching Netflix-style `-mm:ss` behavior. |
 | 2026-05 | Added `src/Lumyn.Test` xUnit project covering subtitle parsing, settings/resume/bookmark persistence, hashed per-file settings keys, and Chromecast unsupported-format decisions; build and release workflows now run `dotnet test Lumyn.sln --configuration Release` before packaging. |
 | 2026-05 | GitHub snap builds now pin `canonical/action-build@v1` to `snapcraft-channel: 9.x/candidate`, required for stable `base: core26` snaps until the Snapcraft 9 stable track is available. |
 | 2026-05 | Snap runtime base moved to `core26` so sandboxed releases report Ubuntu Core 26 / Ubuntu 26.04-era runtime libraries instead of Ubuntu Core 24; ICU staging updated to `libicu78`. |

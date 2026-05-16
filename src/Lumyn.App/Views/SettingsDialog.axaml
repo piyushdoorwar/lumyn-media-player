@@ -1,0 +1,227 @@
+<Window
+    x:Class="Lumyn.App.Views.SettingsDialog"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="Settings"
+    Width="760"
+    Height="560"
+    MinWidth="640"
+    MinHeight="460"
+    CanResize="True"
+    WindowStartupLocation="CenterOwner"
+    Background="#1A1A1A">
+
+  <Grid RowDefinitions="*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="1*,4*" MinHeight="0">
+
+      <Border Grid.Column="0"
+              Background="#151515"
+              BorderBrush="#2A2A2A"
+              BorderThickness="0,0,1,0"
+              Padding="10,12">
+        <StackPanel Spacing="6">
+          <TextBlock Text="SETTINGS"
+                     FontSize="10"
+                     FontWeight="SemiBold"
+                     Foreground="#807C79"
+                     Margin="4,0,0,8" />
+
+          <Button Name="VideoNavButton"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Left"
+                  Click="VideoNavButton_Click">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
+              <TextBlock Text="Video" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+
+          <Button Name="ShortcutsNavButton"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Left"
+                  Click="ShortcutsNavButton_Click">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
+              <TextBlock Text="Shortcuts" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <Grid Grid.Column="1" Margin="18,14,18,0" MinHeight="0">
+        <ScrollViewer Name="VideoPanel" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="0">
+            <TextBlock Text="Video Adjustments"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="#F7F5F3"
+                       Margin="0,0,0,16" />
+
+            <TextBlock Text="COLOR CORRECTION"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79"
+                       Margin="0,0,0,10" />
+
+            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
+              <TextBlock Grid.Column="0" Text="Brightness"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <Slider Grid.Column="1"
+                      Name="BrightnessSlider"
+                      Minimum="-100" Maximum="100"
+                      TickFrequency="1" IsSnapToTickEnabled="True"
+                      ValueChanged="BrightnessSlider_Changed"
+                      VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Name="BrightnessVal"
+                         Text="+0"
+                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
+                         VerticalAlignment="Center" HorizontalAlignment="Right" />
+            </Grid>
+
+            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
+              <TextBlock Grid.Column="0" Text="Contrast"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <Slider Grid.Column="1"
+                      Name="ContrastSlider"
+                      Minimum="-100" Maximum="100"
+                      TickFrequency="1" IsSnapToTickEnabled="True"
+                      ValueChanged="ContrastSlider_Changed"
+                      VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Name="ContrastVal"
+                         Text="+0"
+                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
+                         VerticalAlignment="Center" HorizontalAlignment="Right" />
+            </Grid>
+
+            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,20">
+              <TextBlock Grid.Column="0" Text="Saturation"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <Slider Grid.Column="1"
+                      Name="SaturationSlider"
+                      Minimum="-100" Maximum="100"
+                      TickFrequency="1" IsSnapToTickEnabled="True"
+                      ValueChanged="SaturationSlider_Changed"
+                      VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Name="SaturationVal"
+                         Text="+0"
+                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
+                         VerticalAlignment="Center" HorizontalAlignment="Right" />
+            </Grid>
+
+            <TextBlock Text="GEOMETRY"
+                       FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79"
+                       Margin="0,0,0,10" />
+
+            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
+              <TextBlock Grid.Column="0" Text="Zoom"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <Slider Grid.Column="1"
+                      Name="ZoomSlider"
+                      Minimum="-100" Maximum="100"
+                      TickFrequency="5" IsSnapToTickEnabled="True"
+                      ValueChanged="ZoomSlider_Changed"
+                      VerticalAlignment="Center" />
+              <TextBlock Grid.Column="2" Name="ZoomVal"
+                         Text="100%"
+                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
+                         VerticalAlignment="Center" HorizontalAlignment="Right" />
+            </Grid>
+
+            <TextBlock Text="0 = original size  ·  positive = zoom in  ·  negative = zoom out"
+                       FontSize="10" Foreground="#807C79" Margin="96,0,0,14" />
+
+            <Grid ColumnDefinitions="96,*" Margin="0,0,0,14">
+              <TextBlock Grid.Column="0" Text="Aspect ratio"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <ComboBox Grid.Column="1"
+                        Name="AspectCombo"
+                        Background="#2D2D2D" Foreground="#F7F5F3"
+                        BorderBrush="#4D4658"
+                        MaxDropDownHeight="220"
+                        Focusable="True"
+                        HorizontalAlignment="Stretch"
+                        SelectionChanged="AspectCombo_SelectionChanged" />
+            </Grid>
+
+            <Grid ColumnDefinitions="96,*" Margin="0,0,0,20">
+              <TextBlock Grid.Column="0" Text="Rotation"
+                         VerticalAlignment="Center"
+                         Foreground="#DEDAD5" FontSize="13" />
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                <Button Name="Rot0Btn" Content="0°" MinWidth="58" Click="RotButton_Click" Tag="0" />
+                <Button Name="Rot90Btn" Content="90°" MinWidth="58" Click="RotButton_Click" Tag="90" />
+                <Button Name="Rot180Btn" Content="180°" MinWidth="58" Click="RotButton_Click" Tag="180" />
+                <Button Name="Rot270Btn" Content="270°" MinWidth="58" Click="RotButton_Click" Tag="270" />
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer Name="ShortcutsPanel"
+                      VerticalScrollBarVisibility="Auto"
+                      IsVisible="False">
+          <StackPanel Spacing="0">
+            <TextBlock Text="Keyboard Shortcuts"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="#F7F5F3"
+                       Margin="0,0,0,16" />
+
+            <TextBlock Text="PLAYBACK" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,0,0,8" />
+            <Grid Name="PlaybackGroup" />
+
+            <TextBlock Text="SEEKING" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="SeekingGroup" />
+
+            <TextBlock Text="VOLUME" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="VolumeGroup" />
+
+            <TextBlock Text="SPEED" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="SpeedGroup" />
+
+            <TextBlock Text="TRACKS" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="TracksGroup" />
+
+            <TextBlock Text="WINDOW" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="WindowGroup" />
+
+            <TextBlock Text="FILE &amp; DIALOGS" FontSize="10" FontWeight="SemiBold"
+                       Foreground="#807C79" Margin="0,16,0,8" />
+            <Grid Name="FileGroup" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+
+    <Border Grid.Row="1"
+            BorderBrush="#333333"
+            BorderThickness="0,1,0,0"
+            Padding="18,10,18,14">
+      <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
+        <Button Grid.Column="0" Name="ResetButton"
+                Content="Reset video"
+                Foreground="#FF9999"
+                Click="ResetButton_Click" />
+        <Border Grid.Column="1" />
+        <Button Grid.Column="2" Name="CancelButton"
+                Content="Cancel"
+                Click="CancelButton_Click" />
+        <Button Grid.Column="4" Name="OkButton"
+                Content="Apply"
+                Classes="accent"
+                Click="OkButton_Click" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

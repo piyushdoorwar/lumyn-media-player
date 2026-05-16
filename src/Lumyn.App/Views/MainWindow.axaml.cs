@@ -104,6 +104,13 @@ public partial class MainWindow : Window
         UpdateTopBarVisibility();
     }
 
+    private void DurationText_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        ViewModel?.ToggleDurationDisplay();
+        e.Handled = true;
+    }
+
     private void UpdateTopBarVisibility()
     {
         var topBar = this.FindControl<Border>("TopBar");
@@ -302,7 +309,7 @@ public partial class MainWindow : Window
                 e.Handled = true; break;
             case Key.OemQuestion: // ? → keyboard shortcuts
             case Key.F1:
-                OpenKeyboardShortcutsDialog();
+                await OpenSettingsDialogAsync(SettingsSection.Shortcuts);
                 e.Handled = true; break;
             case Key.I when alt:
                 ViewModel.TakeScreenshotCommand.Execute(null);
@@ -407,10 +414,10 @@ public partial class MainWindow : Window
         => await OpenSubtitleFileAsync();
 
     private async void VideoAdjustments_Click(object? sender, RoutedEventArgs e)
-        => await OpenVideoAdjustmentsDialogAsync();
+        => await OpenSettingsDialogAsync(SettingsSection.Video);
 
-    private void KeyboardShortcuts_Click(object? sender, RoutedEventArgs e)
-        => OpenKeyboardShortcutsDialog();
+    private async void KeyboardShortcuts_Click(object? sender, RoutedEventArgs e)
+        => await OpenSettingsDialogAsync(SettingsSection.Shortcuts);
 
     private async void Cast_Click(object? sender, RoutedEventArgs e)
         => await OpenCastDialogAsync();
@@ -424,11 +431,8 @@ public partial class MainWindow : Window
     private async void LoadSubtitleButton_OnClick(object? sender, RoutedEventArgs e)
         => await OpenSubtitleSettingsDialogAsync();
 
-    private async void VideoAdjustmentsButton_OnClick(object? sender, RoutedEventArgs e)
-        => await OpenVideoAdjustmentsDialogAsync();
-
-    private void KeyboardShortcutsButton_OnClick(object? sender, RoutedEventArgs e)
-        => OpenKeyboardShortcutsDialog();
+    private async void SettingsButton_Click(object? sender, RoutedEventArgs e)
+        => await OpenSettingsDialogAsync(SettingsSection.Video);
 
     private async void CastButton_Click(object? sender, RoutedEventArgs e)
         => await OpenCastDialogAsync();
@@ -588,12 +592,6 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenKeyboardShortcutsDialog()
-    {
-        var dialog = new KeyboardShortcutsDialog();
-        dialog.ShowDialog(this);
-    }
-
     private void OpenAboutDialog()
     {
         var dialog = new AboutDialog();
@@ -607,13 +605,14 @@ public partial class MainWindow : Window
         await dialog.ShowDialog(this);
     }
 
-    private async Task OpenVideoAdjustmentsDialogAsync()
+    private async Task OpenSettingsDialogAsync(SettingsSection section)
     {
         if (ViewModel is null) return;
         var prev = ViewModel.CurrentVideoAdjustments;
-        var dialog = new VideoAdjustmentsDialog(
+        var dialog = new SettingsDialog(
             prev,
-            adj => ViewModel.ApplyVideoAdjustments(adj));
+            adj => ViewModel.ApplyVideoAdjustments(adj),
+            section);
         var result = await dialog.ShowDialog<Lumyn.App.Models.VideoAdjustments?>(this);
         // Apply final result; revert to previous state on cancel.
         ViewModel.ApplyVideoAdjustments(result ?? prev);

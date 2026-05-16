@@ -76,6 +76,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private string _timeText = "00:00 / 00:00";
     private string _positionText = "00:00";
     private string _durationText = "00:00";
+    private bool _showRemainingTime;
+    private TimeSpan _displayedPosition;
+    private TimeSpan _displayedDuration;
     private string? _errorMessage;
     private double _seekValue;
     private int _volume = 80;
@@ -311,6 +314,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _durationText;
         private set => SetField(ref _durationText, value);
+    }
+
+    public void ToggleDurationDisplay()
+    {
+        _showRemainingTime = !_showRemainingTime;
+        SetDisplayedTime(_displayedPosition, _displayedDuration);
     }
 
     public string? ErrorMessage
@@ -1574,8 +1583,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void SetDisplayedTime(TimeSpan position, TimeSpan duration)
     {
+        _displayedPosition = position;
+        _displayedDuration = duration;
+
         var positionText = FormatTime(position);
-        var durationText = FormatTime(duration);
+        var durationText = _showRemainingTime && duration > TimeSpan.Zero
+            ? $"-{FormatTime(duration - position)}"
+            : FormatTime(duration);
         PositionText = positionText;
         DurationText = durationText;
         TimeText = $"{positionText} / {durationText}";

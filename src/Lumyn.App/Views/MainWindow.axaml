@@ -44,11 +44,6 @@
                   Click="LoadSubtitleButton_OnClick">
             <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Subtitle}" />
           </Button>
-          <Button Classes="icon ctrl" Name="VideoAdjustmentsButton"
-                  Classes.dim="{Binding !HasVideoAdjustments}"
-                  Click="VideoAdjustmentsButton_OnClick">
-            <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
-          </Button>
           <Button Classes="icon ctrl" Name="PlaylistButton"
                   Classes.dim="{Binding !IsPlaylistVisible}"
                   Command="{Binding TogglePlaylistCommand}">
@@ -74,9 +69,9 @@
                   Click="AboutButton_Click">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Info}" />
           </Button>
-          <Button Classes="icon ctrl" Name="KeyboardShortcutsButton"
-                  Click="KeyboardShortcutsButton_OnClick">
-            <PathIcon Width="13" Height="13" Data="{StaticResource Icon.Keyboard}" />
+          <Button Classes="icon ctrl" Name="SettingsButton"
+                  Click="SettingsButton_Click">
+            <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Settings}" />
           </Button>
           <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"
@@ -469,6 +464,8 @@
                      TextAlignment="Right"
                      FontSize="12"
                      Foreground="#C8C3C2"
+                     Cursor="Hand"
+                     PointerPressed="DurationText_OnPointerPressed"
                      MinWidth="50" />
         </Grid>
 

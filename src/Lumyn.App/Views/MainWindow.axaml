@@ -226,7 +226,7 @@
                    FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
       </StackPanel>
 
-      <!-- Has recent files: continue watching / recent files grid -->
+      <!-- Has recent files: recently played grid -->
       <Grid IsVisible="{Binding HasRecentFiles}"
             RowDefinitions="Auto,*"
             Margin="24,18,24,12">
@@ -236,94 +236,86 @@
                                 Opacity="0.95" />
 
         <!-- Heading -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,14">
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,18">
           <Image Width="22" Height="22" Source="{StaticResource Icon.LumynMark}" Opacity="0.7" />
-          <TextBlock Text="{Binding StartScreenTitle}"
+          <TextBlock Text="Recently Played"
                      FontSize="16" FontWeight="SemiBold"
                      Foreground="#E0DCD8" VerticalAlignment="Center" />
         </StackPanel>
 
-        <!-- File cards -->
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-          <ItemsControl ItemsSource="{Binding StartScreenItems}">
+          <ItemsControl ItemsSource="{Binding RecentFileItems}">
             <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" />
-              </ItemsPanelTemplate>
+              <ItemsPanelTemplate><WrapPanel Orientation="Horizontal" /></ItemsPanelTemplate>
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate>
-                <Panel Width="200" Height="102" Margin="0,0,10,10">
+                <Panel Width="200" Height="120" Margin="0,0,10,10">
 
-                  <!-- Card button (plays the file) -->
                   <Button Click="RecentItem_Click"
                           Tag="{Binding FilePath}"
-                          Width="200" Height="102"
-                          Margin="0"
-                          Padding="12,10,12,6"
-                          Background="#1E1E1E"
+                          Width="200" Height="120" Margin="0" Padding="0"
+                          Background="#1A1A1A"
                           BorderBrush="#2A2A2A" BorderThickness="1"
                           CornerRadius="6"
-                          HorizontalContentAlignment="Left"
-                          VerticalContentAlignment="Stretch">
-                    <Grid RowDefinitions="*,Auto" HorizontalAlignment="Stretch">
-
-                      <StackPanel Grid.Row="0" Margin="0,0,18,6">
-                        <!-- File name -->
+                          HorizontalContentAlignment="Stretch"
+                          VerticalContentAlignment="Stretch"
+                          ClipToBounds="True">
+                    <Panel>
+                      <!-- Thumbnail (full-bleed, video only) -->
+                      <Image Source="{Binding ThumbnailBitmap}"
+                             Stretch="UniformToFill"
+                             IsVisible="{Binding HasThumbnail}" />
+                      <!-- Gradient overlay for readability -->
+                      <Border>
+                        <Border.Background>
+                          <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                            <GradientStop Color="#00000000" Offset="0.2" />
+                            <GradientStop Color="#CC000000" Offset="1" />
+                          </LinearGradientBrush>
+                        </Border.Background>
+                      </Border>
+                      <!-- Progress % badge top-left -->
+                      <Border HorizontalAlignment="Left" VerticalAlignment="Top"
+                              Margin="6,6,0,0" Padding="4,2"
+                              Background="#CC000000" CornerRadius="3"
+                              IsVisible="{Binding HasResume}">
+                        <TextBlock Text="{Binding ProgressLabel}"
+                                   FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#3A9B4B" />
+                      </Border>
+                      <!-- Text at bottom -->
+                      <StackPanel VerticalAlignment="Bottom" Margin="10,0,28,8" Spacing="2">
                         <TextBlock Text="{Binding DisplayName}"
-                                   FontSize="12" FontWeight="SemiBold"
-                                   Foreground="#E8E4E0"
+                                   FontSize="11" FontWeight="SemiBold"
+                                   Foreground="#F0ECE8"
                                    TextTrimming="CharacterEllipsis"
                                    MaxLines="2" TextWrapping="Wrap" />
-
-                        <!-- Directory -->
-                        <TextBlock Text="{Binding Directory}"
-                                   FontSize="10" Foreground="#4A4948"
-                                   TextTrimming="CharacterEllipsis"
-                                   Margin="0,3,0,0" />
                         <TextBlock Text="{Binding ResumeLabel}"
-                                   FontSize="10"
-                                   FontWeight="SemiBold"
+                                   FontSize="10" FontWeight="SemiBold"
                                    Foreground="#3A9B4B"
-                                   TextTrimming="CharacterEllipsis"
-                                   Margin="0,5,0,0"
                                    IsVisible="{Binding HasResume}" />
                       </StackPanel>
-
-                      <!-- Resume progress -->
-                      <Grid Grid.Row="1"
-                            ColumnDefinitions="*,30"
-                            ColumnSpacing="6"
-                            Margin="3,0,3,0"
-                            IsVisible="{Binding HasResume}">
-                        <controls:MiniProgressBar Grid.Column="0"
-                                                  Minimum="0"
-                                                  Maximum="100"
-                                                  Value="{Binding ProgressPct}"
-                                                  VerticalAlignment="Center" />
-                        <TextBlock Grid.Column="1"
-                                   Text="{Binding ProgressLabel}"
-                                   FontSize="9"
-                                   FontWeight="SemiBold"
-                                   Foreground="#3A9B4B"
-                                   TextAlignment="Right"
-                                   VerticalAlignment="Center" />
-                      </Grid>
-
-                    </Grid>
+                      <!-- Progress bar pinned to bottom edge -->
+                      <controls:MiniProgressBar
+                          VerticalAlignment="Bottom"
+                          Height="3"
+                          Minimum="0" Maximum="100"
+                          Value="{Binding ProgressPct}"
+                          IsVisible="{Binding HasResume}" />
+                    </Panel>
                   </Button>
 
-                  <!-- Remove button (top-right overlay) -->
+                  <!-- Remove button -->
                   <Button Classes="ctrl remove-btn"
                           Command="{Binding $parent[Window].DataContext.RemoveRecentFileCommand}"
                           CommandParameter="{Binding FilePath}"
                           Width="20" Height="20" MinWidth="20" MinHeight="20"
                           HorizontalAlignment="Right" VerticalAlignment="Top"
-                          Margin="0,4,4,0"
-                          Opacity="0.35">
+                          Margin="0,4,4,0" Opacity="0.5">
                     <PathIcon Width="7" Height="7"
                               Data="{StaticResource Icon.WindowClose}"
-                              Foreground="#6A6560" />
+                              Foreground="#AAAAAA" />
                   </Button>
 
                 </Panel>
@@ -331,7 +323,9 @@
             </ItemsControl.ItemTemplate>
           </ItemsControl>
         </ScrollViewer>
+
       </Grid>
+
     </Grid>
 
     <!-- ── Error banner ──────────────────────────────────────────────────── -->

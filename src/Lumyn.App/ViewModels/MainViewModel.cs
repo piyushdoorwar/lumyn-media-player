@@ -29,17 +29,30 @@ public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent)
 public sealed record RecentFileItem(
     string FilePath,
     double ProgressPct,
-    TimeSpan ResumePosition)
+    TimeSpan ResumePosition,
+    bool IsAudio = false,
+    string? ThumbnailPath = null)
 {
-    public string DisplayName   => Path.GetFileNameWithoutExtension(FilePath);
-    public string Directory     => Path.GetDirectoryName(FilePath) ?? "";
-    public bool   HasResume     => ProgressPct >= 0;
+    public string DisplayName     => Path.GetFileNameWithoutExtension(FilePath);
+    public string Directory       => Path.GetDirectoryName(FilePath) ?? "";
+    public bool   HasResume       => ProgressPct >= 0;
     public int    ProgressPercent => (int)Math.Clamp(Math.Round(ProgressPct), 0, 100);
-    public string ProgressLabel => $"{ProgressPercent}%";
-    public string ResumeLabel   =>
+    public string ProgressLabel   => $"{ProgressPercent}%";
+    public string ResumeLabel     =>
         ResumePosition.TotalHours >= 1
             ? $"Resume from {(int)ResumePosition.TotalHours}:{ResumePosition.Minutes:D2}:{ResumePosition.Seconds:D2}"
             : $"Resume from {ResumePosition.Minutes}:{ResumePosition.Seconds:D2}";
+
+    private Avalonia.Media.Imaging.Bitmap? _cachedBitmap;
+    public Avalonia.Media.Imaging.Bitmap? ThumbnailBitmap =>
+        ThumbnailPath is { Length: > 0 } p && File.Exists(p)
+            ? (_cachedBitmap ??= TryLoadBitmap(p)) : null;
+    public bool HasThumbnail => ThumbnailBitmap is not null;
+
+    private static Avalonia.Media.Imaging.Bitmap? TryLoadBitmap(string path)
+    {
+        try { return new Avalonia.Media.Imaging.Bitmap(path); } catch { return null; }
+    }
 }
 
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
@@ -65,6 +78,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly DispatcherTimer _osdTimer;
     private readonly ScreenInhibitor _screenInhibitor = new();
     private string? _thumbnailsLoadedForFile;
+    private string? _recentThumbExtractedForFile;
     private int _stateRefreshQueued;
     private int _castStateRefreshQueued;
     private long _lastTrackRevision = -1;
@@ -212,6 +226,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
 
         ErrorMessage = _playback.InitializationError;
+
+        Task.Run(BackfillRecentThumbnails);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -233,23 +249,24 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             .Select(f =>
             {
                 var (pos, pct) = _settings.GetResumeInfo(f);
-                return new RecentFileItem(f, pct, pos);
+                var isAudio    = AudioExtensions.Contains(
+                    Path.GetExtension(f).ToLowerInvariant());
+                var thumb      = _settings.GetExistingThumbnail(f);
+                return new RecentFileItem(f, pct, pos, isAudio, thumb);
             })
             .ToList();
 
-    public IReadOnlyList<RecentFileItem> ContinueWatchingItems =>
-        RecentFileItems
-            .Where(item => item.HasResume)
-            .ToList();
+    public IReadOnlyList<RecentFileItem> RecentVideoItems =>
+        RecentFileItems.Where(i => !i.IsAudio).ToList();
 
-    public bool HasContinueWatching => ContinueWatchingItems.Count > 0;
+    public IReadOnlyList<RecentFileItem> RecentAudioItems =>
+        RecentFileItems.Where(i => i.IsAudio).ToList();
 
-    public IReadOnlyList<RecentFileItem> StartScreenItems =>
-        HasContinueWatching
-            ? RecentFileItems.OrderByDescending(item => item.HasResume).ToList()
-            : RecentFileItems;
+    public bool HasRecentVideoItems => RecentVideoItems.Count > 0;
+    public bool HasRecentAudioItems => RecentAudioItems.Count > 0;
 
-    public string StartScreenTitle => HasContinueWatching ? "Continue Watching" : "Recently Played";
+    // kept for backwards compat (context menu, etc.)
+    public IReadOnlyList<RecentFileItem> StartScreenItems => RecentFileItems;
 
     // ── Bookmarks ────────────────────────────────────────────────────────────
 
@@ -1307,6 +1324,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             _thumbnails.StartGeneration(CurrentFilePath, displayDuration);
         }
 
+        // Extract thumbnail for recently played card: use resume position (last watched frame),
+        // falling back to 30% for files with no resume history.
+        if (displayDuration > TimeSpan.Zero
+            && !IsAudioMode
+            && !string.IsNullOrWhiteSpace(CurrentFilePath)
+            && !string.Equals(_recentThumbExtractedForFile, CurrentFilePath, StringComparison.Ordinal))
+        {
+            _recentThumbExtractedForFile = CurrentFilePath;
+            var path       = CurrentFilePath;
+            var dur        = displayDuration;
+            var (pos, _)   = _settings.GetResumeInfo(path);
+            var seekTarget = pos > TimeSpan.Zero ? pos : TimeSpan.FromSeconds(dur.TotalSeconds * 0.30);
+            Task.Run(() => ExtractRecentThumbnail(path, dur, seekTarget));
+        }
+
         NotifyMediaIdentityIfChanged();
         RefreshTracksIfNeeded();
 
@@ -1439,11 +1471,127 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         OnPropertyChanged(nameof(RecentFiles));
         OnPropertyChanged(nameof(RecentFileItems));
-        OnPropertyChanged(nameof(ContinueWatchingItems));
-        OnPropertyChanged(nameof(HasContinueWatching));
         OnPropertyChanged(nameof(StartScreenItems));
-        OnPropertyChanged(nameof(StartScreenTitle));
         OnPropertyChanged(nameof(HasRecentFiles));
+        OnPropertyChanged(nameof(RecentVideoItems));
+        OnPropertyChanged(nameof(RecentAudioItems));
+        OnPropertyChanged(nameof(HasRecentVideoItems));
+        OnPropertyChanged(nameof(HasRecentAudioItems));
+    }
+
+    private void BackfillRecentThumbnails()
+    {
+        var pending = _settings.RecentFiles
+            .Where(f => File.Exists(f) && _settings.GetExistingThumbnail(f) is null)
+            .ToList();
+
+        foreach (var filePath in pending)
+        {
+            try
+            {
+                var isAudio = AudioExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant());
+                if (isAudio)
+                    ExtractAudioCoverArt(filePath);
+                else
+                {
+                    var (pos, _) = _settings.GetResumeInfo(filePath);
+                    var seekTarget = pos > TimeSpan.Zero ? pos : TimeSpan.FromSeconds(30);
+                    ExtractRecentThumbnail(filePath, TimeSpan.MaxValue, seekTarget);
+                }
+            }
+            catch { }
+        }
+    }
+
+    private void ExtractAudioCoverArt(string filePath)
+    {
+        try
+        {
+            var outputPath = _settings.GetThumbnailPath(filePath);
+
+            // 1. Use the same external cover art file the player shows (fastest path).
+            var externalCover = FindCoverArtPath(filePath);
+            if (externalCover is not null)
+            {
+                File.Copy(externalCover, outputPath, overwrite: true);
+                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
+                return;
+            }
+
+            // 2. Fall back to ffmpeg extracting embedded cover art from the audio file.
+            var tempPath = outputPath + ".tmp";
+
+            var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg")
+            {
+                UseShellExecute        = false,
+                CreateNoWindow         = true,
+                RedirectStandardError  = true,
+                RedirectStandardOutput = true
+            };
+            psi.ArgumentList.Add("-y");
+            psi.ArgumentList.Add("-i");
+            psi.ArgumentList.Add(filePath);
+            psi.ArgumentList.Add("-map");
+            psi.ArgumentList.Add("0:v:0");
+            psi.ArgumentList.Add("-vframes");
+            psi.ArgumentList.Add("1");
+            psi.ArgumentList.Add("-vf");
+            psi.ArgumentList.Add("scale=320:-2");
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add("image2");
+            psi.ArgumentList.Add(tempPath);
+
+            using var proc = System.Diagnostics.Process.Start(psi);
+            proc?.WaitForExit(10_000);
+
+            if (File.Exists(tempPath))
+            {
+                File.Move(tempPath, outputPath, overwrite: true);
+                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
+            }
+        }
+        catch { }
+    }
+
+    private void ExtractRecentThumbnail(string filePath, TimeSpan duration, TimeSpan seekTarget)
+    {
+        try
+        {
+            var outputPath = _settings.GetThumbnailPath(filePath);
+            var tempPath   = outputPath + ".tmp";
+            var maxSec     = duration == TimeSpan.MaxValue ? seekTarget.TotalSeconds : Math.Max(0, duration.TotalSeconds - 1);
+            var seekSec    = Math.Clamp(seekTarget.TotalSeconds, 0, maxSec);
+
+            var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg")
+            {
+                UseShellExecute        = false,
+                CreateNoWindow         = true,
+                RedirectStandardError  = true,
+                RedirectStandardOutput = true
+            };
+            psi.ArgumentList.Add("-y");
+            psi.ArgumentList.Add("-ss");
+            psi.ArgumentList.Add(seekSec.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+            psi.ArgumentList.Add("-i");
+            psi.ArgumentList.Add(filePath);
+            psi.ArgumentList.Add("-vframes");
+            psi.ArgumentList.Add("1");
+            psi.ArgumentList.Add("-vf");
+            psi.ArgumentList.Add("scale=320:-2");
+            psi.ArgumentList.Add("-f");
+            psi.ArgumentList.Add("image2");
+            psi.ArgumentList.Add(tempPath);
+
+            using var proc = System.Diagnostics.Process.Start(psi);
+            proc?.WaitForExit(15_000);
+
+            if (File.Exists(tempPath))
+            {
+                File.Move(tempPath, outputPath, overwrite: true);
+                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
+            }
+        }
+        catch { }
     }
 
     private string? FindSubtitleText(TimeSpan position)
@@ -1502,8 +1650,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private void Stop()
     {
         SaveResumePosition();
-        NotifyRecentFilesChanged();
-        _thumbnailsLoadedForFile = null;
+
+        // Capture playback state before clearing it, for thumbnail refresh.
+        var filePath  = CurrentFilePath;
+        var position  = CurrentMediaPosition;
+        var duration  = _displayedDuration;
+        var isAudio   = !string.IsNullOrWhiteSpace(filePath) &&
+                        AudioExtensions.Contains(Path.GetExtension(filePath).ToLowerInvariant());
+
+        _thumbnailsLoadedForFile      = null;
+        _recentThumbExtractedForFile  = null;
         _thumbnails.Cancel();
         _playback.Stop();
         Title         = "Lumyn";
@@ -1517,6 +1673,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         // Leave the playlist intact so the user can resume or navigate.
         NotifyPlaylistState();
         RefreshState();
+
+        // Re-extract thumbnail so the recently-played card reflects current position.
+        if (!string.IsNullOrWhiteSpace(filePath))
+        {
+            if (isAudio)
+                Task.Run(() => ExtractAudioCoverArt(filePath));
+            else if (duration > TimeSpan.Zero)
+            {
+                var seekTarget = position > TimeSpan.Zero
+                    ? position
+                    : TimeSpan.FromSeconds(duration.TotalSeconds * 0.30);
+                Task.Run(() => ExtractRecentThumbnail(filePath, duration, seekTarget));
+            }
+        }
     }
 
     private void ToggleMute()

@@ -9,6 +9,7 @@ public sealed class SettingsService
     private const int MaxRecentFiles = 12;
 
     private readonly string _settingsPath;
+    private readonly string _thumbsDir;
     private readonly Dictionary<string, double> _resumePositions;
     private readonly Dictionary<string, double> _resumeDurations;
     private readonly List<string> _recentFiles;
@@ -30,6 +31,8 @@ public sealed class SettingsService
         Directory.CreateDirectory(configDir);
 
         _settingsPath = Path.Combine(configDir, "settings.json");
+        _thumbsDir    = Path.Combine(configDir, "thumbs");
+        Directory.CreateDirectory(_thumbsDir);
 
         var settings = LoadSettings();
         _resumePositions  = settings.ResumePositions;
@@ -196,6 +199,20 @@ public sealed class SettingsService
         };
         var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_settingsPath, json);
+    }
+
+    // ── Thumbnail cache ──────────────────────────────────────────────────────
+
+    public string GetThumbnailPath(string filePath)
+    {
+        var key = KeyForFile(filePath);
+        return Path.Combine(_thumbsDir, key[..16] + ".jpg");
+    }
+
+    public string? GetExistingThumbnail(string filePath)
+    {
+        var path = GetThumbnailPath(filePath);
+        return File.Exists(path) ? path : null;
     }
 
     private static string KeyForFile(string filePath)

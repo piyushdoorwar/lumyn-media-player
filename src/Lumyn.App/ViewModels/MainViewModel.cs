@@ -1091,6 +1091,69 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         ShowOsd(adj.IsDefault ? "Video adjustments reset" : "Video adjustments applied");
     }
 
+    public async Task ApplyWatchModeAsync(WatchMode mode)
+    {
+        var preset = mode switch
+        {
+            WatchMode.Cinema => new WatchModePreset(
+                "Cinema",
+                new Lumyn.App.Models.VideoAdjustments(4, 8, 6, 0, 0.0, VideoAspect.Auto),
+                SubtitleFontSize.Large,
+                SubtitleFont.SansSerif,
+                SubtitleColor.WhiteWithBorder,
+                1.0f,
+                10),
+            WatchMode.Lecture => new WatchModePreset(
+                "Lecture",
+                new Lumyn.App.Models.VideoAdjustments(8, 10, -5, 0, 0.0, VideoAspect.Auto),
+                SubtitleFontSize.Medium,
+                SubtitleFont.SansSerif,
+                SubtitleColor.Yellow,
+                1.25f,
+                30),
+            WatchMode.LanguageLearning => new WatchModePreset(
+                "Language Learning",
+                Lumyn.App.Models.VideoAdjustments.Default,
+                SubtitleFontSize.Large,
+                SubtitleFont.SansSerif,
+                SubtitleColor.Yellow,
+                0.75f,
+                5),
+            WatchMode.Night => new WatchModePreset(
+                "Night",
+                new Lumyn.App.Models.VideoAdjustments(-15, -5, -10, 0, 0.0, VideoAspect.Auto),
+                SubtitleFontSize.Medium,
+                SubtitleFont.SansSerif,
+                SubtitleColor.Grey,
+                1.0f,
+                10),
+            WatchMode.MusicVideo => new WatchModePreset(
+                "Music Video",
+                new Lumyn.App.Models.VideoAdjustments(6, 12, 18, 0, 0.0, VideoAspect.Auto),
+                SubtitleFontSize.Small,
+                SubtitleFont.SansSerif,
+                SubtitleColor.White,
+                1.0f,
+                10),
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null)
+        };
+
+        ApplyVideoAdjustments(preset.Video);
+        SetSpeed(preset.Speed);
+        SeekStep = preset.SeekStep;
+        _settings.SaveSessionPreferences(_volume, _speed, _seekStep);
+
+        var subtitleSettings = CurrentSubtitleSettings with
+        {
+            FontSize = preset.SubtitleSize,
+            Font = preset.SubtitleFont,
+            Color = preset.SubtitleColor
+        };
+        await ApplySubtitleSettingsAsync(subtitleSettings);
+
+        ShowOsd($"Watch mode: {preset.Name}");
+    }
+
     public void EndSeek()
     {
         _isSeeking = false;
@@ -1852,4 +1915,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         public bool CanExecute(object? parameter) => true;
         public void Execute(object? parameter) => execute(parameter);
     }
+
+    private sealed record WatchModePreset(
+        string Name,
+        Lumyn.App.Models.VideoAdjustments Video,
+        SubtitleFontSize SubtitleSize,
+        SubtitleFont SubtitleFont,
+        SubtitleColor SubtitleColor,
+        float Speed,
+        int SeekStep);
 }

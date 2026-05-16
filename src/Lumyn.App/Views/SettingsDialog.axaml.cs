@@ -12,9 +12,12 @@ namespace Lumyn.App.Views;
 
 public enum SettingsSection
 {
+    WatchModes,
     Video,
     Shortcuts
 }
+
+public sealed record SettingsDialogResult(VideoAdjustments VideoAdjustments, WatchMode? WatchMode);
 
 public partial class SettingsDialog : Window
 {
@@ -35,6 +38,69 @@ public partial class SettingsDialog : Window
     private static readonly IBrush NavNormalBg = new SolidColorBrush(Color.Parse("#252525"));
     private static readonly IBrush NavSelectedBorder = new SolidColorBrush(Color.Parse("#3A9B4B"));
     private static readonly IBrush NavNormalBorder = new SolidColorBrush(Color.Parse("#353535"));
+    private static readonly IBrush ModeSelectedBg = new SolidColorBrush(Color.Parse("#202C22"));
+    private static readonly IBrush ModeNormalBg = new SolidColorBrush(Color.Parse("#181818"));
+    private static readonly IBrush ModeSelectedBorder = new SolidColorBrush(Color.Parse("#3A9B4B"));
+    private static readonly IBrush ModeNormalBorder = new SolidColorBrush(Color.Parse("#2F2F2F"));
+
+    private static readonly WatchModeChoice[] WatchModes =
+    [
+        new(
+            WatchMode.Cinema,
+            "Cinema",
+            [
+                new("Icon.Brightness", "+4%"),
+                new("Icon.Contrast", "+8%"),
+                new("Icon.Color", "+6%"),
+                new("Icon.SeekForward", "10s"),
+                new("Icon.SpeedGauge", "1x"),
+                new("Icon.Subtitle", "Large outlined")
+            ]),
+        new(
+            WatchMode.Lecture,
+            "Lecture",
+            [
+                new("Icon.Brightness", "+8%"),
+                new("Icon.Contrast", "+10%"),
+                new("Icon.Color", "-5%"),
+                new("Icon.SeekForward", "30s"),
+                new("Icon.SpeedGauge", "1.25x"),
+                new("Icon.Subtitle", "Yellow")
+            ]),
+        new(
+            WatchMode.LanguageLearning,
+            "Language Learning",
+            [
+                new("Icon.Brightness", "0%"),
+                new("Icon.Contrast", "0%"),
+                new("Icon.Color", "0%"),
+                new("Icon.SeekForward", "5s"),
+                new("Icon.SpeedGauge", "0.75x"),
+                new("Icon.Subtitle", "Large yellow")
+            ]),
+        new(
+            WatchMode.Night,
+            "Night",
+            [
+                new("Icon.Brightness", "-15%"),
+                new("Icon.Contrast", "-5%"),
+                new("Icon.Color", "-10%"),
+                new("Icon.SeekForward", "10s"),
+                new("Icon.SpeedGauge", "1x"),
+                new("Icon.Subtitle", "Grey")
+            ]),
+        new(
+            WatchMode.MusicVideo,
+            "Music Video",
+            [
+                new("Icon.Brightness", "+6%"),
+                new("Icon.Contrast", "+12%"),
+                new("Icon.Color", "+18%"),
+                new("Icon.SeekForward", "10s"),
+                new("Icon.SpeedGauge", "1x"),
+                new("Icon.Subtitle", "Small")
+            ])
+    ];
 
     private static readonly (string Key, string Action)[] Playback =
     [
@@ -103,9 +169,10 @@ public partial class SettingsDialog : Window
     private int _rotation;
     private int _zoomSlider;
     private VideoAspect _aspect;
+    private WatchMode? _selectedWatchMode;
 
     public SettingsDialog()
-        : this(VideoAdjustments.Default, null, SettingsSection.Video)
+        : this(VideoAdjustments.Default, null, SettingsSection.WatchModes)
     {
     }
 
@@ -124,11 +191,14 @@ public partial class SettingsDialog : Window
         var aspectCombo = this.FindControl<ComboBox>("AspectCombo")!;
         aspectCombo.ItemsSource = AspectChoices;
 
+        PopulateWatchModes();
         PopulateShortcuts();
         RefreshAll();
         ShowSection(initialSection);
         KeyDown += OnKeyDown;
     }
+
+    private void WatchModesNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.WatchModes);
 
     private void VideoNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Video);
 
@@ -137,6 +207,7 @@ public partial class SettingsDialog : Window
     private void BrightnessSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_suppressCallbacks) return;
+        ClearSelectedWatchMode();
         _brightness = (int)e.NewValue;
         UpdateLabel("BrightnessVal", FormatOffset(_brightness));
         _preview?.Invoke(BuildCurrent());
@@ -145,6 +216,7 @@ public partial class SettingsDialog : Window
     private void ContrastSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_suppressCallbacks) return;
+        ClearSelectedWatchMode();
         _contrast = (int)e.NewValue;
         UpdateLabel("ContrastVal", FormatOffset(_contrast));
         _preview?.Invoke(BuildCurrent());
@@ -153,6 +225,7 @@ public partial class SettingsDialog : Window
     private void SaturationSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_suppressCallbacks) return;
+        ClearSelectedWatchMode();
         _saturation = (int)e.NewValue;
         UpdateLabel("SaturationVal", FormatOffset(_saturation));
         _preview?.Invoke(BuildCurrent());
@@ -161,6 +234,7 @@ public partial class SettingsDialog : Window
     private void ZoomSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {
         if (_suppressCallbacks) return;
+        ClearSelectedWatchMode();
         _zoomSlider = (int)e.NewValue;
         UpdateLabel("ZoomVal", FormatZoom(_zoomSlider));
         _preview?.Invoke(BuildCurrent());
@@ -171,6 +245,7 @@ public partial class SettingsDialog : Window
         if (_suppressCallbacks) return;
         if (sender is ComboBox { SelectedItem: Choice choice })
         {
+            ClearSelectedWatchMode();
             _aspect = choice.Value;
             _preview?.Invoke(BuildCurrent());
         }
@@ -180,12 +255,14 @@ public partial class SettingsDialog : Window
     {
         if (sender is not Button btn || !int.TryParse(btn.Tag?.ToString(), out var deg)) return;
 
+        ClearSelectedWatchMode();
         _rotation = deg;
         RefreshRotationButtons();
         _preview?.Invoke(BuildCurrent());
     }
 
-    private void OkButton_Click(object? sender, RoutedEventArgs e) => Close(BuildCurrent());
+    private void OkButton_Click(object? sender, RoutedEventArgs e) =>
+        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode));
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e) => Close(null);
 
@@ -197,18 +274,182 @@ public partial class SettingsDialog : Window
         _rotation = 0;
         _zoomSlider = 0;
         _aspect = VideoAspect.Auto;
+        _selectedWatchMode = null;
         RefreshAll();
+        RefreshWatchModeSelection();
         _preview?.Invoke(BuildCurrent());
     }
 
     private void ShowSection(SettingsSection section)
     {
         _section = section;
+        var isWatchModes = section == SettingsSection.WatchModes;
         var isVideo = section == SettingsSection.Video;
+        SetVisible("WatchModesPanel", isWatchModes);
         SetVisible("VideoPanel", isVideo);
-        SetVisible("ShortcutsPanel", !isVideo);
+        SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
+        MarkNavSelected("WatchModesNavButton", isWatchModes);
         MarkNavSelected("VideoNavButton", isVideo);
-        MarkNavSelected("ShortcutsNavButton", !isVideo);
+        MarkNavSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
+    }
+
+    private void PopulateWatchModes()
+    {
+        var list = this.FindControl<StackPanel>("WatchModesList");
+        if (list is null) return;
+
+        foreach (var mode in WatchModes)
+        {
+            var button = new Button
+            {
+                Tag = mode.Mode,
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                Padding = new Thickness(12, 10),
+                Background = ModeNormalBg,
+                BorderBrush = ModeNormalBorder,
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Content = new Grid
+                {
+                    RowDefinitions =
+                    {
+                        new RowDefinition(GridLength.Auto),
+                        new RowDefinition(GridLength.Auto)
+                    },
+                    Children =
+                    {
+                        BuildModeText(mode),
+                        BuildModeEffects(mode)
+                    }
+                }
+            };
+            button.Click += WatchModeButton_Click;
+            list.Children.Add(button);
+        }
+    }
+
+    private static TextBlock BuildModeText(WatchModeChoice mode)
+    {
+        var text = new TextBlock
+        {
+            Text = mode.Name,
+            FontSize = 14,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = Brushes.White,
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        Grid.SetRow(text, 0);
+        return text;
+    }
+
+    private static Grid BuildModeEffects(WatchModeChoice mode)
+    {
+        var effects = new Grid
+        {
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+
+        for (var i = 0; i < mode.Effects.Length; i++)
+            effects.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(i == mode.Effects.Length - 1 ? 150 : 68)));
+
+        for (var i = 0; i < mode.Effects.Length; i++)
+        {
+            var effect = BuildEffect(mode.Effects[i]);
+            Grid.SetColumn(effect, i);
+            effects.Children.Add(effect);
+        }
+
+        Grid.SetRow(effects, 1);
+        return effects;
+    }
+
+    private static StackPanel BuildEffect(WatchModeEffect effect)
+    {
+        var panel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Left
+        };
+
+        if (Application.Current?.Resources.TryGetResource(effect.IconKey, Avalonia.Styling.ThemeVariant.Default, out var icon) == true &&
+            icon is StreamGeometry geometry)
+        {
+            panel.Children.Add(new PathIcon
+            {
+                Data = geometry,
+                Width = 13,
+                Height = 13,
+                Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+                VerticalAlignment = VerticalAlignment.Center
+            });
+        }
+
+        panel.Children.Add(new TextBlock
+        {
+            Text = effect.Text,
+            FontSize = 12,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+
+        return panel;
+    }
+
+    private void WatchModeButton_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: WatchMode mode }) return;
+
+        _selectedWatchMode = mode;
+        ApplyWatchModeToDraft(mode);
+        RefreshAll();
+        RefreshWatchModeSelection();
+        _preview?.Invoke(BuildCurrent());
+    }
+
+    private void ApplyWatchModeToDraft(WatchMode mode)
+    {
+        var video = mode switch
+        {
+            WatchMode.Cinema => new VideoAdjustments(4, 8, 6, 0, 0.0, VideoAspect.Auto),
+            WatchMode.Lecture => new VideoAdjustments(8, 10, -5, 0, 0.0, VideoAspect.Auto),
+            WatchMode.LanguageLearning => VideoAdjustments.Default,
+            WatchMode.Night => new VideoAdjustments(-15, -5, -10, 0, 0.0, VideoAspect.Auto),
+            WatchMode.MusicVideo => new VideoAdjustments(6, 12, 18, 0, 0.0, VideoAspect.Auto),
+            _ => VideoAdjustments.Default
+        };
+
+        _brightness = video.Brightness;
+        _contrast = video.Contrast;
+        _saturation = video.Saturation;
+        _rotation = video.Rotation;
+        _zoomSlider = ZoomToSlider(video.Zoom);
+        _aspect = video.Aspect;
+    }
+
+    private void RefreshWatchModeSelection()
+    {
+        var list = this.FindControl<StackPanel>("WatchModesList");
+        if (list is null) return;
+
+        foreach (var button in list.Children.OfType<Button>())
+        {
+            var selected = button.Tag is WatchMode mode && _selectedWatchMode == mode;
+            button.Background = selected ? ModeSelectedBg : ModeNormalBg;
+            button.BorderBrush = selected ? ModeSelectedBorder : ModeNormalBorder;
+        }
+    }
+
+    private void ClearSelectedWatchMode()
+    {
+        if (_selectedWatchMode is null) return;
+        _selectedWatchMode = null;
+        RefreshWatchModeSelection();
     }
 
     private void PopulateShortcuts()
@@ -382,4 +623,11 @@ public partial class SettingsDialog : Window
     {
         public override string ToString() => Label;
     }
+
+    private sealed record WatchModeChoice(
+        WatchMode Mode,
+        string Name,
+        WatchModeEffect[] Effects);
+
+    private sealed record WatchModeEffect(string IconKey, string Text);
 }

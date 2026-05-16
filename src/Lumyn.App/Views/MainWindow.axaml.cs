@@ -432,7 +432,7 @@ public partial class MainWindow : Window
         => await OpenSubtitleSettingsDialogAsync();
 
     private async void SettingsButton_Click(object? sender, RoutedEventArgs e)
-        => await OpenSettingsDialogAsync(SettingsSection.Video);
+        => await OpenSettingsDialogAsync(SettingsSection.WatchModes);
 
     private async void CastButton_Click(object? sender, RoutedEventArgs e)
         => await OpenCastDialogAsync();
@@ -613,9 +613,19 @@ public partial class MainWindow : Window
             prev,
             adj => ViewModel.ApplyVideoAdjustments(adj),
             section);
-        var result = await dialog.ShowDialog<Lumyn.App.Models.VideoAdjustments?>(this);
-        // Apply final result; revert to previous state on cancel.
-        ViewModel.ApplyVideoAdjustments(result ?? prev);
+        var result = await dialog.ShowDialog<SettingsDialogResult?>(this);
+        if (result is null)
+        {
+            ViewModel.ApplyVideoAdjustments(prev);
+        }
+        else if (result.WatchMode is { } mode)
+        {
+            await ViewModel.ApplyWatchModeAsync(mode);
+        }
+        else
+        {
+            ViewModel.ApplyVideoAdjustments(result.VideoAdjustments);
+        }
         Focus();
     }
 

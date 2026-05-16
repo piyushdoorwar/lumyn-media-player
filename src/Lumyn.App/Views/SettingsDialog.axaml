@@ -26,6 +26,16 @@
                      Foreground="#807C79"
                      Margin="4,0,0,8" />
 
+          <Button Name="WatchModesNavButton"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Left"
+                  Click="WatchModesNavButton_Click">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="◐" Width="15" FontSize="13" HorizontalAlignment="Center" />
+              <TextBlock Text="Watch Modes" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+
           <Button Name="VideoNavButton"
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Left"
@@ -49,6 +59,21 @@
       </Border>
 
       <Grid Grid.Column="1" Margin="18,14,18,0" MinHeight="0">
+        <ScrollViewer Name="WatchModesPanel" VerticalScrollBarVisibility="Auto">
+          <StackPanel Spacing="0">
+            <TextBlock Text="Watch Modes"
+                       FontSize="20"
+                       FontWeight="SemiBold"
+                       Foreground="#F7F5F3"
+                       Margin="0,0,0,8" />
+            <TextBlock Text="Presets tune Lumyn for the way you are watching."
+                       FontSize="12"
+                       Foreground="#9D9B98"
+                       Margin="0,0,0,16" />
+            <StackPanel Name="WatchModesList" Spacing="8" />
+          </StackPanel>
+        </ScrollViewer>
+
         <ScrollViewer Name="VideoPanel" VerticalScrollBarVisibility="Auto">
           <StackPanel Spacing="0">
             <TextBlock Text="Video Adjustments"

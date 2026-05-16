@@ -61,7 +61,7 @@ Design philosophy: quiet, distraction-free interface. No bloat. Let the media pl
 
 ```
 lumyn-media-player/
-├── Lumyn.sln                        # Visual Studio solution (2 projects)
+├── Lumyn.sln                        # Visual Studio solution (3 projects)
 ├── Directory.Build.props            # Global build config (net10.0, nullable, etc.)
 ├── Directory.Packages.props         # Central NuGet version management
 ├── VERSION                          # Base version string, currently "1.0"
@@ -113,6 +113,11 @@ lumyn-media-player/
 │           ├── SubtitleParser.cs         # SRT/ASS/SSA/VTT parser
 │           └── SubtitleSearchService.cs  # Online subtitle search
 │
+│   └── Lumyn.Test/                  # xUnit tests for core and important deterministic logic
+│       ├── SubtitleParserTests.cs   # SRT/ASS parsing behavior
+│       ├── SettingsServiceTests.cs  # settings, resume, bookmarks, hashed per-file keys
+│       └── ChromecastCastServiceTests.cs # cast format support decisions
+│
 ├── scripts/
 │   ├── build-linux.sh               # Linux .deb packaging (266 lines)
 │   ├── build-windows.ps1            # Windows installer via Inno Setup (363 lines, PowerShell)
@@ -149,6 +154,14 @@ Avalonia.Fonts.Inter    11.3.14
 `Lumyn.Core` NuGet dependencies:
 ```
 GoogleCast           1.7.0   (Google Cast v2 protocol — includes Zeroconf for mDNS and protobuf-net)
+```
+
+`Lumyn.Test` NuGet dependencies:
+```
+Microsoft.NET.Test.Sdk
+xunit
+xunit.runner.visualstudio
+coverlet.collector
 ```
 
 ---
@@ -540,6 +553,7 @@ lumyn
 
 | Job | Runner | Output artifact |
 |---|---|---|
+| `unit-tests` | ubuntu-latest | runs `dotnet test Lumyn.sln --configuration Release` |
 | `linux-deb` | ubuntu-latest | `lumyn-linux-amd64-deb` (*.deb) |
 | `linux-snap` | ubuntu-latest | `lumyn-linux-amd64-snap` (*.snap) |
 | `windows-installer` | windows-latest | `lumyn-windows-x64-installer` (*_setup.exe) |
@@ -624,6 +638,9 @@ sudo apt install libmpv-dev
 git clone ...
 cd lumyn-media-player
 dotnet run --project src/Lumyn.App/Lumyn.App.csproj
+
+# Run tests
+dotnet test Lumyn.sln
 ```
 
 ### Windows
@@ -649,6 +666,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 - **Custom controls**: Placed in `Lumyn.App/Controls/`. Inherit from Avalonia primitives (e.g., `Control`, `Slider`).
 - **Tiny progress visuals**: For very small progress indicators, prefer a custom-rendered `Control` (like `MiniProgressBar`) over styling Avalonia `ProgressBar`; template layout can make tiny fills appear full or empty incorrectly.
 - **Seek/timeline hit targets**: `SeekBar` intentionally has a larger invisible hit area than its visible track. Preserve that ergonomic leeway when adjusting bottom controls.
+- **Tests**: `src/Lumyn.Test` uses xUnit. Prefer tests for deterministic core logic such as subtitle parsing, settings persistence, resume/bookmarks, and format decisions. Avoid unit tests that require mpv, OpenGL, real Chromecast devices, or Avalonia windows unless those dependencies are isolated.
 
 ---
 
@@ -658,6 +676,7 @@ dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 
 | Date | Change |
 |---|---|
+| 2026-05 | Added `src/Lumyn.Test` xUnit project covering subtitle parsing, settings/resume/bookmark persistence, hashed per-file settings keys, and Chromecast unsupported-format decisions; build and release workflows now run `dotnet test Lumyn.sln --configuration Release` before packaging. |
 | 2026-05 | GitHub snap builds now pin `canonical/action-build@v1` to `snapcraft-channel: 9.x/candidate`, required for stable `base: core26` snaps until the Snapcraft 9 stable track is available. |
 | 2026-05 | Snap runtime base moved to `core26` so sandboxed releases report Ubuntu Core 26 / Ubuntu 26.04-era runtime libraries instead of Ubuntu Core 24; ICU staging updated to `libicu78`. |
 | 2026-05 | Snap input polish: video right-click now opens the root context menu explicitly, and snap packaging stages Yaru/Adwaita/DMZ cursor themes with `XCURSOR_*` launcher fallbacks so the cursor does not shrink inside the sandbox. |

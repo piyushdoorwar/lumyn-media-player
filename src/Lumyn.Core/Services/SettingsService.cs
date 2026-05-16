@@ -20,9 +20,9 @@ public sealed class SettingsService
     public float LastSpeed    { get; private set; } = 1.0f;
     public int   SeekStep     { get; private set; } = 5;    // seconds (5 | 10 | 30)
 
-    public SettingsService()
+    public SettingsService(string? settingsDirectory = null)
     {
-        var configDir = Path.Combine(
+        var configDir = settingsDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Lumyn");
         Directory.CreateDirectory(configDir);

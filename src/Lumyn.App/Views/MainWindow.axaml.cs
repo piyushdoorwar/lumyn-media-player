@@ -30,7 +30,6 @@ public partial class MainWindow : Window
     private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
 
     private static readonly Color GlowOff = Color.FromArgb(0, 0, 0, 0);
-    private static readonly Color AudioGlowColor = Color.FromArgb(80, 0x49, 0xB3, 0x5C);
 
     public MainWindow()
     {
@@ -76,6 +75,10 @@ public partial class MainWindow : Window
                 seekSlider.PointerMoved  += (_, e) => UpdateSeekThumbnail(e);
                 seekSlider.PointerExited += (_, _) => HideSeekThumbnailPopup();
             }
+
+            var audioPanel = this.FindControl<Grid>("AudioModePanel");
+            if (audioPanel is not null)
+                audioPanel.PointerPressed += AudioPanel_OnPointerPressed;
         };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) =>
@@ -162,6 +165,13 @@ public partial class MainWindow : Window
     }
 
     // ── Video click surface ──────────────────────────────────────────────────
+
+    private void AudioPanel_OnPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
+        ViewModel?.TogglePlayPauseCommand.Execute(null);
+        e.Handled = true;
+    }
 
     private void VideoClickLayer_OnPointerPressed(object? sender, PointerPressedEventArgs e)
     {
@@ -868,13 +878,11 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (vm.IsAudioMode)
+            if (vm.IsAudioMode || !vm.IsPlaying)
             {
-                _targetGlowColor = AudioGlowColor;
+                _targetGlowColor = GlowOff;
                 return;
             }
-
-            if (!vm.IsPlaying) return;
 
             var tmpPath = Path.Combine(Path.GetTempPath(), "lumyn_glow.ppm");
             var ok = await Task.Run(() => vm.TakeGlowSnapshot(tmpPath));

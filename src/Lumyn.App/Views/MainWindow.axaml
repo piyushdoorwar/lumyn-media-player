@@ -139,7 +139,8 @@
     </Border>
 
     <!-- ── Audio-only mode panel ─────────────────────────────────────────── -->
-    <Grid IsVisible="{Binding IsAudioMode}"
+    <Grid Name="AudioModePanel"
+          IsVisible="{Binding IsAudioMode}"
           Background="#111111"
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch"

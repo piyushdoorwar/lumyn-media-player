@@ -117,7 +117,15 @@
     <Setter Property="Background" Value="#43AD56" />
   </Style>
 
+  <Style Selector="Button.play-primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#43AD56" />
+  </Style>
+
   <Style Selector="Button.play-primary:pressed">
+    <Setter Property="Background" Value="#2F7D3D" />
+  </Style>
+
+  <Style Selector="Button.play-primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#2F7D3D" />
   </Style>
 

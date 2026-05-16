@@ -20,6 +20,12 @@ public partial class MainWindow : Window
     private readonly SolidColorBrush _glowBrush = new(Colors.Transparent);
     private Color _targetGlowColor = GlowOff;
     private bool _glowSampling;
+
+    // Seek thumbnail preview
+    private readonly Avalonia.Media.Imaging.Bitmap?[] _thumbBitmapCache =
+        new Avalonia.Media.Imaging.Bitmap?[Lumyn.Core.Services.ThumbnailExtractor.FrameCount];
+    private string? _thumbCacheForFile;
+
     private bool _isApplyingFullscreenState;
     private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
 
@@ -63,12 +69,24 @@ public partial class MainWindow : Window
                 pic.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
                 pic.AddHandler(DragDrop.DropEvent, PlaylistDrop);
             }
+
+            var seekSlider = this.FindControl<Controls.SeekBar>("SeekSlider");
+            if (seekSlider is not null)
+            {
+                seekSlider.PointerMoved  += (_, e) => UpdateSeekThumbnail(e);
+                seekSlider.PointerExited += (_, _) => HideSeekThumbnailPopup();
+            }
         };
         Closing += (_, _) => ViewModel?.SaveResumePosition();
         Closed += (_, _) =>
         {
             _glowTimer.Stop();
             _glowLerpTimer.Stop();
+            for (int i = 0; i < _thumbBitmapCache.Length; i++)
+            {
+                _thumbBitmapCache[i]?.Dispose();
+                _thumbBitmapCache[i] = null;
+            }
             ViewModel?.Dispose();
         };
         PropertyChanged += (_, e) =>
@@ -983,6 +1001,85 @@ public partial class MainWindow : Window
             (byte)Math.Clamp((int)(mid + (g - mid) * factor), 0, 255),
             (byte)Math.Clamp((int)(mid + (b - mid) * factor), 0, 255));
     }
+
+    // ── Seek thumbnail preview ───────────────────────────────────────────────
+
+    private void UpdateSeekThumbnail(PointerEventArgs e)
+    {
+        var vm = ViewModel;
+        if (vm is null || !vm.HasMedia || vm.IsAudioMode) return;
+
+        var seekSlider = this.FindControl<Controls.SeekBar>("SeekSlider");
+        var popup      = this.FindControl<Border>("SeekThumbnailPopup");
+        var thumbImg   = this.FindControl<Avalonia.Controls.Image>("SeekThumbnailImage");
+        var timeText   = this.FindControl<TextBlock>("SeekThumbnailTimeText");
+        var videoPanel = this.FindControl<Panel>("VideoPanel");
+
+        if (seekSlider is null || popup is null || thumbImg is null
+            || timeText is null || videoPanel is null) return;
+
+        var posOnSlider = e.GetPosition(seekSlider);
+        var sliderWidth = seekSlider.Bounds.Width;
+        if (sliderWidth <= 0) return;
+
+        var progress = Math.Clamp(posOnSlider.X / sliderWidth, 0.0, 1.0);
+        var duration = vm.MediaDuration;
+        if (duration <= TimeSpan.Zero) return;
+
+        var bmp = GetCachedThumbBitmap(progress, vm);
+        if (bmp is null) return;
+
+        thumbImg.Source = bmp;
+        timeText.Text   = FormatSeekTime(TimeSpan.FromSeconds(progress * duration.TotalSeconds));
+
+        var origin = seekSlider.TranslatePoint(new Point(0, 0), videoPanel);
+        if (origin is null) return;
+
+        var rawX       = origin.Value.X + posOnSlider.X - 82;
+        var leftMargin = Math.Clamp(rawX, 0, Math.Max(0, videoPanel.Bounds.Width - 164));
+        popup.Margin    = new Thickness(leftMargin, 0, 0, 88);
+        popup.IsVisible = true;
+    }
+
+    private Avalonia.Media.Imaging.Bitmap? GetCachedThumbBitmap(double progress, MainViewModel vm)
+    {
+        if (!string.Equals(_thumbCacheForFile, vm.CurrentFilePath, StringComparison.Ordinal))
+        {
+            for (int i = 0; i < _thumbBitmapCache.Length; i++)
+            {
+                _thumbBitmapCache[i]?.Dispose();
+                _thumbBitmapCache[i] = null;
+            }
+            _thumbCacheForFile = vm.CurrentFilePath;
+        }
+
+        var idx = (int)Math.Round(Math.Clamp(progress, 0, 1)
+                      * (Lumyn.Core.Services.ThumbnailExtractor.FrameCount - 1));
+
+        if (_thumbBitmapCache[idx] is { } cached) return cached;
+
+        var bytes = vm.Thumbnails.GetNearest(progress);
+        if (bytes is null) return null;
+
+        try
+        {
+            using var ms = new System.IO.MemoryStream(bytes);
+            var bmp = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(ms, 160);
+            return _thumbBitmapCache[idx] = bmp;
+        }
+        catch { return null; }
+    }
+
+    private void HideSeekThumbnailPopup()
+    {
+        var popup = this.FindControl<Border>("SeekThumbnailPopup");
+        if (popup is not null) popup.IsVisible = false;
+    }
+
+    private static string FormatSeekTime(TimeSpan t)
+        => t.TotalHours >= 1
+            ? $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}"
+            : $"{t.Minutes}:{t.Seconds:D2}";
 
     // ── Fullscreen ───────────────────────────────────────────────────────────
 

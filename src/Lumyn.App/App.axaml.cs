@@ -18,10 +18,11 @@ public sealed partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var playback = new PlaybackService();
-            var settings = new SettingsService();
-            var casting = new ChromecastCastService();
-            var vm = new MainViewModel(playback, settings, casting);
+            var playback   = new PlaybackService();
+            var settings   = new SettingsService();
+            var casting    = new ChromecastCastService();
+            var thumbnails = new ThumbnailExtractor();
+            var vm = new MainViewModel(playback, settings, casting, thumbnails);
 
             var window = new MainWindow { DataContext = vm };
             desktop.MainWindow = window;

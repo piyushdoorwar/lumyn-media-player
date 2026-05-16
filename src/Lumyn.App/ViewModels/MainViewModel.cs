@@ -61,8 +61,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly PlaybackService _playback;
     private readonly SettingsService _settings;
     private readonly ChromecastCastService _casting;
+    private readonly ThumbnailExtractor _thumbnails;
     private readonly DispatcherTimer _osdTimer;
     private readonly ScreenInhibitor _screenInhibitor = new();
+    private string? _thumbnailsLoadedForFile;
     private int _stateRefreshQueued;
     private int _castStateRefreshQueued;
     private long _lastTrackRevision = -1;
@@ -131,11 +133,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private int _playlistIndex = -1;
     private bool _isPlaylistVisible;
 
-    public MainViewModel(PlaybackService playback, SettingsService settings, ChromecastCastService? casting = null)
+    public MainViewModel(
+        PlaybackService playback,
+        SettingsService settings,
+        ChromecastCastService? casting = null,
+        ThumbnailExtractor? thumbnails = null)
     {
-        _playback = playback;
-        _settings = settings;
-        _casting = casting ?? new ChromecastCastService();
+        _playback   = playback;
+        _settings   = settings;
+        _casting    = casting    ?? new ChromecastCastService();
+        _thumbnails = thumbnails ?? new ThumbnailExtractor();
         _uiVisibility = _settings.UiVisibility;
 
         // Restore persisted session preferences
@@ -212,6 +219,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Read-only state ──────────────────────────────────────────────────────
 
     public PlaybackService Playback => _playback;
+    public ThumbnailExtractor Thumbnails => _thumbnails;
+    public TimeSpan MediaDuration => _displayedDuration;
     public string? CurrentFilePath => _playback.CurrentFilePath;
     public IReadOnlyList<string> RecentFiles => _settings.RecentFiles;
     public ObservableCollection<ChromecastDevice> CastDevices { get; } = [];
@@ -1287,6 +1296,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
 
         SetDisplayedTime(displayPosition, displayDuration);
+
+        // Start thumbnail generation once duration is known for a new non-audio file.
+        if (displayDuration > TimeSpan.Zero
+            && !IsAudioMode
+            && !string.IsNullOrWhiteSpace(CurrentFilePath)
+            && !string.Equals(_thumbnailsLoadedForFile, CurrentFilePath, StringComparison.Ordinal))
+        {
+            _thumbnailsLoadedForFile = CurrentFilePath;
+            _thumbnails.StartGeneration(CurrentFilePath, displayDuration);
+        }
+
         NotifyMediaIdentityIfChanged();
         RefreshTracksIfNeeded();
 
@@ -1382,6 +1402,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _osdTimer.Stop();
         _coverArtBitmap?.Dispose();
         _screenInhibitor.Dispose();
+        _thumbnails.Dispose();
         _casting.Dispose();
         _playback.Dispose();
     }
@@ -1482,6 +1503,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         SaveResumePosition();
         NotifyRecentFilesChanged();
+        _thumbnailsLoadedForFile = null;
+        _thumbnails.Cancel();
         _playback.Stop();
         Title         = "Lumyn";
         IsAudioOnly   = false;

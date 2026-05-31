@@ -267,7 +267,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.App/Controls/MpvVideoSurface.cs` | — | Avalonia OpenGL surface for mpv rendering |
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
 | `src/Lumyn.App/Controls/MiniProgressBar.cs` | — | Custom 3px recent-card progress indicator; avoid default `ProgressBar` template for tiny bars |
-| `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Pre-generates 100 evenly-spaced JPEG frames in a background Task using `"exact"` seek. Frames cached as `byte[]?[]`. |
+| `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Generates JPEG frames in a background Task in two phases: `Phase1Count` (20) coarse evenly-spaced frames first, then `Phase2PerMinute` (12/min) refinement. `GetNearest(progress)` returns the closest frame's bytes. |
 
 ---
 
@@ -681,4 +681,6 @@ dotnet test Lumyn.sln
 - **Custom controls**: Placed in `Lumyn.App/Controls/`. Inherit from Avalonia primitives (e.g., `Control`, `Slider`).
 - **Tiny progress visuals**: For very small progress indicators, prefer a custom-rendered `Control` (like `MiniProgressBar`) over styling Avalonia `ProgressBar`; template layout can make tiny fills appear full or empty incorrectly.
 - **Seek/timeline hit targets**: `SeekBar` intentionally has a larger invisible hit area than its visible track. Preserve that ergonomic leeway when adjusting bottom controls.
+- **Idle timer gating**: `MainWindow` runs `_positionTimer` (200ms refresh), `_glowTimer` (2.5s ambient-glow sample), and `_glowLerpTimer` (80ms color lerp) only when they have work — driven by `UpdateActivityTimers()` off the VM's `IsPlaying`/`IsCasting`/`HasMedia`/`IsAudioMode`. Position runs while playing/casting; glow sampling while a local video plays; the lerp stops itself once the border color settles. Paused/seek updates still arrive via `PlaybackService.StateChanged → QueueRefreshState`. Don't reintroduce unconditional `.Start()` on these — it causes constant idle wakeups.
+- **Seek-thumbnail bitmap cache**: `MainWindow._thumbBitmapCache` (decoded hover-preview bitmaps, 0–1999 progress-bucket keys) is an LRU bounded to `MaxThumbBitmaps` (64); evicted and file-change/closed bitmaps are disposed. Keep eviction + disposal when touching it so heavy scrubbing can't grow memory unbounded.
 - **Tests**: `src/Lumyn.Test` uses xUnit. Prefer tests for deterministic core logic such as subtitle parsing, settings persistence, resume/bookmarks, and format decisions. Avoid unit tests that require mpv, OpenGL, real Chromecast devices, or Avalonia windows unless those dependencies are isolated.

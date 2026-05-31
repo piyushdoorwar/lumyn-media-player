@@ -23,11 +23,17 @@ public partial class MainWindow : Window
     private bool _glowSampling;
 
     // Seek thumbnail preview — keyed by coarse progress bucket (0–1999).
-    // Each entry also stores the source JPEG reference so Phase 2 upgrades
-    // are detected automatically: if GetNearest returns a different byte[]
-    // the cached Bitmap is disposed and the new frame decoded in its place.
-    private readonly Dictionary<int, (byte[] Src, Avalonia.Media.Imaging.Bitmap Bmp)> _thumbBitmapCache = new();
+    // Each entry stores the source JPEG reference so Phase 2 upgrades are
+    // detected automatically (a different byte[] → re-decode), plus its LRU node.
+    // Bounded by MaxThumbBitmaps with least-recently-used eviction so heavy
+    // scrubbing of one file can't accumulate unbounded decoded bitmaps.
+    private const int MaxThumbBitmaps = 64;
+    private readonly Dictionary<int, (byte[] Src, Avalonia.Media.Imaging.Bitmap Bmp, LinkedListNode<int> Node)> _thumbBitmapCache = new();
+    private readonly LinkedList<int> _thumbLru = new();
     private string? _thumbCacheForFile;
+
+    // Tracked so we can unsubscribe PropertyChanged when the DataContext changes.
+    private MainViewModel? _subscribedViewModel;
 
     private bool _isApplyingFullscreenState;
     private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
@@ -44,20 +50,19 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
+        // These three timers are started/stopped on demand by UpdateActivityTimers()
+        // so the app doesn't keep waking up (12.5/sec lerp, 5/sec refresh) while idle.
         _positionTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _positionTimer.Tick += (_, _) => ViewModel?.QueueRefreshState();
-        _positionTimer.Start();
 
         _hideControlsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         _hideControlsTimer.Tick += (_, _) => HideControls();
 
         _glowTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2.5) };
         _glowTimer.Tick += GlowTimer_Tick;
-        _glowTimer.Start();
 
         _glowLerpTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(80) };
         _glowLerpTimer.Tick += GlowLerpTimer_Tick;
-        _glowLerpTimer.Start();
 
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
@@ -71,6 +76,7 @@ public partial class MainWindow : Window
             Focus();
             var rb = this.FindControl<Border>("RootBorder");
             if (rb is not null) rb.BorderBrush = _glowBrush;
+            UpdateActivityTimers();
             // Wire playlist reorder DragDrop after visual tree is ready.
             var pic = this.FindControl<ItemsControl>("PlaylistItemsControl");
             if (pic is not null)
@@ -102,10 +108,12 @@ public partial class MainWindow : Window
         };
         Closed += (_, _) =>
         {
+            _positionTimer.Stop();
             _glowTimer.Stop();
             _glowLerpTimer.Stop();
-            foreach (var (_, bmp) in _thumbBitmapCache.Values) bmp.Dispose();
-            _thumbBitmapCache.Clear();
+            ClearThumbBitmapCache();
+            if (_subscribedViewModel is not null)
+                _subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
             ViewModel?.Dispose();
         };
         PropertyChanged += (_, e) =>
@@ -124,9 +132,63 @@ public partial class MainWindow : Window
         DataContextChanged += (_, _) =>
         {
             UpdateTopBarVisibility();
+
+            if (_subscribedViewModel is not null)
+                _subscribedViewModel.PropertyChanged -= OnViewModelPropertyChanged;
+            _subscribedViewModel = ViewModel;
+
             if (ViewModel is not null)
+            {
                 ViewModel.CopyImageToClipboard = CopyImageToClipboardAsync;
+                ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+            }
+
+            UpdateActivityTimers();
         };
+    }
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        // Start/stop the activity timers when playback state that gates them changes.
+        if (e.PropertyName is nameof(MainViewModel.IsPlaying)
+                           or nameof(MainViewModel.IsCasting)
+                           or nameof(MainViewModel.HasMedia)
+                           or nameof(MainViewModel.IsAudioMode))
+        {
+            UpdateActivityTimers();
+        }
+    }
+
+    // Runs the position/glow/lerp timers only when they have work to do, so the
+    // app goes quiet (no periodic wakeups) when idle, paused, or audio-only.
+    private void UpdateActivityTimers()
+    {
+        var vm = ViewModel;
+
+        var positionActive = vm is not null && (vm.IsPlaying || vm.IsCasting);
+        SetTimer(_positionTimer, positionActive);
+
+        var glowActive = vm is not null && vm.IsPlaying && vm.HasMedia
+                         && !vm.IsAudioMode && !vm.IsCasting;
+        SetTimer(_glowTimer, glowActive);
+        if (!glowActive)
+        {
+            // Fade the border out, then let the lerp timer stop itself once settled.
+            _targetGlowColor = GlowOff;
+            EnsureGlowLerpRunning();
+        }
+    }
+
+    private static void SetTimer(DispatcherTimer timer, bool run)
+    {
+        if (run && !timer.IsEnabled) timer.Start();
+        else if (!run && timer.IsEnabled) timer.Stop();
+    }
+
+    private void EnsureGlowLerpRunning()
+    {
+        if (_glowBrush.Color != _targetGlowColor && !_glowLerpTimer.IsEnabled)
+            _glowLerpTimer.Start();
     }
 
     private async Task<bool> CopyImageToClipboardAsync(string imagePath)
@@ -1014,6 +1076,8 @@ public partial class MainWindow : Window
         finally
         {
             _glowSampling = false;
+            // Animate toward whatever target this tick produced.
+            EnsureGlowLerpRunning();
         }
     }
 
@@ -1021,7 +1085,12 @@ public partial class MainWindow : Window
     {
         var current = _glowBrush.Color;
         var target = _targetGlowColor;
-        if (current == target) return;
+        if (current == target)
+        {
+            // Settled — no need to keep waking up until the target changes again.
+            _glowLerpTimer.Stop();
+            return;
+        }
 
         static byte Lerp(byte from, byte to)
             => (byte)Math.Round(from + (to - from) * 0.18);
@@ -1175,8 +1244,7 @@ public partial class MainWindow : Window
         // On file change, dispose and clear every cached Bitmap.
         if (!string.Equals(_thumbCacheForFile, vm.CurrentFilePath, StringComparison.Ordinal))
         {
-            foreach (var (_, bmp) in _thumbBitmapCache.Values) bmp.Dispose();
-            _thumbBitmapCache.Clear();
+            ClearThumbBitmapCache();
             _thumbCacheForFile = vm.CurrentFilePath;
         }
 
@@ -1190,8 +1258,14 @@ public partial class MainWindow : Window
         {
             // Phase 2 may have inserted a closer frame for this bucket.
             // If the byte[] reference changed, dispose the stale Bitmap and re-decode.
-            if (ReferenceEquals(entry.Src, bytes)) return entry.Bmp;
+            if (ReferenceEquals(entry.Src, bytes))
+            {
+                _thumbLru.Remove(entry.Node);
+                _thumbLru.AddLast(entry.Node); // mark most-recently-used
+                return entry.Bmp;
+            }
             entry.Bmp.Dispose();
+            _thumbLru.Remove(entry.Node);
             _thumbBitmapCache.Remove(key);
         }
 
@@ -1199,10 +1273,27 @@ public partial class MainWindow : Window
         {
             using var ms  = new System.IO.MemoryStream(bytes);
             var bmp = Avalonia.Media.Imaging.Bitmap.DecodeToWidth(ms, 160);
-            _thumbBitmapCache[key] = (bytes, bmp);
+            var node = _thumbLru.AddLast(key);
+            _thumbBitmapCache[key] = (bytes, bmp, node);
+
+            // Evict least-recently-used entries beyond the cap.
+            while (_thumbBitmapCache.Count > MaxThumbBitmaps && _thumbLru.First is { } oldest)
+            {
+                _thumbLru.RemoveFirst();
+                if (_thumbBitmapCache.Remove(oldest.Value, out var evicted))
+                    evicted.Bmp.Dispose();
+            }
+
             return bmp;
         }
         catch { return null; }
+    }
+
+    private void ClearThumbBitmapCache()
+    {
+        foreach (var (_, bmp, _) in _thumbBitmapCache.Values) bmp.Dispose();
+        _thumbBitmapCache.Clear();
+        _thumbLru.Clear();
     }
 
     private void HideSeekThumbnailPopup()

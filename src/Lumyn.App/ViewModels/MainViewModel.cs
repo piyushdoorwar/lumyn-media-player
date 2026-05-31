@@ -1422,6 +1422,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _settings.SaveResumePosition(CurrentFilePath, CurrentMediaPosition, CurrentMediaDuration);
     }
 
+    public WindowGeometry? GetWindowGeometry() => _settings.GetWindowGeometry();
+
+    public void SaveWindowGeometry(double width, double height, int x, int y, bool maximized)
+        => _settings.SaveWindowGeometry(width, height, x, y, maximized);
+
     public void ShowOsd(string message)
     {
         OsdMessage = message;
@@ -1438,6 +1443,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _thumbnails.Dispose();
         _casting.Dispose();
         _playback.Dispose();
+        // Flush any debounced settings writes so nothing is lost on close.
+        _settings.Flush();
     }
 
     private void NotifyMediaIdentityIfChanged()
@@ -1807,6 +1814,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool TakeGlowSnapshot(string path) => HasMedia && _playback.TakeSnapshot(path);
 
+    /// <summary>
+    /// Set by the view: copies the screenshot at the given path to the system
+    /// clipboard, returning true on success. Image clipboard support is
+    /// platform-dependent, so callers always keep the on-disk copy as fallback.
+    /// </summary>
+    public Func<string, Task<bool>>? CopyImageToClipboard { get; set; }
+
     private void TakeScreenshot()
     {
         if (!HasMedia) return;
@@ -1814,10 +1828,30 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         Directory.CreateDirectory(dir);
         var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
         var path = Path.Combine(dir, $"Lumyn_{timestamp}.png");
-        if (_playback.TakeSnapshot(path))
-            ShowOsd($"Screenshot saved");
-        else
+        if (!_playback.TakeSnapshot(path))
+        {
             ShowOsd("Screenshot failed");
+            return;
+        }
+
+        // The file is the reliable result; clipboard copy is a best-effort bonus.
+        ShowOsd("Screenshot saved");
+        var copy = CopyImageToClipboard;
+        if (copy is not null)
+            _ = CopyScreenshotToClipboardAsync(copy, path);
+    }
+
+    private async Task CopyScreenshotToClipboardAsync(Func<string, Task<bool>> copy, string path)
+    {
+        try
+        {
+            if (await copy(path))
+                ShowOsd("Screenshot copied to clipboard");
+        }
+        catch
+        {
+            // Clipboard refused the image; the saved file already covers the user.
+        }
     }
 
     private void SetAudioTrack(object? parameter)

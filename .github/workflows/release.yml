@@ -46,15 +46,33 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
+
       - name: Run unit tests
         run: dotnet test Lumyn.sln --configuration Release
 
   linux-deb:
-    name: Linux Debian package
-    runs-on: ubuntu-latest
+    name: Linux Debian package (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: [prepare, unit-tests]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            rid: linux-x64
+            runner: ubuntu-latest
+          - arch: arm64
+            rid: linux-arm64
+            runner: ubuntu-24.04-arm
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
+      RID: ${{ matrix.rid }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -64,11 +82,18 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
+
       - name: Cache apt packages
         uses: awalsh128/cache-apt-pkgs-action@latest
         with:
           packages: libmpv2
-          version: 1.0
+          version: 1.0-${{ matrix.arch }}
 
       - name: Build deb
         run: ./scripts/build-linux.sh
@@ -76,7 +101,7 @@ jobs:
       - name: Upload deb
         uses: actions/upload-artifact@v5
         with:
-          name: lumyn-linux-amd64-deb
+          name: lumyn-linux-${{ matrix.arch }}-deb
           path: artifacts/packages/*.deb
 
   linux-snap:
@@ -213,6 +238,13 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
+
       - name: Install Windows SDK (MakeAppx for MSIX)
         shell: pwsh
         run: |
@@ -247,12 +279,25 @@ jobs:
         with:
           path: release-artifacts
 
+      - name: Generate SHA256 checksums
+        run: |
+          cd release-artifacts
+          # Flatten per-artifact subdirectories into one checksum manifest,
+          # listing just the file basenames so it reads cleanly on the release.
+          find . -type f ! -name 'checksums.sha256' -printf '%P\n' \
+            | sort \
+            | while read -r f; do sha256sum "$f"; done > checksums.sha256
+          echo "Checksums:"
+          cat checksums.sha256
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: "Lumyn ${{ needs.prepare.outputs.version }}"
-          files: release-artifacts/**/*
+          files: |
+            release-artifacts/**/*
+            release-artifacts/checksums.sha256
 
   # ── Publish to Ubuntu PPA ──────────────────────────────────────────────────
   publish-ppa:

@@ -2,6 +2,7 @@ using System.ComponentModel;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
@@ -30,6 +31,12 @@ public partial class MainWindow : Window
 
     private bool _isApplyingFullscreenState;
     private WindowState _restoreWindowStateAfterFullscreen = WindowState.Normal;
+
+    // Last known "normal" (non-maximized, non-fullscreen) bounds — what we persist
+    // so reopening restores the size/place the user actually chose.
+    private double _normalWidth;
+    private double _normalHeight;
+    private PixelPoint _normalPosition;
 
     private static readonly Color GlowOff = Color.FromArgb(0, 0, 0, 0);
 
@@ -60,6 +67,7 @@ public partial class MainWindow : Window
         PointerWheelChanged += OnWindowPointerWheelChanged;
         Opened += (_, _) =>
         {
+            RestoreWindowGeometry();
             Focus();
             var rb = this.FindControl<Border>("RootBorder");
             if (rb is not null) rb.BorderBrush = _glowBrush;
@@ -82,7 +90,16 @@ public partial class MainWindow : Window
             if (audioPanel is not null)
                 audioPanel.PointerPressed += AudioPanel_OnPointerPressed;
         };
-        Closing += (_, _) => ViewModel?.SaveResumePosition();
+        PositionChanged += (_, _) =>
+        {
+            if (WindowState == WindowState.Normal)
+                _normalPosition = Position;
+        };
+        Closing += (_, _) =>
+        {
+            PersistWindowGeometry();
+            ViewModel?.SaveResumePosition();
+        };
         Closed += (_, _) =>
         {
             _glowTimer.Stop();
@@ -98,8 +115,52 @@ public partial class MainWindow : Window
                 UpdateMaximizeIcon();
                 UpdateTopBarVisibility();
             }
+            else if (e.Property == BoundsProperty && WindowState == WindowState.Normal)
+            {
+                if (!double.IsNaN(Width))  _normalWidth  = Width;
+                if (!double.IsNaN(Height)) _normalHeight = Height;
+            }
         };
-        DataContextChanged += (_, _) => UpdateTopBarVisibility();
+        DataContextChanged += (_, _) =>
+        {
+            UpdateTopBarVisibility();
+            if (ViewModel is not null)
+                ViewModel.CopyImageToClipboard = CopyImageToClipboardAsync;
+        };
+    }
+
+    private async Task<bool> CopyImageToClipboardAsync(string imagePath)
+    {
+        try
+        {
+            var clipboard = Clipboard;
+            if (clipboard is null) return false;
+
+            // The clipboard renders its contents lazily when a consumer pastes,
+            // so anything we hand it must stay valid (no `using` dispose) and
+            // must not require a fragile encode step on the dispatcher thread.
+            if (OperatingSystem.IsWindows())
+            {
+                // Windows: a Bitmap lands as a native CF_DIB image that Paint,
+                // Office, browsers, etc. can paste directly.
+                var bitmap = new Avalonia.Media.Imaging.Bitmap(imagePath);
+                await clipboard.SetBitmapAsync(bitmap);
+            }
+            else
+            {
+                // X11/Wayland: offer the raw PNG bytes under the image/png target.
+                // Avoids Avalonia's X11 Bitmap.Save path, which NRE-crashes the
+                // app on the event thread when another app requests the image.
+                var bytes = await File.ReadAllBytesAsync(imagePath);
+                var format = DataFormat.CreateBytesPlatformFormat("image/png");
+                await clipboard.SetValueAsync(format, bytes);
+            }
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private MainViewModel? ViewModel => DataContext as MainViewModel;
@@ -112,6 +173,64 @@ public partial class MainWindow : Window
         await ViewModel.OpenFileAsync(filePath);
         Focus();
         ShowControls();
+    }
+
+    // ── Window geometry persistence ──────────────────────────────────────────
+
+    private void RestoreWindowGeometry()
+    {
+        var geo = ViewModel?.GetWindowGeometry();
+        if (geo is null)
+        {
+            _normalWidth    = Width;
+            _normalHeight   = Height;
+            _normalPosition = Position;
+            return;
+        }
+
+        var w = Math.Max(geo.Width, MinWidth);
+        var h = Math.Max(geo.Height, MinHeight);
+        Width  = w;
+        Height = h;
+        _normalWidth  = w;
+        _normalHeight = h;
+
+        var pos = new PixelPoint(geo.X, geo.Y);
+        if (IsPositionOnScreen(pos))
+        {
+            Position        = pos;
+            _normalPosition = pos;
+        }
+        else
+        {
+            _normalPosition = Position;
+        }
+
+        // Restore Maximized only; never reopen straight into FullScreen.
+        if (geo.Maximized)
+            WindowState = WindowState.Maximized;
+    }
+
+    private void PersistWindowGeometry()
+    {
+        // Don't persist transient fullscreen bounds — keep the last normal geometry.
+        if (WindowState == WindowState.FullScreen) return;
+
+        var maximized = WindowState == WindowState.Maximized;
+        var w = _normalWidth  > 0 ? _normalWidth  : Width;
+        var h = _normalHeight > 0 ? _normalHeight : Height;
+        if (double.IsNaN(w) || double.IsNaN(h)) return;
+
+        ViewModel?.SaveWindowGeometry(w, h, _normalPosition.X, _normalPosition.Y, maximized);
+    }
+
+    private bool IsPositionOnScreen(PixelPoint pos)
+    {
+        var screens = Screens;
+        if (screens is null) return true;
+        foreach (var screen in screens.All)
+            if (screen.Bounds.Contains(pos)) return true;
+        return false;
     }
 
     // ── Controls visibility ──────────────────────────────────────────────────

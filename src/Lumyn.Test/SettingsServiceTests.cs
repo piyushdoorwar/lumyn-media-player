@@ -12,6 +12,7 @@ public sealed class SettingsServiceTests : IDisposable
         var settings = CreateSettings();
 
         settings.SaveSessionPreferences(volume: 999, speed: 12.5f, seekStep: 99);
+        settings.Flush();
 
         var reloaded = CreateSettings();
         Assert.Equal(150, reloaded.LastVolume);
@@ -44,6 +45,7 @@ public sealed class SettingsServiceTests : IDisposable
         var file = Path.Combine(_settingsDir, "movie.mkv");
 
         settings.SaveResumePosition(file, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(120));
+        settings.Flush();
 
         var reloaded = CreateSettings();
         var info = reloaded.GetResumeInfo(file);
@@ -51,6 +53,7 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(25, info.ProgressPct);
 
         reloaded.SaveResumePosition(file, TimeSpan.FromSeconds(117), TimeSpan.FromSeconds(120));
+        reloaded.Flush();
 
         var cleared = CreateSettings().GetResumeInfo(file);
         Assert.Equal(TimeSpan.Zero, cleared.Position);
@@ -72,6 +75,7 @@ public sealed class SettingsServiceTests : IDisposable
             DelayMs = 250
         });
         settings.AddBookmark(file, TimeSpan.FromSeconds(60), "Good part");
+        settings.Flush();
 
         var json = File.ReadAllText(Path.Combine(_settingsDir, "settings.json"));
         Assert.DoesNotContain(file, json);
@@ -90,10 +94,12 @@ public sealed class SettingsServiceTests : IDisposable
         var file = Path.Combine(_settingsDir, "movie.mp4");
 
         settings.SaveAudioSettings(file, new AudioSettingsEntry { Mode = "VoiceBoost" });
+        settings.Flush();
 
         Assert.Equal("VoiceBoost", CreateSettings().GetAudioSettings(file)?.Mode);
 
         settings.ClearAudioSettings(file);
+        settings.Flush();
 
         Assert.Null(CreateSettings().GetAudioSettings(file));
     }
@@ -113,6 +119,7 @@ public sealed class SettingsServiceTests : IDisposable
             ShowLoop = true,
             ShowMarkers = false
         });
+        settings.Flush();
 
         var reloaded = CreateSettings().UiVisibility;
         Assert.False(reloaded.ShowScreenshot);
@@ -146,6 +153,39 @@ public sealed class SettingsServiceTests : IDisposable
                 Assert.Equal("Scene", bookmark.Label);
                 Assert.Equal("1:15", bookmark.FormattedTime);
             });
+    }
+
+    [Fact]
+    public void WindowGeometry_RoundTripsAfterFlush()
+    {
+        var settings = CreateSettings();
+
+        Assert.Null(settings.GetWindowGeometry());
+
+        settings.SaveWindowGeometry(width: 1280, height: 720, x: 40, y: 60, maximized: true);
+        settings.Flush();
+
+        var geo = CreateSettings().GetWindowGeometry();
+        Assert.NotNull(geo);
+        Assert.Equal(1280, geo!.Width);
+        Assert.Equal(720, geo.Height);
+        Assert.Equal(40, geo.X);
+        Assert.Equal(60, geo.Y);
+        Assert.True(geo.Maximized);
+    }
+
+    [Fact]
+    public void Flush_PersistsBufferedWritesBeforeReload()
+    {
+        var settings = CreateSettings();
+
+        settings.SaveSessionPreferences(volume: 55, speed: 1.5f, seekStep: 10);
+        settings.Flush();
+
+        var reloaded = CreateSettings();
+        Assert.Equal(55, reloaded.LastVolume);
+        Assert.Equal(1.5f, reloaded.LastSpeed);
+        Assert.Equal(10, reloaded.SeekStep);
     }
 
     private SettingsService CreateSettings() => new(_settingsDir);

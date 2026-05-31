@@ -291,7 +291,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Video rotation: 0°, 90°, 180°, 270°
 - Zoom control (log₂ scale)
 - Aspect ratio override: 16:9, 4:3, 2.35:1, 1:1, auto
-- Screenshot capture to file
+- Screenshot capture to file (also copied to the system clipboard when supported)
 - Fullscreen mode (maximize conflict fix landed in recent commits)
 
 ### Subtitles
@@ -321,6 +321,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Configurable seek step: 5 / 10 / 30 seconds
 - Volume and speed persisted across sessions
 - Subtitle settings persisted per file
+- Main window size/position/maximized state persisted across sessions (clamped on-screen; fullscreen not persisted)
 
 ### Casting
 - Chromecast (Google Cast v2) device discovery via mDNS (`_googlecast._tcp`)
@@ -404,13 +405,14 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 
 - **Location**: `~/.config/Lumyn/settings.json` (Linux); equivalent app-data location on Windows
 - **Thumbnail cache**: `~/.config/Lumyn/thumbs/{sha256_16chars}.jpg` — one JPEG per file, keyed by first 16 hex chars of SHA256(normalized path). Created by the app on startup.
-- **Format**: JSON, auto-saved on changes
+- **Format**: compact JSON. Writes are **debounced** (~400ms `System.Threading.Timer`) and written atomically (temp file + `File.Move`) off the UI thread; `Flush()` forces a synchronous write and runs on app close. `SettingsService` is `IDisposable`.
 - **Contents**:
   - Resume positions (key = SHA256 of normalized file path)
   - Bookmarks per file
   - Subtitle settings per file (font, size, color, delay)
   - Audio clarity mode per file
   - Recent files list (max 12)
+  - Main window geometry (`WindowGeometry`: width/height/x/y/maximized)
   - Global: volume, speed, seek step preference, UI visibility toggles
 
 ---
@@ -567,16 +569,16 @@ lumyn
 | Job | Runner | Output artifact |
 |---|---|---|
 | `unit-tests` | ubuntu-latest | runs `dotnet test Lumyn.sln --configuration Release` |
-| `linux-deb` | ubuntu-latest | `lumyn-linux-amd64-deb` (*.deb) |
+| `linux-deb` (matrix) | ubuntu-latest (amd64) / `ubuntu-24.04-arm` (arm64) | `lumyn-linux-amd64-deb`, `lumyn-linux-arm64-deb` (*.deb) |
 | `linux-snap` | ubuntu-latest | `lumyn-linux-amd64-snap` (*.snap) |
 | `windows-installer` | windows-latest | `lumyn-windows-x64-installer` (*_setup.exe) |
 
-All jobs install .NET 10.0 SDK.
+All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (key: OS+arch+hash of `Directory.Packages.props`/`**/*.csproj`). The workflow has a `concurrency` group that cancels superseded runs. The arm64 `.deb` must build on a native arm64 runner because `build-linux.sh` bundles the host-architecture `libmpv` (via `ldd`); cross-building on amd64 would ship a broken arm64 package.
 
 ### `release.yml` — triggered on `v*` tag push or manual dispatch
 
-- Runs same build jobs as `build-artifacts.yml`
-- Additional `github-release` job: attaches all artifacts to a GitHub Release
+- Runs same build jobs as `build-artifacts.yml` (including the amd64+arm64 `.deb` matrix and NuGet caching)
+- Additional `github-release` job: generates a `checksums.sha256` manifest over all downloaded artifacts and attaches it plus all artifacts to a GitHub Release
 - `linux-snap` also publishes the built snap to the Snap Store using the `SNAPCRAFT_STORE_CREDENTIALS` secret
 
 ### `static.yml` — triggered on push to `main`
@@ -680,54 +682,3 @@ dotnet test Lumyn.sln
 - **Tiny progress visuals**: For very small progress indicators, prefer a custom-rendered `Control` (like `MiniProgressBar`) over styling Avalonia `ProgressBar`; template layout can make tiny fills appear full or empty incorrectly.
 - **Seek/timeline hit targets**: `SeekBar` intentionally has a larger invisible hit area than its visible track. Preserve that ergonomic leeway when adjusting bottom controls.
 - **Tests**: `src/Lumyn.Test` uses xUnit. Prefer tests for deterministic core logic such as subtitle parsing, settings persistence, resume/bookmarks, and format decisions. Avoid unit tests that require mpv, OpenGL, real Chromecast devices, or Avalonia windows unless those dependencies are isolated.
-
----
-
-## Changelog (Feature Updates)
-
-> Update this section whenever a feature is added, removed, or significantly changed.
-
-| Date | Change |
-|---|---|
-| 2026-05 | Seek thumbnail preview: hovering the seek bar shows a 164×~115px popup with a JPEG video frame and timestamp. `ThumbnailExtractor` (Lumyn.Core) runs a secondary silent mpv instance (`vo=null ao=null screenshot-sw=yes`) to pre-generate 100 evenly-spaced JPEG frames (was 40) in a background Task using `"exact"` seek mode (was `"keyframes"`) for frame-accurate thumbnails. The popup time label shows the thumbnail's actual capture time (not the raw cursor position) so the label and frame are always in sync. Frames stored as `byte[]?[]`, lazily decoded to `Avalonia.Media.Imaging.Bitmap` via `GetCachedThumbBitmap`. SeekBar `PointerMoved`/`PointerExited` drive `UpdateSeekThumbnail` / `HideSeekThumbnailPopup`. |
-| 2026-05 | Recently played video thumbnail cards: each card shows a full-bleed video frame thumbnail (200×120px) with a dark gradient overlay, filename, resume label, 3px progress bar, and a `%` badge top-left. Thumbnails extracted via ffmpeg (`-f image2` required on ffmpeg 8+, `.tmp` atomic write). Extraction triggered during playback, on stop (at exact stopped position), and backfilled at startup. Audio cards show cover art (external sidecar → embedded ffmpeg extract). Cache in `~/.config/Lumyn/thumbs/`. `RecentFileItem` record has lazy `ThumbnailBitmap` property. |
-| 2026-05 | OSD toast redesigned: moved from bottom-left to top-left (52px top margin). Style simplified — translucent `#99` background, near-invisible white border, small bare icon, regular-weight muted text, reduced shadow. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap correctly (StackPanel gave infinite width, disabling TextWrapping). |
-| 2026-05 | Scrollbar theme: globally styled in `Lumyn.axaml` to 6px wide/tall, green-tinted (`#3A9B4B`) thumb with opacity-based states (0.35 normal / 0.75 hover / 1.0 pressed). Arrow buttons hidden. Uses `Opacity` rather than `Background` for state changes because Fluent theme's Thumb template overrides Background internally. |
-| 2026-05 | Right-click context menu crash fixed: `ContextMenu.Open(control)` requires the control it is attached to in AXAML (`VideoPanel`), not the Window. Changed `OpenRootContextMenu()` to find and pass `VideoPanel`. |
-| 2026-05 | Ambient border glow: `RootBorder` (2px) animated to the dominant edge color of the current video frame, sampled via PPM screenshot every 2.5s. Lerp timer (80ms) smoothly transitions the `SolidColorBrush`. Audio-only mode glows Lumyn green; no media fades to transparent. All logic in `MainWindow.axaml.cs` (`GlowTimer_Tick`, `GlowLerpTimer_Tick`, `SamplePpmEdgeColor`). `MainViewModel.TakeGlowSnapshot` delegates to `PlaybackService.TakeSnapshot`. |
-| 2026-05 | Added a bottom-pinned Transmux section in Settings for video/audio format conversion handoff, using the Transmux site SVG asset and linking to the Transmux website with a summary of supported conversion, subtitle, and progress features. |
-| 2026-05 | Added Interface visibility settings for hiding Screenshot, Always on Top, Cast, Seek Step, Queue, Loop, and Markers controls. Visibility preferences persist globally, and the queue sidebar header now has a close button next to clear. |
-| 2026-05 | Added Audio Clarity settings with Off, Voice Boost, Loudness Normalize, and Quiet Mode presets. Presets use mpv audio filters, are remembered per file, and display tidy icon/value summaries in Settings. |
-| 2026-05 | Added Watch Modes as the first Settings section. Cinema, Lecture, Language Learning, Night, and Music Video presets preview video adjustments and apply speed, seek-step, and subtitle style choices on Apply, with each row showing its concrete effects. |
-| 2026-05 | Added a top-bar Settings button with a two-column settings modal. Video adjustments and keyboard shortcuts now live as the first two settings sections, with context-menu and F1/? shortcut routes opening the relevant section. |
-| 2026-05 | Duration text in the seek row now toggles between total duration and remaining time when clicked, matching Netflix-style `-mm:ss` behavior. |
-| 2026-05 | Added `src/Lumyn.Test` xUnit project covering subtitle parsing, settings/resume/bookmark persistence, hashed per-file settings keys, and Chromecast unsupported-format decisions; build and release workflows now run `dotnet test Lumyn.sln --configuration Release` before packaging. |
-| 2026-05 | GitHub snap builds now pin `canonical/action-build@v1` to `snapcraft-channel: 9.x/candidate`, required for stable `base: core26` snaps until the Snapcraft 9 stable track is available. |
-| 2026-05 | Snap runtime base moved to `core26` so sandboxed releases report Ubuntu Core 26 / Ubuntu 26.04-era runtime libraries instead of Ubuntu Core 24; ICU staging updated to `libicu78`. |
-| 2026-05 | Snap input polish: video right-click now opens the root context menu explicitly, and snap packaging stages Yaru/Adwaita/DMZ cursor themes with `XCURSOR_*` launcher fallbacks so the cursor does not shrink inside the sandbox. |
-| 2026-05 | Website Linux download panel now promotes Ubuntu App Center / Snapcraft first with a Snapcraft icon, keeping the `.deb` package as the secondary option. |
-| 2026-05 | Fixed release snap versioning by injecting the resolved release `VERSION` into the staged Snapcraft project and verifying the packed snap metadata before Snap Store upload. |
-| 2026-05 | Hardened Linux `libmpv` loading: launcher now exports app-local and architecture library paths, `PlaybackService` prefers bundled mpv paths before system lookup, and CI validates bundled snap mpv files before upload/publish. |
-| 2026-05 | Snap `libmpv` diagnostics tightened: runtime now reports exact bundled library load failures, and Snapcraft verifies `libmpv.so.2` dependency resolution using the snap's staged library paths so host libraries cannot mask missing sandbox dependencies. |
-| 2026-05 | Snap runtime library path includes architecture `blas` and `lapack` subdirectories because `libblas3`/`liblapack3` stage their shared objects there; workflow verification checks the packaged launcher keeps those paths. |
-| 2026-05 | Moved release setup guides under `docs/release/` so PPA and Snap Store publishing notes are grouped away from the repo root. |
-| 2026-05 | Added Ubuntu PPA support for Lumyn: Debian source package metadata in `packaging/debian/`, `publish-ppa` release workflow job, and `docs/release/ppa.md` with required GitHub secrets. |
-| 2026-05 | Added Snap Store release automation: `release.yml` uploads built snaps with `snapcraft upload --release`, documents `SNAPCRAFT_STORE_CREDENTIALS`, and maps stable versions to `stable` / prereleases to `edge`. |
-| 2026-05 | Added initial Snap packaging for Ubuntu App Center: `packaging/snap/snapcraft.yaml`, `packaging/snap/gui/lumyn.desktop`, `scripts/build-snap.sh`, GitHub Actions snap artifact jobs, Snapcraft build output ignores, and agent packaging notes. |
-| 2026-05 | Removed the discontinued desktop platform support from packaging, release workflows, runtime platform code, website downloads, and documentation. |
-| 2026-05 | Windows casting hardening: installer adds a private/domain inbound firewall rule, MSIX declares private-network access, and Chromecast HTTP serving prefers real LAN adapters over virtual/tunnel interfaces. |
-| 2026-05 | Website landing page download section changed to OS tabs with platform detection: Linux shows Ubuntu `.deb`, and Windows shows Microsoft Store + standalone `.exe`. |
-| 2026-05 | Recently played cards now show resume progress percentage labels and a custom-rendered `MiniProgressBar` so tiny 3px progress fills match the saved percentage accurately. |
-| 2026-05 | Stop/end/cast-stop refresh now updates recent-card resume percentages immediately and resets the seek bar fill to zero when no media duration is active. |
-| 2026-05 | Seek bar hit target increased while keeping the visible timeline slim, making nearby clicks update seek position more forgivingly. |
-| 2026-05 | Cast icon refreshed to a filled Font Awesome-style Chromecast silhouette across app resources and website asset; cast accents standardized to Lumyn green. |
-| 2026-05 | Git tag–based versioning — `VERSION` file removed, version now sourced from git tag (`v1.2.3`), baked into assembly via `-p:InformationalVersion`, read from `AssemblyInformationalVersionAttribute` at runtime. Pre-release tags (containing `-`) auto-marked on GitHub. Local dev shows `0.0.0-dev`. |
-| 2026-05 | Screen sleep/lock inhibition while playing — `ScreenInhibitor` service added to `Lumyn.Core/Services/`. Windows: `SetThreadExecutionState`; Linux: `org.freedesktop.ScreenSaver.Inhibit` via `dbus-send` (uses `ArgumentList` to avoid argv-splitting issues with typed values). Driven by `IsPlaying` setter in `MainViewModel`. |
-| 2026-05 | Full-screen / maximize conflict fix (`386f746`) |
-| 2026-05 | Top bar visibility fix in non-fullscreen mode (`e214ef9`) |
-| 2026-05 | Video rendering optimization (`6d349ee`) |
-| 2026-05 | Fix unnecessary wakeups/render pressure over time (`4f41a0f`) |
-| 2026-05 | Media controls via DLNA cast (`a750c3b`) |
-| 2026-05 | Switch cast from DLNA/UPnP to Google Cast (Chromecast) — `DlnaCastService` replaced by `ChromecastCastService` using `GoogleCast` NuGet (mDNS discovery, Cast v2 protocol, SRT→WebVTT subtitle tracks). Format support is best-effort (no transcoding). |
-| 2026-05 | Casting: removed experimental remux-to-temp-file approach (too slow/unreliable). Unsupported formats (MKV, AVI, etc.) now show a clear "not supported" message in the Cast dialog and disable the Cast button. MP4/WebM + subtitle casting fully working. |
-| 2026-05 | Packaging: removed `Depends: ffmpeg` from Linux `.deb` control (app doesn't invoke the ffmpeg binary at runtime). |

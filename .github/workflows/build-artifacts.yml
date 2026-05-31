@@ -8,6 +8,11 @@ on:
 permissions:
   contents: read
 
+# Cancel superseded runs for the same ref so pushes don't pile up.
+concurrency:
+  group: build-artifacts-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   VERSION: "0.0.0-dev"
 
@@ -24,13 +29,30 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
+
       - name: Run unit tests
         run: dotnet test Lumyn.sln --configuration Release
 
   linux-deb:
-    name: Linux Debian package
-    runs-on: ubuntu-latest
+    name: Linux Debian package (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: unit-tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            rid: linux-x64
+            runner: ubuntu-latest
+          - arch: arm64
+            rid: linux-arm64
+            runner: ubuntu-24.04-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -40,6 +62,13 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
+
       - name: Install native packaging inputs
         run: |
           sudo apt-get update
@@ -47,11 +76,13 @@ jobs:
 
       - name: Build deb
         run: ./scripts/build-linux.sh
+        env:
+          RID: ${{ matrix.rid }}
 
       - name: Upload deb
         uses: actions/upload-artifact@v5
         with:
-          name: lumyn-linux-amd64-deb
+          name: lumyn-linux-${{ matrix.arch }}-deb
           path: artifacts/packages/*.deb
 
   linux-snap:
@@ -135,6 +166,13 @@ jobs:
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
 
       - name: Build Windows installer
         shell: pwsh

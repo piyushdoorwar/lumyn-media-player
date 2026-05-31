@@ -4,9 +4,14 @@ using System.Text.Json;
 
 namespace Lumyn.Core.Services;
 
-public sealed class SettingsService
+public sealed class SettingsService : IDisposable
 {
     private const int MaxRecentFiles = 12;
+
+    // How long to coalesce rapid setting changes before writing to disk.
+    private const int FlushDebounceMs = 400;
+
+    private static readonly JsonSerializerOptions WriteOptions = new() { WriteIndented = false };
 
     private readonly string _settingsPath;
     private readonly string _thumbsDir;
@@ -17,6 +22,14 @@ public sealed class SettingsService
     private readonly Dictionary<string, AudioSettingsEntry> _audioSettings;
     private readonly Dictionary<string, List<BookmarkEntry>> _bookmarks;
     private UiVisibilitySettings _uiVisibility;
+    private WindowGeometry? _windowGeometry;
+
+    // Debounced-write state. The JSON is serialized synchronously by the caller
+    // (cheap, and avoids enumerating the dictionaries off-thread), then written
+    // to disk by the timer on a background thread. _ioLock guards the handoff.
+    private readonly object _ioLock = new();
+    private readonly Timer _flushTimer;
+    private string? _pendingJson;
 
     // ── Session-level preferences ─────────────────────────────────────────
     public int   LastVolume   { get; private set; } = 80;
@@ -45,11 +58,27 @@ public sealed class SettingsService
         LastVolume        = settings.LastVolume;
         LastSpeed         = settings.LastSpeed;
         SeekStep          = settings.SeekStep;
+        _windowGeometry   = settings.WindowGeometry;
+
+        _flushTimer = new Timer(_ => FlushToDisk(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
     public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
 
     public UiVisibilitySettings UiVisibility => _uiVisibility.Clone();
+
+    // ── Window geometry ───────────────────────────────────────────────────
+
+    public WindowGeometry? GetWindowGeometry() => _windowGeometry;
+
+    public void SaveWindowGeometry(double width, double height, int x, int y, bool maximized)
+    {
+        _windowGeometry = new WindowGeometry
+        {
+            Width = width, Height = height, X = x, Y = y, Maximized = maximized
+        };
+        Save();
+    }
 
     // ── Recent files ────────────────────────────────────────────────────────
 
@@ -193,12 +222,59 @@ public sealed class SettingsService
             AudioSettings    = _audioSettings,
             Bookmarks        = _bookmarks,
             UiVisibility     = _uiVisibility,
+            WindowGeometry   = _windowGeometry,
             LastVolume       = LastVolume,
             LastSpeed        = LastSpeed,
             SeekStep         = SeekStep
         };
-        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions { WriteIndented = true });
-        File.WriteAllText(_settingsPath, json);
+        // Serialize on the calling thread (the dictionaries are only mutated
+        // here), then hand the string off to the debounced disk writer.
+        var json = JsonSerializer.Serialize(settings, WriteOptions);
+        lock (_ioLock)
+            _pendingJson = json;
+        _flushTimer.Change(FlushDebounceMs, Timeout.Infinite);
+    }
+
+    /// <summary>
+    /// Writes any pending settings to disk immediately and synchronously.
+    /// Call on app shutdown so nothing buffered is lost.
+    /// </summary>
+    public void Flush()
+    {
+        _flushTimer.Change(Timeout.Infinite, Timeout.Infinite);
+        FlushToDisk();
+    }
+
+    private void FlushToDisk()
+    {
+        string? json;
+        lock (_ioLock)
+        {
+            json = _pendingJson;
+            _pendingJson = null;
+        }
+        if (json is null) return;
+
+        try
+        {
+            // Atomic replace so a crash mid-write can't leave a truncated file.
+            var tmp = _settingsPath + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, _settingsPath, overwrite: true);
+        }
+        catch
+        {
+            // Don't drop the data on a transient write failure — keep the most
+            // recent pending payload so the next flush retries.
+            lock (_ioLock)
+                _pendingJson ??= json;
+        }
+    }
+
+    public void Dispose()
+    {
+        Flush();
+        _flushTimer.Dispose();
     }
 
     // ── Thumbnail cache ──────────────────────────────────────────────────────
@@ -293,10 +369,21 @@ public sealed class SettingsService
         public Dictionary<string, AudioSettingsEntry> AudioSettings { get; set; } = [];
         public Dictionary<string, List<BookmarkEntry>> Bookmarks { get; set; } = [];
         public UiVisibilitySettings UiVisibility { get; set; } = new();
+        public WindowGeometry? WindowGeometry { get; set; }
         public int   LastVolume { get; set; } = 80;
         public float LastSpeed  { get; set; } = 1.0f;
         public int   SeekStep   { get; set; } = 5;
     }
+}
+
+/// <summary>Persisted main-window placement, restored on next launch.</summary>
+public sealed class WindowGeometry
+{
+    public double Width  { get; set; }
+    public double Height { get; set; }
+    public int    X      { get; set; }
+    public int    Y      { get; set; }
+    public bool   Maximized { get; set; }
 }
 
 /// <summary>Global controls that can be hidden for a cleaner player surface.</summary>

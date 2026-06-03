@@ -858,6 +858,8 @@ public partial class MainWindow : Window
             prev,
             ViewModel.CurrentAudioClarityMode,
             ViewModel.CurrentUiVisibility,
+            ViewModel.ResumeAudioEnabled,
+            ViewModel.ResumeVideoEnabled,
             adj => ViewModel.ApplyVideoAdjustments(adj),
             section);
         var result = await dialog.ShowDialog<SettingsDialogResult?>(this);
@@ -871,6 +873,7 @@ public partial class MainWindow : Window
             if (result.AudioClarityMode != ViewModel.CurrentAudioClarityMode)
                 ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
             ViewModel.ApplyUiVisibility(result.UiVisibility);
+            ViewModel.ApplyResumePreferences(result.ResumeAudio, result.ResumeVideo);
         }
         else
         {
@@ -878,6 +881,7 @@ public partial class MainWindow : Window
             if (result.AudioClarityMode != ViewModel.CurrentAudioClarityMode)
                 ViewModel.ApplyAudioClarityMode(result.AudioClarityMode);
             ViewModel.ApplyUiVisibility(result.UiVisibility);
+            ViewModel.ApplyResumePreferences(result.ResumeAudio, result.ResumeVideo);
         }
         Focus();
     }

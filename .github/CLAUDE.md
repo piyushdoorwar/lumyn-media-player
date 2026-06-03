@@ -319,7 +319,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Video thumbnails cached per file (`~/.config/Lumyn/thumbs/{sha256_16}.jpg`) extracted via ffmpeg at the resume position (or 30% fallback). Re-extracted on stop at the exact stopped position. Backfilled at startup for all recent files with no cached thumbnail.
 - Audio cover art for recently played cards uses the external sidecar image (same basename + `.png`/`.jpg`/etc., or `cover.jpg`/`folder.jpg` in the same directory) — same source as the audio player cover art display. Falls back to ffmpeg `-map 0:v:0` for embedded cover art if no sidecar file exists.
 - `SettingsService.GetThumbnailPath(filePath)` / `GetExistingThumbnail(filePath)` manage the thumbnail cache directory.
-- Resume playback position per file (SHA256-hashed path for privacy)
+- Resume playback position per file (SHA256-hashed path for privacy), gated per media kind by a **Playback** settings toggle — `ResumeAudio` (default **off**) and `ResumeVideo` (default **on**) in `SettingsService` (`ResumeEnabledFor(isAudio)`). When a kind's toggle is off, positions for that kind are neither saved nor restored, and recent-card progress badges are hidden for it.
 - Markers dialog combines editable user bookmarks with read-only embedded video chapters
 - Bookmarks support add/edit/remove/jump per file; embedded chapters support jump only
 - Jump-to-time dialog
@@ -418,6 +418,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
   - Audio clarity mode per file
   - Recent files list (max 12)
   - Main window geometry (`WindowGeometry`: width/height/x/y/maximized)
+  - Resume preferences: `ResumeAudio` (default false), `ResumeVideo` (default true)
   - Global: volume, speed, seek step preference, UI visibility toggles
 
 ---

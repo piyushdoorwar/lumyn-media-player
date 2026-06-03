@@ -188,6 +188,27 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.Equal(10, reloaded.SeekStep);
     }
 
+    [Fact]
+    public void ResumePreferences_DefaultAudioOffVideoOn_AndRoundTrip()
+    {
+        var settings = CreateSettings();
+
+        // Defaults: audio off, video on.
+        Assert.False(settings.ResumeAudio);
+        Assert.True(settings.ResumeVideo);
+        Assert.False(settings.ResumeEnabledFor(isAudio: true));
+        Assert.True(settings.ResumeEnabledFor(isAudio: false));
+
+        settings.SetResumePreferences(audio: true, video: false);
+        settings.Flush();
+
+        var reloaded = CreateSettings();
+        Assert.True(reloaded.ResumeAudio);
+        Assert.False(reloaded.ResumeVideo);
+        Assert.True(reloaded.ResumeEnabledFor(isAudio: true));
+        Assert.False(reloaded.ResumeEnabledFor(isAudio: false));
+    }
+
     private SettingsService CreateSettings() => new(_settingsDir);
 
     public void Dispose()

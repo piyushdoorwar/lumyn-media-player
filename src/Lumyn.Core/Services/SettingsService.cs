@@ -36,6 +36,11 @@ public sealed class SettingsService : IDisposable
     public float LastSpeed    { get; private set; } = 1.0f;
     public int   SeekStep     { get; private set; } = 5;    // seconds (5 | 10 | 30)
 
+    // Whether to remember/restore playback position per file, by media kind.
+    // Audio defaults off (a song rarely needs resuming); video defaults on.
+    public bool  ResumeAudio  { get; private set; } = false;
+    public bool  ResumeVideo  { get; private set; } = true;
+
     public SettingsService(string? settingsDirectory = null)
     {
         var configDir = settingsDirectory ?? Path.Combine(
@@ -58,6 +63,8 @@ public sealed class SettingsService : IDisposable
         LastVolume        = settings.LastVolume;
         LastSpeed         = settings.LastSpeed;
         SeekStep          = settings.SeekStep;
+        ResumeAudio       = settings.ResumeAudio;
+        ResumeVideo       = settings.ResumeVideo;
         _windowGeometry   = settings.WindowGeometry;
 
         _flushTimer = new Timer(_ => FlushToDisk(), null, Timeout.Infinite, Timeout.Infinite);
@@ -87,6 +94,16 @@ public sealed class SettingsService : IDisposable
         LastVolume = Math.Clamp(volume, 0, 150);
         LastSpeed  = Math.Clamp(speed, 0.25f, 4.0f);
         SeekStep   = seekStep is 5 or 10 or 30 ? seekStep : 5;
+        Save();
+    }
+
+    /// <summary>Whether resume positions should be remembered for the given media kind.</summary>
+    public bool ResumeEnabledFor(bool isAudio) => isAudio ? ResumeAudio : ResumeVideo;
+
+    public void SetResumePreferences(bool audio, bool video)
+    {
+        ResumeAudio = audio;
+        ResumeVideo = video;
         Save();
     }
 
@@ -225,7 +242,9 @@ public sealed class SettingsService : IDisposable
             WindowGeometry   = _windowGeometry,
             LastVolume       = LastVolume,
             LastSpeed        = LastSpeed,
-            SeekStep         = SeekStep
+            SeekStep         = SeekStep,
+            ResumeAudio      = ResumeAudio,
+            ResumeVideo      = ResumeVideo
         };
         // Serialize on the calling thread (the dictionaries are only mutated
         // here), then hand the string off to the debounced disk writer.
@@ -373,6 +392,8 @@ public sealed class SettingsService : IDisposable
         public int   LastVolume { get; set; } = 80;
         public float LastSpeed  { get; set; } = 1.0f;
         public int   SeekStep   { get; set; } = 5;
+        public bool  ResumeAudio { get; set; } = false;
+        public bool  ResumeVideo { get; set; } = true;
     }
 }
 

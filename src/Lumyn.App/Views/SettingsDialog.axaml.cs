@@ -16,6 +16,7 @@ namespace Lumyn.App.Views;
 public enum SettingsSection
 {
     WatchModes,
+    Playback,
     Video,
     AudioClarity,
     Interface,
@@ -27,7 +28,9 @@ public sealed record SettingsDialogResult(
     VideoAdjustments VideoAdjustments,
     WatchMode? WatchMode,
     AudioClarityMode AudioClarityMode,
-    UiVisibilitySettings UiVisibility);
+    UiVisibilitySettings UiVisibility,
+    bool ResumeAudio,
+    bool ResumeVideo);
 
 public partial class SettingsDialog : Window
 {
@@ -228,9 +231,12 @@ public partial class SettingsDialog : Window
     private WatchMode? _selectedWatchMode;
     private AudioClarityMode _selectedAudioClarityMode;
     private UiVisibilitySettings _uiVisibility;
+    private bool _resumeAudio;
+    private bool _resumeVideo;
 
     public SettingsDialog()
-        : this(VideoAdjustments.Default, AudioClarityMode.Off, new UiVisibilitySettings(), null, SettingsSection.WatchModes)
+        : this(VideoAdjustments.Default, AudioClarityMode.Off, new UiVisibilitySettings(),
+               resumeAudio: false, resumeVideo: true, null, SettingsSection.WatchModes)
     {
     }
 
@@ -238,6 +244,8 @@ public partial class SettingsDialog : Window
         VideoAdjustments current,
         AudioClarityMode currentAudioClarityMode,
         UiVisibilitySettings uiVisibility,
+        bool resumeAudio,
+        bool resumeVideo,
         Action<VideoAdjustments>? onPreview,
         SettingsSection initialSection)
     {
@@ -252,6 +260,8 @@ public partial class SettingsDialog : Window
         _aspect = current.Aspect;
         _selectedAudioClarityMode = currentAudioClarityMode;
         _uiVisibility = uiVisibility.Clone();
+        _resumeAudio = resumeAudio;
+        _resumeVideo = resumeVideo;
 
         var aspectCombo = this.FindControl<ComboBox>("AspectCombo")!;
         aspectCombo.ItemsSource = AspectChoices;
@@ -260,12 +270,40 @@ public partial class SettingsDialog : Window
         PopulateAudioClarityModes();
         PopulateInterfaceOptions();
         PopulateShortcuts();
+        InitPlaybackToggles();
         RefreshAll();
         ShowSection(initialSection);
         KeyDown += OnKeyDown;
     }
 
+    private void InitPlaybackToggles()
+    {
+        // Set IsChecked before subscribing so the change handlers don't fire on init.
+        if (this.FindControl<ToggleSwitch>("ResumeAudioToggle") is { } audio)
+        {
+            audio.IsChecked = _resumeAudio;
+            audio.IsCheckedChanged += ResumeAudioToggle_IsCheckedChanged;
+        }
+        if (this.FindControl<ToggleSwitch>("ResumeVideoToggle") is { } video)
+        {
+            video.IsChecked = _resumeVideo;
+            video.IsCheckedChanged += ResumeVideoToggle_IsCheckedChanged;
+        }
+    }
+
+    private void ResumeAudioToggle_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleSwitch t) _resumeAudio = t.IsChecked == true;
+    }
+
+    private void ResumeVideoToggle_IsCheckedChanged(object? sender, RoutedEventArgs e)
+    {
+        if (sender is ToggleSwitch t) _resumeVideo = t.IsChecked == true;
+    }
+
     private void WatchModesNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.WatchModes);
+
+    private void PlaybackNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Playback);
 
     private void VideoNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Video);
 
@@ -338,7 +376,8 @@ public partial class SettingsDialog : Window
     }
 
     private void OkButton_Click(object? sender, RoutedEventArgs e) =>
-        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode, _selectedAudioClarityMode, _uiVisibility.Clone()));
+        Close(new SettingsDialogResult(BuildCurrent(), _selectedWatchMode, _selectedAudioClarityMode,
+                                       _uiVisibility.Clone(), _resumeAudio, _resumeVideo));
 
     private void CancelButton_Click(object? sender, RoutedEventArgs e) => Close(null);
 
@@ -360,17 +399,20 @@ public partial class SettingsDialog : Window
     {
         _section = section;
         var isWatchModes = section == SettingsSection.WatchModes;
+        var isPlayback = section == SettingsSection.Playback;
         var isVideo = section == SettingsSection.Video;
         var isAudioClarity = section == SettingsSection.AudioClarity;
         var isInterface = section == SettingsSection.Interface;
         var isTransmux = section == SettingsSection.Transmux;
         SetVisible("WatchModesPanel", isWatchModes);
+        SetVisible("PlaybackPanel", isPlayback);
         SetVisible("VideoPanel", isVideo);
         SetVisible("AudioClarityPanel", isAudioClarity);
         SetVisible("InterfacePanel", isInterface);
         SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
         SetVisible("TransmuxPanel", isTransmux);
         MarkNavSelected("WatchModesNavButton", isWatchModes);
+        MarkNavSelected("PlaybackNavButton", isPlayback);
         MarkNavSelected("VideoNavButton", isVideo);
         MarkNavSelected("AudioClarityNavButton", isAudioClarity);
         MarkNavSelected("InterfaceNavButton", isInterface);

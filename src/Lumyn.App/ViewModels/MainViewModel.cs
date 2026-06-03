@@ -284,9 +284,12 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             .Where(File.Exists)
             .Select(f =>
             {
-                var (pos, pct) = _settings.GetResumeInfo(f);
                 var isAudio    = AudioExtensions.Contains(
                     Path.GetExtension(f).ToLowerInvariant());
+                // Hide resume progress for a kind whose resume preference is off.
+                var (pos, pct) = _settings.ResumeEnabledFor(isAudio)
+                    ? _settings.GetResumeInfo(f)
+                    : (TimeSpan.Zero, -1.0);
                 var thumb      = _settings.GetExistingThumbnail(f);
                 return new RecentFileItem(f, pct, pos, isAudio, thumb);
             })
@@ -902,7 +905,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             if (finalPosition > TimeSpan.Zero)
             {
                 _playback.Seek(finalPosition);
-                _settings.SaveResumePosition(CurrentFilePath, finalPosition, CurrentMediaDuration);
+                if (_settings.ResumeEnabledFor(_isAudioOnly))
+                    _settings.SaveResumePosition(CurrentFilePath, finalPosition, CurrentMediaDuration);
                 NotifyRecentFilesChanged();
             }
 
@@ -1463,7 +1467,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void SaveResumePosition()
     {
+        // Respect the per-kind resume preference (audio defaults off).
+        if (!_settings.ResumeEnabledFor(_isAudioOnly)) return;
         _settings.SaveResumePosition(CurrentFilePath, CurrentMediaPosition, CurrentMediaDuration);
+    }
+
+    // ── Resume-position preferences ──────────────────────────────────────────
+
+    public bool ResumeAudioEnabled => _settings.ResumeAudio;
+    public bool ResumeVideoEnabled => _settings.ResumeVideo;
+
+    /// <summary>Persists the resume toggles and refreshes recent-card progress badges.</summary>
+    public void ApplyResumePreferences(bool audio, bool video)
+    {
+        _settings.SetResumePreferences(audio, video);
+        NotifyRecentFilesChanged();
     }
 
     public WindowGeometry? GetWindowGeometry() => _settings.GetWindowGeometry();
@@ -2141,7 +2159,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RebuildPlaylistItems();
         NotifyPlaylistState();
 
-        var resume = _settings.GetResumePosition(filePath);
+        // Only resume if enabled for this media kind (audio defaults off).
+        var resume = _settings.ResumeEnabledFor(audioOnly)
+            ? _settings.GetResumePosition(filePath)
+            : TimeSpan.Zero;
         await _playback.OpenAsync(filePath, resume);
         _settings.AddRecentFile(filePath);
         NotifyRecentFilesChanged();

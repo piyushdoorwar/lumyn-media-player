@@ -146,6 +146,22 @@
           VerticalAlignment="Stretch"
           RowDefinitions="*,Auto">
 
+      <!-- Ambient blurred cover-art backdrop (subtle, like YT/Apple Music).
+           Blur of the cover supplies the colour; the scrim keeps it muted. -->
+      <Panel Grid.Row="0" Grid.RowSpan="2"
+             ClipToBounds="True"
+             IsHitTestVisible="False"
+             IsVisible="{Binding HasCoverArt}">
+        <Image Source="{Binding CoverArtBitmap}"
+               Stretch="UniformToFill"
+               Opacity="0.55">
+          <Image.Effect>
+            <BlurEffect Radius="110" />
+          </Image.Effect>
+        </Image>
+        <Border Background="#111111" Opacity="0.6" />
+      </Panel>
+
       <!-- Center: cover art on the left, info + visualizer on the right -->
       <StackPanel Grid.Row="0"
                   Orientation="Horizontal"
@@ -154,7 +170,7 @@
                   Spacing="28" Margin="24,0">
 
         <!-- Cover art or placeholder -->
-        <Border Width="190" Height="190"
+        <Border Width="216" Height="216"
                 CornerRadius="16"
                 ClipToBounds="True"
                 Background="#1E1E1E"
@@ -205,7 +221,7 @@
       <TextBlock Grid.Row="1"
                  Text="{Binding FolderTrackLabel}"
                  HorizontalAlignment="Center"
-                 Margin="0,0,0,76"
+                 Margin="0,0,0,100"
                  FontSize="11" Foreground="#4A4948"
                  IsVisible="{Binding HasFolderTracks}" />
     </Grid>

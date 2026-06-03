@@ -19,10 +19,38 @@ public sealed record ChapterInfo(int Index, string Title, TimeSpan Position)
         : Position.ToString(@"mm\:ss");
 }
 
-/// <summary>One entry in the playlist / queue shown in the sidebar.</summary>
-public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent)
+/// <summary>Lazily-probed metadata for a queued file (duration, tags, cover path).</summary>
+public sealed class QueueTrackMeta
+{
+    public string?    Title;
+    public string?    Artist;
+    public TimeSpan?  Duration;
+    public string?    CoverPath;
+}
+
+/// <summary>One entry in the playlist / queue shown in the sidebar and audio queue.</summary>
+public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent, QueueTrackMeta? Meta = null)
 {
     public string DisplayName => Path.GetFileName(FilePath);
+
+    // Richer fields used by the YouTube-Music-style audio queue (fall back to the
+    // filename / blank until the background probe fills the metadata in).
+    public string  TitleLabel  => string.IsNullOrWhiteSpace(Meta?.Title)
+        ? Path.GetFileNameWithoutExtension(FilePath) : Meta!.Title!;
+    public string? ArtistLabel => Meta?.Artist;
+    public bool    HasArtist   => !string.IsNullOrWhiteSpace(Meta?.Artist);
+    public string  DurationLabel => MediaTime.FormatDuration(Meta?.Duration);
+
+    private Avalonia.Media.Imaging.Bitmap? _cachedCover;
+    public Avalonia.Media.Imaging.Bitmap? CoverBitmap =>
+        Meta?.CoverPath is { Length: > 0 } p && File.Exists(p)
+            ? (_cachedCover ??= TryLoadBitmap(p)) : null;
+    public bool HasCover => CoverBitmap is not null;
+
+    private static Avalonia.Media.Imaging.Bitmap? TryLoadBitmap(string path)
+    {
+        try { return new Avalonia.Media.Imaging.Bitmap(path); } catch { return null; }
+    }
 }
 
 /// <summary>A recently-played file shown on the start screen.</summary>
@@ -77,6 +105,13 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly ThumbnailExtractor _thumbnails;
     private readonly DispatcherTimer _osdTimer;
     private readonly ScreenInhibitor _screenInhibitor = new();
+
+    // YouTube-Music-style queue metadata: durations/tags/cover probed lazily in the
+    // background, cached per file path (thread-safe — written off the UI thread).
+    private readonly QueueMetadataProbe _queueProbe = new();
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, QueueTrackMeta> _queueMeta = new(StringComparer.Ordinal);
+    private CancellationTokenSource? _queueProbeCts;
+    private Task? _queueProbeTask;
     private string? _thumbnailsLoadedForFile;
     private string? _recentThumbExtractedForFile;
     private int _stateRefreshQueued;
@@ -491,8 +526,17 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool IsPlaylistVisible
     {
         get => _isPlaylistVisible;
-        set => SetField(ref _isPlaylistVisible, value);
+        set { if (SetField(ref _isPlaylistVisible, value)) OnPropertyChanged(nameof(IsSidebarVisible)); }
     }
+
+    /// <summary>
+    /// The standalone 260px queue sidebar. Hidden in audio mode with 2+ tracks,
+    /// where the inline YouTube-Music queue pane replaces it (avoids a double queue).
+    /// </summary>
+    public bool IsSidebarVisible => IsPlaylistVisible && !(IsAudioMode && HasPlaylist);
+
+    /// <summary>Top-bar queue toggle — hidden when the inline audio queue is showing.</summary>
+    public bool ShowQueueToggle => ShowQueueButton && !(IsAudioMode && HasPlaylist);
 
     public IReadOnlyList<PlaylistItem> PlaylistItems { get; private set; } = [];
 
@@ -1441,6 +1485,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _coverArtBitmap?.Dispose();
         _screenInhibitor.Dispose();
         _thumbnails.Dispose();
+        _queueProbeCts?.Cancel();
+        _queueProbe.Dispose();
         _casting.Dispose();
         _playback.Dispose();
         // Flush any debounced settings writes so nothing is lost on close.
@@ -1472,6 +1518,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsAudioMode));
             // Only run the measurement filter while the audio visualizer is shown.
             _playback.SetAudioMetering(isAudioMode);
+            OnPropertyChanged(nameof(IsSidebarVisible));
+            OnPropertyChanged(nameof(ShowQueueToggle));
+            // Entering audio mode: start filling the queue's durations/covers.
+            if (isAudioMode) StartQueueMetadataProbe();
         }
 
         _hasNotifiedMediaIdentity = true;
@@ -2189,9 +2239,64 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         PlaylistItems = _playlist.Count == 0
             ? []
-            : [.. _playlist.Select((p, i) => new PlaylistItem(i, p, i == _playlistIndex))];
+            : [.. _playlist.Select((p, i) => new PlaylistItem(
+                i, p, i == _playlistIndex,
+                _queueMeta.TryGetValue(p, out var meta) ? meta : null))];
         OnPropertyChanged(nameof(PlaylistItems));
         OnPropertyChanged(nameof(PlaylistCount));
+        StartQueueMetadataProbe();
+    }
+
+    /// <summary>
+    /// Probes duration/title/artist + resolves a cover for any queued file lacking
+    /// cached metadata, on a single background task, refreshing the queue rows as
+    /// each resolves. Only runs in audio mode (the YouTube-Music queue is audio-only).
+    /// </summary>
+    private void StartQueueMetadataProbe()
+    {
+        if (!IsAudioMode || !_queueProbe.IsAvailable) return;
+        // A probe is already iterating the current queue — let it finish; the next
+        // queue change will start a fresh pass for any newly-added files.
+        if (_queueProbeTask is { IsCompleted: false }) return;
+
+        var pending = _playlist.Where(f => !_queueMeta.ContainsKey(f)).Distinct().ToList();
+        if (pending.Count == 0) return;
+
+        _queueProbeCts?.Dispose();
+        _queueProbeCts = new CancellationTokenSource();
+        var ct = _queueProbeCts.Token;
+
+        _queueProbeTask = Task.Run(() =>
+        {
+            foreach (var file in pending)
+            {
+                if (ct.IsCancellationRequested) break;
+                if (_queueMeta.ContainsKey(file)) continue;
+
+                QueueProbeResult probed;
+                try { probed = _queueProbe.Probe(file, ct); } catch { probed = default; }
+
+                // Cover reuses the recent-card audio pipeline (sidecar → embedded ffmpeg),
+                // cached under the shared thumbs directory.
+                var cover = _settings.GetExistingThumbnail(file);
+                if (cover is null)
+                {
+                    try { ExtractAudioCoverArt(file); } catch { }
+                    cover = _settings.GetExistingThumbnail(file);
+                }
+
+                _queueMeta[file] = new QueueTrackMeta
+                {
+                    Title    = probed.Title,
+                    Artist   = probed.Artist,
+                    Duration = probed.Duration,
+                    CoverPath = cover
+                };
+
+                if (!ct.IsCancellationRequested)
+                    Dispatcher.UIThread.Post(RebuildPlaylistItems, DispatcherPriority.Background);
+            }
+        }, ct);
     }
 
     private void NotifyPlaylistState()
@@ -2202,6 +2307,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(FolderTrackLabel));
         OnPropertyChanged(nameof(HasPreviousTrack));
         OnPropertyChanged(nameof(HasNextTrack));
+        OnPropertyChanged(nameof(IsSidebarVisible));
+        OnPropertyChanged(nameof(ShowQueueToggle));
     }
 
 

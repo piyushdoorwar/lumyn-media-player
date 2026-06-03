@@ -268,6 +268,9 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
 | `src/Lumyn.App/Controls/MiniProgressBar.cs` | — | Custom 3px recent-card progress indicator; avoid default `ProgressBar` template for tiny bars |
 | `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Generates JPEG frames in a background Task in two phases: `Phase1Count` (20) coarse evenly-spaced frames first, then `Phase2PerMinute` (12/min) refinement. `GetNearest(progress)` returns the closest frame's bytes. |
+| `src/Lumyn.Core/Services/QueueMetadataProbe.cs` | — | Secondary silent mpv instance that reads duration / `media-title` / artist for a queued file without playing it (`Probe(path, ct)` → `QueueProbeResult`). Drives the audio-queue rows. |
+| `src/Lumyn.Core/Services/MediaTime.cs` | — | `FormatDuration(TimeSpan?)` → `m:ss` / `h:mm:ss` (blank if unknown). Unit-tested. |
+| `src/Lumyn.App/Converters.cs` | — | `Converters.QueueColumnWidth` (`FuncValueConverter<bool,GridLength>`): true → `2*`, false → `0`; collapses the audio queue column for a single track. Referenced via `x:Static`. |
 
 ---
 
@@ -308,6 +311,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Volume normalization (0–150%)
 - Metadata reading (title, artist, album)
 - Cover art detection and display
+- **YouTube-Music-style two-pane audio view** (when the queue has 2+ tracks): left ~60% shows the cover, title/artist, and the waveform below it; right ~40% is the queue ("Up next") with a cover thumbnail, title/artist, and duration per row. Click a row to play, drag the handle to reorder, hover/right-click to remove. A single file keeps the centered hero (the queue column collapses via `Converters.QueueColumnWidth`). The standalone sidebar + its top-bar toggle are suppressed in this view (`IsSidebarVisible`/`ShowQueueToggle`) to avoid a double queue. Per-row duration/title/artist are filled by `QueueMetadataProbe` on a single cancellable background task; covers reuse the recent-card audio pipeline (`ExtractAudioCoverArt` → thumbs cache). Cached in `MainViewModel._queueMeta` (`QueueTrackMeta`), surfaced through `PlaylistItem`.
 - Audio-only mode shows cover art on the left and title/artist + a live music-reactive equalizer (`AudioBars`) on the right, over a subtle ambient backdrop (the cover art stretched `UniformToFill` with a `BlurEffect` + dark `#111111` scrim, shown only when `HasCoverArt`) — like YT/Apple Music. Bars are driven by real loudness, not a fixed animation: `PlaybackService.SetAudioMetering(true)` (toggled with audio mode) adds a labelled `@viz:lavfi=[astats=metadata=1:reset=1]` pass-through filter, and `GetAudioLevel()` reads `af-metadata/viz/lavfi.astats.Overall.RMS_level` (dBFS) normalized to 0..1. `AudioBars.LevelProvider` (wired in `MainWindow.axaml.cs`) pulls that level each frame; falls back to a decorative wave when no level is available. Note: `SetAudioFilter` re-asserts the `@viz` filter so audio-clarity changes don't drop metering.
 
 ### Navigation & Persistence

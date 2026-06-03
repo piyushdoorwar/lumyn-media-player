@@ -77,12 +77,20 @@ public partial class MainWindow : Window
             var rb = this.FindControl<Border>("RootBorder");
             if (rb is not null) rb.BorderBrush = _glowBrush;
             UpdateActivityTimers();
-            // Wire playlist reorder DragDrop after visual tree is ready.
+            // Wire playlist reorder DragDrop after visual tree is ready (both the
+            // sidebar list and the inline audio queue reuse the same handlers).
             var pic = this.FindControl<ItemsControl>("PlaylistItemsControl");
             if (pic is not null)
             {
                 pic.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
                 pic.AddHandler(DragDrop.DropEvent, PlaylistDrop);
+            }
+
+            var audioQueue = this.FindControl<ItemsControl>("AudioQueueItemsControl");
+            if (audioQueue is not null)
+            {
+                audioQueue.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
+                audioQueue.AddHandler(DragDrop.DropEvent, PlaylistDrop);
             }
 
             var seekSlider = this.FindControl<Controls.SeekBar>("SeekSlider");

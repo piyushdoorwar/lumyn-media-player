@@ -261,7 +261,57 @@ public sealed class PlaybackService : IDisposable
     // ── Audio clarity ──────────────────────────────────────────────────────
 
     public void SetAudioFilter(string? filter)
-        => SetPropertyString("af", string.IsNullOrWhiteSpace(filter) ? "" : filter);
+    {
+        SetPropertyString("af", string.IsNullOrWhiteSpace(filter) ? "" : filter);
+        // Setting the `af` property replaces the entire chain, dropping our
+        // labelled measurement filter — re-assert it so the visualizer keeps
+        // reacting when the user toggles an audio-clarity mode.
+        if (_audioMetering) ApplyAudioMetering();
+    }
+
+    // ── Audio level metering (drives the audio-mode visualizer) ─────────────
+
+    private bool _audioMetering;
+
+    /// <summary>
+    /// Toggles a measurement-only <c>astats</c> filter on the audio chain so
+    /// <see cref="GetAudioLevel"/> can report live loudness. Pass-through; does
+    /// not alter the audio that is heard.
+    /// </summary>
+    public void SetAudioMetering(bool enabled)
+    {
+        if (_audioMetering == enabled) return;
+        _audioMetering = enabled;
+        ApplyAudioMetering();
+    }
+
+    private void ApplyAudioMetering()
+    {
+        // Remove any existing instance first (ignore failure when absent).
+        Command("af", "remove", "@viz");
+        if (_audioMetering)
+            Command("af", "add", "@viz:lavfi=[astats=metadata=1:reset=1]");
+    }
+
+    /// <summary>
+    /// Live overall RMS loudness normalized to 0..1, or -1 when unavailable
+    /// (no metering filter, silence, or unparseable value).
+    /// </summary>
+    public double GetAudioLevel()
+    {
+        if (_mpv == IntPtr.Zero || !_audioMetering) return -1;
+
+        var raw = GetString("af-metadata/viz/lavfi.astats.Overall.RMS_level");
+        if (string.IsNullOrEmpty(raw)
+            || !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var db))
+            return -1;
+
+        // astats reports RMS in dBFS (≤ 0; -inf for digital silence).
+        // Map a useful musical window of ~-60..0 dB onto 0..1.
+        if (double.IsNegativeInfinity(db) || db <= -60.0) return 0.0;
+        if (db >= 0.0) return 1.0;
+        return (db + 60.0) / 60.0;
+    }
 
     // ── Metadata / track info ──────────────────────────────────────────────
 

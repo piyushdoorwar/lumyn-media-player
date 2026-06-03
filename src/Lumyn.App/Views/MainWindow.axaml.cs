@@ -95,6 +95,10 @@ public partial class MainWindow : Window
             var audioPanel = this.FindControl<Grid>("AudioModePanel");
             if (audioPanel is not null)
                 audioPanel.PointerPressed += AudioPanel_OnPointerPressed;
+
+            var audioBars = this.FindControl<Controls.AudioBars>("AudioVisualizer");
+            if (audioBars is not null)
+                audioBars.LevelProvider = () => ViewModel?.Playback.GetAudioLevel() ?? -1.0;
         };
         PositionChanged += (_, _) =>
         {

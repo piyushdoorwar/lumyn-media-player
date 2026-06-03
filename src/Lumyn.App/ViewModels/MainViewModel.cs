@@ -1470,6 +1470,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             _lastNotifiedIsAudioMode = isAudioMode;
             OnPropertyChanged(nameof(IsAudioMode));
+            // Only run the measurement filter while the audio visualizer is shown.
+            _playback.SetAudioMetering(isAudioMode);
         }
 
         _hasNotifiedMediaIdentity = true;

@@ -146,20 +146,21 @@
           VerticalAlignment="Stretch"
           RowDefinitions="*,Auto">
 
-      <!-- Center: cover art + info + visualizer -->
+      <!-- Center: cover art on the left, info + visualizer on the right -->
       <StackPanel Grid.Row="0"
+                  Orientation="Horizontal"
                   VerticalAlignment="Center"
                   HorizontalAlignment="Center"
-                  Spacing="22" Margin="24,0">
+                  Spacing="28" Margin="24,0">
 
-        <!-- Cover art or placeholder circle -->
+        <!-- Cover art or placeholder -->
         <Border Width="190" Height="190"
                 CornerRadius="16"
                 ClipToBounds="True"
                 Background="#1E1E1E"
                 BorderBrush="#303030"
                 BorderThickness="1"
-                HorizontalAlignment="Center">
+                VerticalAlignment="Center">
           <Panel>
             <Image Source="{Binding CoverArtBitmap}"
                    Stretch="UniformToFill"
@@ -173,30 +174,31 @@
           </Panel>
         </Border>
 
-        <!-- Track title -->
-        <StackPanel Spacing="5" HorizontalAlignment="Center">
-          <TextBlock Text="{Binding TrackTitle}"
-                     FontSize="18" FontWeight="SemiBold"
-                     Foreground="#F2EFEC"
-                     HorizontalAlignment="Center"
-                     TextTrimming="CharacterEllipsis"
-                     MaxWidth="480"
-                     IsVisible="{Binding TrackTitle,
-                         Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-          <TextBlock Text="{Binding TrackArtistAlbum}"
-                     FontSize="13"
-                     Foreground="#7A7675"
-                     HorizontalAlignment="Center"
-                     TextTrimming="CharacterEllipsis"
-                     MaxWidth="480"
-                     IsVisible="{Binding TrackArtistAlbum,
-                         Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        </StackPanel>
+        <!-- Title, artist/album and the live visualizer -->
+        <StackPanel VerticalAlignment="Center"
+                    HorizontalAlignment="Left"
+                    Width="340" Spacing="14">
+          <StackPanel Spacing="5">
+            <TextBlock Text="{Binding TrackTitle}"
+                       FontSize="22" FontWeight="SemiBold"
+                       Foreground="#F2EFEC"
+                       TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding TrackTitle,
+                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Text="{Binding TrackArtistAlbum}"
+                       FontSize="14"
+                       Foreground="#7A7675"
+                       TextTrimming="CharacterEllipsis"
+                       IsVisible="{Binding TrackArtistAlbum,
+                           Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
 
-        <!-- Animated equalizer bars -->
-        <controls:AudioBars Width="84" Height="32"
-                            HorizontalAlignment="Center"
-                            IsActive="{Binding IsPlaying}" />
+          <!-- Music-reactive equalizer bars -->
+          <controls:AudioBars Name="AudioVisualizer"
+                              Height="60"
+                              HorizontalAlignment="Stretch"
+                              IsActive="{Binding IsPlaying}" />
+        </StackPanel>
       </StackPanel>
 
       <!-- Folder track label: "3 / 12" -->

@@ -84,7 +84,7 @@ lumyn-media-player/
 │   │   │   ├── SeekBar.cs           # Custom timeline/scrubbing control
 │   │   │   ├── MiniProgressBar.cs   # Tiny custom-rendered resume progress bar
 │   │   │   ├── VolumeSlider.cs      # Volume slider control
-│   │   │   └── AudioBars.cs         # Audio visualization bars
+│   │   │   └── AudioBars.cs         # Music-reactive equalizer bars (driven by live RMS via LevelProvider)
 │   │   ├── Models/
 │   │   │   ├── AudioClarityMode.cs # Audio clarity preset enum
 │   │   │   ├── VideoAdjustments.cs  # Record for brightness/contrast/saturation/rotation/zoom/aspect
@@ -308,6 +308,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Volume normalization (0–150%)
 - Metadata reading (title, artist, album)
 - Cover art detection and display
+- Audio-only mode shows cover art on the left and title/artist + a live music-reactive equalizer (`AudioBars`) on the right. Bars are driven by real loudness, not a fixed animation: `PlaybackService.SetAudioMetering(true)` (toggled with audio mode) adds a labelled `@viz:lavfi=[astats=metadata=1:reset=1]` pass-through filter, and `GetAudioLevel()` reads `af-metadata/viz/lavfi.astats.Overall.RMS_level` (dBFS) normalized to 0..1. `AudioBars.LevelProvider` (wired in `MainWindow.axaml.cs`) pulls that level each frame; falls back to a decorative wave when no level is available. Note: `SetAudioFilter` re-asserts the `@viz` filter so audio-clarity changes don't drop metering.
 
 ### Navigation & Persistence
 - Recent files list (last 12 files) with resume percentage badge (top-left), full-bleed thumbnail, and miniature progress bar at card bottom

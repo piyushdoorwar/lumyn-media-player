@@ -152,7 +152,6 @@ public partial class SettingsDialog : Window
 
     private static readonly VisibilityChoice[] InterfaceOptions =
     [
-        new("ShowQueue", "Queue button", "Icon.Playlist", "Top bar queue/playlist toggle"),
         new("ShowPin", "Always on top", "Icon.AlwaysOnTop", "Top bar pin button"),
         new("ShowCast", "Cast", "Icon.Cast", "Bottom bar cast button"),
         new("ShowLoop", "Loop", "Icon.Loop", "Bottom bar loop toggle"),
@@ -213,7 +212,6 @@ public partial class SettingsDialog : Window
     private static readonly (string Key, string Action)[] FileAndDialogs =
     [
         ("O", "Open file"),
-        ("Q", "Toggle queue / playlist"),
         ("B", "Open markers"),
         ("Ctrl + G", "Jump to time"),
         ("Alt + I", "Take screenshot"),
@@ -766,7 +764,6 @@ public partial class SettingsDialog : Window
         nameof(UiVisibilitySettings.ShowPin) => _uiVisibility.ShowPin,
         nameof(UiVisibilitySettings.ShowCast) => _uiVisibility.ShowCast,
         nameof(UiVisibilitySettings.ShowSeekStep) => _uiVisibility.ShowSeekStep,
-        nameof(UiVisibilitySettings.ShowQueue) => _uiVisibility.ShowQueue,
         nameof(UiVisibilitySettings.ShowLoop) => _uiVisibility.ShowLoop,
         nameof(UiVisibilitySettings.ShowMarkers) => _uiVisibility.ShowMarkers,
         _ => true
@@ -787,9 +784,6 @@ public partial class SettingsDialog : Window
                 break;
             case nameof(UiVisibilitySettings.ShowSeekStep):
                 _uiVisibility.ShowSeekStep = value;
-                break;
-            case nameof(UiVisibilitySettings.ShowQueue):
-                _uiVisibility.ShowQueue = value;
                 break;
             case nameof(UiVisibilitySettings.ShowLoop):
                 _uiVisibility.ShowLoop = value;

@@ -180,7 +180,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Playlist / queue ───────────────────────────────────────────────
     private List<string> _playlist = [];
     private int _playlistIndex = -1;
-    private bool _isPlaylistVisible;
 
     public MainViewModel(
         PlaybackService playback,
@@ -235,10 +234,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SetSpeedCommand        = new RelayCommand(p => ParseAndSetSpeed(p));
         PreviousTrackCommand   = new RelayCommand(_ => { _ = NavigateTrackAsync(-1); });
         NextTrackCommand       = new RelayCommand(_ => { _ = NavigateTrackAsync(+1); });
-        TogglePlaylistCommand  = new RelayCommand(_ => IsPlaylistVisible = !IsPlaylistVisible);
         OpenPlaylistItemCommand   = new RelayCommand(p => { if (p is int i) _ = PlayFromIndexAsync(i); });
         RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
-        ClearPlaylistCommand   = new RelayCommand(_ => ClearPlaylist());
         RemoveRecentFileCommand = new RelayCommand(p => { if (p is string path) RemoveRecentFile(path); });
         PreviousChapterCommand = new RelayCommand(_ => _playback.SeekToChapter(-1));
         NextChapterCommand     = new RelayCommand(_ => _playback.SeekToChapter(+1));
@@ -526,20 +523,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     // ── Playlist / queue properties ─────────────────────────────────────────
 
-    public bool IsPlaylistVisible
-    {
-        get => _isPlaylistVisible;
-        set { if (SetField(ref _isPlaylistVisible, value)) OnPropertyChanged(nameof(IsSidebarVisible)); }
-    }
-
-    /// <summary>
-    /// The standalone 260px queue sidebar. Hidden in audio mode with 2+ tracks,
-    /// where the inline YouTube-Music queue pane replaces it (avoids a double queue).
-    /// </summary>
-    public bool IsSidebarVisible => IsPlaylistVisible && !(IsAudioMode && HasPlaylist);
-
-    /// <summary>Top-bar queue toggle — hidden when the inline audio queue is showing.</summary>
-    public bool ShowQueueToggle => ShowQueueButton && !(IsAudioMode && HasPlaylist);
 
     public IReadOnlyList<PlaylistItem> PlaylistItems { get; private set; } = [];
 
@@ -665,7 +648,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool ShowPinButton => _uiVisibility.ShowPin;
     public bool ShowCastButton => _uiVisibility.ShowCast;
     public bool ShowSeekStepButton => _uiVisibility.ShowSeekStep;
-    public bool ShowQueueButton => _uiVisibility.ShowQueue;
     public bool ShowLoopButton => _uiVisibility.ShowLoop;
     public bool ShowMarkersButton => _uiVisibility.ShowMarkers;
 
@@ -674,14 +656,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public void ApplyUiVisibility(UiVisibilitySettings visibility)
     {
         _uiVisibility = visibility.Clone();
-        if (!_uiVisibility.ShowQueue)
-            IsPlaylistVisible = false;
         _settings.SaveUiVisibility(_uiVisibility);
         OnPropertyChanged(nameof(ShowScreenshotButton));
         OnPropertyChanged(nameof(ShowPinButton));
         OnPropertyChanged(nameof(ShowCastButton));
         OnPropertyChanged(nameof(ShowSeekStepButton));
-        OnPropertyChanged(nameof(ShowQueueButton));
         OnPropertyChanged(nameof(ShowLoopButton));
         OnPropertyChanged(nameof(ShowMarkersButton));
     }
@@ -787,10 +766,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand CycleSubtitleTrackCommand { get; }
     public ICommand SetSpeedCommand { get; }    public ICommand PreviousTrackCommand { get; }
     public ICommand NextTrackCommand { get; }
-    public ICommand TogglePlaylistCommand { get; }
     public ICommand OpenPlaylistItemCommand { get; }
     public ICommand RemovePlaylistItemCommand { get; }
-    public ICommand ClearPlaylistCommand { get; }
     public ICommand RemoveRecentFileCommand { get; }
     public ICommand PreviousChapterCommand { get; }
     public ICommand NextChapterCommand { get; }
@@ -1536,8 +1513,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             OnPropertyChanged(nameof(IsAudioMode));
             // Only run the measurement filter while the audio visualizer is shown.
             _playback.SetAudioMetering(isAudioMode);
-            OnPropertyChanged(nameof(IsSidebarVisible));
-            OnPropertyChanged(nameof(ShowQueueToggle));
             // Entering audio mode: start filling the queue's durations/covers.
             if (isAudioMode) StartQueueMetadataProbe();
         }
@@ -2241,14 +2216,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         NotifyPlaylistState();
     }
 
-    private void ClearPlaylist()
-    {
-        _playlist.Clear();
-        _playlistIndex = -1;
-        RebuildPlaylistItems();
-        NotifyPlaylistState();
-    }
-
     private void SetPlaylist(IEnumerable<string> files, int activeIndex)
     {
         _playlist = [.. files];
@@ -2328,8 +2295,6 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(FolderTrackLabel));
         OnPropertyChanged(nameof(HasPreviousTrack));
         OnPropertyChanged(nameof(HasNextTrack));
-        OnPropertyChanged(nameof(IsSidebarVisible));
-        OnPropertyChanged(nameof(ShowQueueToggle));
     }
 
 

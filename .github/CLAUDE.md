@@ -270,7 +270,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Generates JPEG frames in a background Task in two phases: `Phase1Count` (20) coarse evenly-spaced frames first, then `Phase2PerMinute` (12/min) refinement. `GetNearest(progress)` returns the closest frame's bytes. |
 | `src/Lumyn.Core/Services/QueueMetadataProbe.cs` | — | Secondary silent mpv instance that reads duration / `media-title` / artist for a queued file without playing it (`Probe(path, ct)` → `QueueProbeResult`). Drives the audio-queue rows. |
 | `src/Lumyn.Core/Services/MediaTime.cs` | — | `FormatDuration(TimeSpan?)` → `m:ss` / `h:mm:ss` (blank if unknown). Unit-tested. |
-| `src/Lumyn.App/Converters.cs` | — | `Converters.QueueColumnWidth` (`FuncValueConverter<bool,GridLength>`): true → `2*`, false → `0`; collapses the audio queue column for a single track. Referenced via `x:Static`. |
+| `src/Lumyn.App/Converters.cs` | — | `Converters.QueueColumnWidth` (`FuncValueConverter<bool,GridLength>`): true → `3*` (~30% beside the `7*` hero), false → `0`; collapses the audio queue column for a single track. Referenced via `x:Static`. |
 
 ---
 
@@ -311,7 +311,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Volume normalization (0–150%)
 - Metadata reading (title, artist, album)
 - Cover art detection and display
-- **YouTube-Music-style two-pane audio view** (when the queue has 2+ tracks): left ~60% shows the cover, title/artist, and the waveform below it; right ~40% is the queue ("Up next") with a cover thumbnail, title/artist, and duration per row. Click a row to play, drag the handle to reorder, hover/right-click to remove. A single file keeps the centered hero (the queue column collapses via `Converters.QueueColumnWidth`). The standalone sidebar + its top-bar toggle are suppressed in this view (`IsSidebarVisible`/`ShowQueueToggle`) to avoid a double queue. Per-row duration/title/artist are filled by `QueueMetadataProbe` on a single cancellable background task; covers reuse the recent-card audio pipeline (`ExtractAudioCoverArt` → thumbs cache). Cached in `MainViewModel._queueMeta` (`QueueTrackMeta`), surfaced through `PlaylistItem`.
+- **YouTube-Music-style two-pane audio view** (when the queue has 2+ tracks): left ~70% shows the cover, title/artist, and the waveform below it; right ~30% is the queue ("Up next") with a cover thumbnail, title/artist, and duration per row. Click a row to play, drag the handle to reorder, hover/right-click to remove. The currently-playing row is highlighted with a soft Lumyn-green tint (`#1649B35C`) and light-green title. A single file keeps the centered hero (the queue column collapses via `Converters.QueueColumnWidth`). **The queue UI exists only in this audio view** — there is no video/sidebar queue. Per-row duration/title/artist are filled by `QueueMetadataProbe` on a single cancellable background task; covers reuse the recent-card audio pipeline (`ExtractAudioCoverArt` → thumbs cache). Cached in `MainViewModel._queueMeta` (`QueueTrackMeta`), surfaced through `PlaylistItem`. The underlying `_playlist` still drives next/previous-track navigation for both audio and video.
 - Audio-only mode shows cover art on the left and title/artist + a live music-reactive equalizer (`AudioBars`) on the right, over a subtle ambient backdrop (the cover art stretched `UniformToFill` with a `BlurEffect` + dark `#111111` scrim, shown only when `HasCoverArt`) — like YT/Apple Music. Bars are driven by real loudness, not a fixed animation: `PlaybackService.SetAudioMetering(true)` (toggled with audio mode) adds a labelled `@viz:lavfi=[astats=metadata=1:reset=1]` pass-through filter, and `GetAudioLevel()` reads `af-metadata/viz/lavfi.astats.Overall.RMS_level` (dBFS) normalized to 0..1. `AudioBars.LevelProvider` (wired in `MainWindow.axaml.cs`) pulls that level each frame; falls back to a decorative wave when no level is available. Note: `SetAudioFilter` re-asserts the `@viz` filter so audio-clarity changes don't drop metering.
 
 ### Navigation & Persistence
@@ -353,7 +353,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Keyboard shortcuts (full list in KeyboardShortcutsDialog)
 - OSD toast: top-left, translucent (`#99` opacity), subtle border, small bare icon — intentionally unobtrusive so it doesn't pull attention from the video. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap instead of overflowing the pill.
 - Scrollbar: 6px wide/tall, green-tinted thumb (`#3A9B4B`), opacity-based hover (0.35 → 0.75 → 1.0), no arrow buttons, applied globally via `Lumyn.axaml`.
-- Sidebar playlist panel (toggle with Q)
+- Queue is shown only in the audio two-pane view (no separate video/sidebar queue)
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
 - Windows file associations through Inno Setup registry entries (`packaging/windows/lumyn.iss`) and MSIX declarations (`packaging/windows/AppxManifest.xml`); `scripts/build-windows.ps1` also contains a portable `Register-FileAssociations.ps1` generator helper.
 - Command-line startup file support: `App.axaml.cs` accepts normal file paths and `file://` URIs from `desktop.Args`, then calls `OpenFileWhenReadyAsync()`.
@@ -446,8 +446,9 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 │  SeekBar                                   │
 │  Play | << | >> | Vol | Speed | Loop | Mute │
 └─────────────────────────────────────────────┘
-       [Playlist sidebar — toggle with Q]
 ```
+
+In audio mode with 2+ tracks the centre area becomes a 70/30 split: cover + info + waveform on the left, the "Up next" queue on the right. Video has no queue UI.
 
 ### Recent Files Start Screen
 

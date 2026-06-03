@@ -77,15 +77,7 @@ public partial class MainWindow : Window
             var rb = this.FindControl<Border>("RootBorder");
             if (rb is not null) rb.BorderBrush = _glowBrush;
             UpdateActivityTimers();
-            // Wire playlist reorder DragDrop after visual tree is ready (both the
-            // sidebar list and the inline audio queue reuse the same handlers).
-            var pic = this.FindControl<ItemsControl>("PlaylistItemsControl");
-            if (pic is not null)
-            {
-                pic.AddHandler(DragDrop.DragOverEvent, PlaylistDragOver);
-                pic.AddHandler(DragDrop.DropEvent, PlaylistDrop);
-            }
-
+            // Wire queue reorder DragDrop on the inline audio queue once the tree is ready.
             var audioQueue = this.FindControl<ItemsControl>("AudioQueueItemsControl");
             if (audioQueue is not null)
             {
@@ -565,9 +557,6 @@ public partial class MainWindow : Window
                 e.Handled = true; break;
             case Key.P:
                 ViewModel.PreviousTrackCommand.Execute(null);
-                e.Handled = true; break;
-            case Key.Q:
-                ViewModel.TogglePlaylistCommand.Execute(null);
                 e.Handled = true; break;
             case Key.B:
                 await OpenBookmarksDialogAsync();

@@ -414,7 +414,6 @@ public sealed class UiVisibilitySettings
     public bool ShowPin { get; set; } = true;
     public bool ShowCast { get; set; } = true;
     public bool ShowSeekStep { get; set; } = true;
-    public bool ShowQueue { get; set; } = true;
     public bool ShowLoop { get; set; } = true;
     public bool ShowMarkers { get; set; } = true;
 
@@ -424,7 +423,6 @@ public sealed class UiVisibilitySettings
         ShowPin = ShowPin,
         ShowCast = ShowCast,
         ShowSeekStep = ShowSeekStep,
-        ShowQueue = ShowQueue,
         ShowLoop = ShowLoop,
         ShowMarkers = ShowMarkers
     };

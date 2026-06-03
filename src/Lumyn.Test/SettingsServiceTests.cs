@@ -115,7 +115,6 @@ public sealed class SettingsServiceTests : IDisposable
             ShowPin = true,
             ShowCast = false,
             ShowSeekStep = true,
-            ShowQueue = false,
             ShowLoop = true,
             ShowMarkers = false
         });
@@ -126,7 +125,6 @@ public sealed class SettingsServiceTests : IDisposable
         Assert.True(reloaded.ShowPin);
         Assert.False(reloaded.ShowCast);
         Assert.True(reloaded.ShowSeekStep);
-        Assert.False(reloaded.ShowQueue);
         Assert.True(reloaded.ShowLoop);
         Assert.False(reloaded.ShowMarkers);
     }

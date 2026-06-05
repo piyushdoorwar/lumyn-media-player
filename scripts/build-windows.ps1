@@ -298,7 +298,12 @@ function Get-FfmpegExe {
     }
 
     Write-Host "Downloading ffmpeg for Windows..."
-    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl-shared.zip"
+    # Use the STATIC build (no "-shared"): it produces a single, self-contained
+    # ffmpeg.exe with no external DLL dependencies. The shared build's ffmpeg.exe
+    # needs avcodec-*/avformat-*/avfilter-* DLLs that we don't ship (mpv statically
+    # links its own ffmpeg into mpv-2.dll), which causes "DLL not found" loader
+    # popups on launch. We only copy ffmpeg.exe below, so static is required.
+    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
     $extractDir = Join-Path "artifacts/downloads" "ffmpeg-win-x64"
     Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $extractDir | Out-Null

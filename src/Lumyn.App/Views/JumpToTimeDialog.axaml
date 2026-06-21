@@ -12,7 +12,7 @@
     <TextBlock Text="Enter time:" Foreground="#DEDAD5" />
     <TextBox
         Name="TimeInput"
-        Watermark="mm:ss  or  h:mm:ss  or  seconds"
+        PlaceholderText="mm:ss  or  h:mm:ss  or  seconds"
         Background="#2D2D2D"
         Foreground="#F7F5F3"
         BorderBrush="#4D4658"

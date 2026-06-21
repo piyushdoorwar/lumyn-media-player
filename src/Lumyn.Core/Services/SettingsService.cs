@@ -415,6 +415,9 @@ public sealed class UiVisibilitySettings
     public bool ShowCast { get; set; } = true;
     public bool ShowSeekStep { get; set; } = true;
     public bool ShowLoop { get; set; } = true;
+    // Opt-in: the bottom bar stays uncluttered by default for users who don't
+    // use A-B repeat. The keyboard shortcut works regardless of this setting.
+    public bool ShowAbLoop { get; set; } = false;
     public bool ShowMarkers { get; set; } = true;
 
     public UiVisibilitySettings Clone() => new()
@@ -424,6 +427,7 @@ public sealed class UiVisibilitySettings
         ShowCast = ShowCast,
         ShowSeekStep = ShowSeekStep,
         ShowLoop = ShowLoop,
+        ShowAbLoop = ShowAbLoop,
         ShowMarkers = ShowMarkers
     };
 }

@@ -514,6 +514,9 @@ public partial class MainWindow : Window
             case Key.L:
                 ViewModel.ToggleLoopCommand.Execute(null);
                 e.Handled = true; break;
+            case Key.R:
+                ViewModel.ToggleAbLoopCommand.Execute(null);
+                ShowControls(); e.Handled = true; break;
 
             // ── Tracks ──────────────────────────────────────────────────────
             case Key.A:

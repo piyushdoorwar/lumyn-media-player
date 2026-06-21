@@ -129,7 +129,7 @@ public partial class BookmarksDialog : Window
             BorderThickness = new Avalonia.Thickness(1),
             Padding = new Avalonia.Thickness(8, 5),
             CornerRadius = new Avalonia.CornerRadius(4),
-            Watermark = "Add a name…",
+            PlaceholderText = "Add a name…",
             IsVisible = startEditing,
             Tag = (index, labelText)
         };

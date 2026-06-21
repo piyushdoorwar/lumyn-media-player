@@ -155,6 +155,7 @@ public partial class SettingsDialog : Window
         new("ShowPin", "Always on top", "Icon.AlwaysOnTop", "Top bar pin button"),
         new("ShowCast", "Cast", "Icon.Cast", "Bottom bar cast button"),
         new("ShowLoop", "Loop", "Icon.Loop", "Bottom bar loop toggle"),
+        new("ShowAbLoop", "A-B repeat", "Icon.Loop", "Bottom bar A-B repeat button (shortcut: R)"),
         new("ShowSeekStep", "Seek step", "Icon.SeekForward", "Bottom bar step-size control"),
         new("ShowMarkers", "Markers", "Icon.BookmarkOutline", "Bottom bar bookmarks/chapters button"),
         new("ShowScreenshot", "Screenshot", "Icon.Screenshot", "Bottom bar screenshot button")
@@ -169,6 +170,7 @@ public partial class SettingsDialog : Window
         ("Page Up", "Previous chapter"),
         ("Page Down", "Next chapter"),
         ("L", "Toggle loop"),
+        ("R", "A-B repeat: set A → set B → clear"),
     ];
 
     private static readonly (string Key, string Action)[] Seeking =
@@ -765,6 +767,7 @@ public partial class SettingsDialog : Window
         nameof(UiVisibilitySettings.ShowCast) => _uiVisibility.ShowCast,
         nameof(UiVisibilitySettings.ShowSeekStep) => _uiVisibility.ShowSeekStep,
         nameof(UiVisibilitySettings.ShowLoop) => _uiVisibility.ShowLoop,
+        nameof(UiVisibilitySettings.ShowAbLoop) => _uiVisibility.ShowAbLoop,
         nameof(UiVisibilitySettings.ShowMarkers) => _uiVisibility.ShowMarkers,
         _ => true
     };
@@ -787,6 +790,9 @@ public partial class SettingsDialog : Window
                 break;
             case nameof(UiVisibilitySettings.ShowLoop):
                 _uiVisibility.ShowLoop = value;
+                break;
+            case nameof(UiVisibilitySettings.ShowAbLoop):
+                _uiVisibility.ShowAbLoop = value;
                 break;
             case nameof(UiVisibilitySettings.ShowMarkers):
                 _uiVisibility.ShowMarkers = value;

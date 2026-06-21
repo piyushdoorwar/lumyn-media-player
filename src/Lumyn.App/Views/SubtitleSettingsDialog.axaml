@@ -62,7 +62,7 @@
             <TextBox Grid.Column="0"
                      Name="FilePathBox"
                      IsReadOnly="True"
-                     Watermark="No subtitle file loaded"
+                     PlaceholderText="No subtitle file loaded"
                      Background="#2D2D2D" Foreground="#F7F5F3"
                      BorderBrush="#4D4658" />
             <Button Grid.Column="2"
@@ -84,7 +84,7 @@
           <Grid Grid.Row="3" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,0,0,8">
             <TextBox Grid.Column="0"
                      Name="SearchBox"
-                     Watermark="Movie or show name…"
+                     PlaceholderText="Movie or show name…"
                      Background="#2D2D2D" Foreground="#F7F5F3"
                      BorderBrush="#4D4658" />
             <ComboBox Grid.Column="2"

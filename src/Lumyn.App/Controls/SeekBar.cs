@@ -16,6 +16,8 @@ public sealed class SeekBar : Control
     private static readonly IBrush TrackBrush   = new SolidColorBrush(Color.Parse("#554A4A4A"));
     private static readonly IBrush FillBrush    = new SolidColorBrush(Color.Parse("#3A9B4B"));
     private static readonly IBrush ChapterBrush = new SolidColorBrush(Color.Parse("#80F7F5F3"));
+    private static readonly IBrush LoopRegionBrush = new SolidColorBrush(Color.Parse("#5549B35C"));
+    private static readonly IBrush LoopMarkerBrush = new SolidColorBrush(Color.Parse("#7BD88E"));
 
     public static readonly StyledProperty<double> MinimumProperty =
         AvaloniaProperty.Register<SeekBar, double>(nameof(Minimum), 0);
@@ -34,6 +36,14 @@ public sealed class SeekBar : Control
         AvaloniaProperty.Register<SeekBar, IReadOnlyList<double>>(
             nameof(ChapterPositions),
             defaultValue: []);
+
+    // A-B loop markers, in the same units as Value (-1 = unset). The region
+    // between them is highlighted and each point gets a vertical tick.
+    public static readonly StyledProperty<double> LoopStartProperty =
+        AvaloniaProperty.Register<SeekBar, double>(nameof(LoopStart), -1);
+
+    public static readonly StyledProperty<double> LoopEndProperty =
+        AvaloniaProperty.Register<SeekBar, double>(nameof(LoopEnd), -1);
 
     public static readonly RoutedEvent<RoutedEventArgs> SeekCommittedEvent =
         RoutedEvent.Register<SeekBar, RoutedEventArgs>(
@@ -67,6 +77,18 @@ public sealed class SeekBar : Control
         set => SetValue(ChapterPositionsProperty, value);
     }
 
+    public double LoopStart
+    {
+        get => GetValue(LoopStartProperty);
+        set => SetValue(LoopStartProperty, value);
+    }
+
+    public double LoopEnd
+    {
+        get => GetValue(LoopEndProperty);
+        set => SetValue(LoopEndProperty, value);
+    }
+
     public event EventHandler<RoutedEventArgs>? SeekCommitted
     {
         add => AddHandler(SeekCommittedEvent, value);
@@ -75,7 +97,8 @@ public sealed class SeekBar : Control
 
     static SeekBar()
     {
-        AffectsRender<SeekBar>(ValueProperty, MinimumProperty, MaximumProperty, ChapterPositionsProperty);
+        AffectsRender<SeekBar>(ValueProperty, MinimumProperty, MaximumProperty, ChapterPositionsProperty,
+            LoopStartProperty, LoopEndProperty);
         FocusableProperty.OverrideDefaultValue<SeekBar>(false);
     }
 
@@ -134,6 +157,23 @@ public sealed class SeekBar : Control
                         new Rect(tickX - 0.5, tickY, 1, tickH));
                 }
             }
+        }
+
+        // A-B loop markers (only drawn once a point is set).
+        var loopRange = Maximum - Minimum;
+        if (loopRange > 0)
+        {
+            double? aX = LoopStart >= Minimum ? width * (LoopStart - Minimum) / loopRange : null;
+            double? bX = LoopEnd   >= Minimum ? width * (LoopEnd   - Minimum) / loopRange : null;
+
+            if (aX is { } a && bX is { } b && b > a)
+                context.DrawRectangle(LoopRegionBrush, null,
+                    new Rect(a, trackY, b - a, TrackHeight));
+
+            const double markH = 13.0;
+            var markY = (height - markH) / 2;
+            if (aX is { } ax) context.DrawRectangle(LoopMarkerBrush, null, new Rect(ax - 1, markY, 2, markH));
+            if (bX is { } bx) context.DrawRectangle(LoopMarkerBrush, null, new Rect(bx - 1, markY, 2, markH));
         }
     }
 

@@ -18,7 +18,7 @@
     <Grid Row="0" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,0,0,10">
       <TextBox Grid.Column="0"
                Name="SearchBox"
-               Watermark="Movie or show name…"
+               PlaceholderText="Movie or show name…"
                Background="#2D2D2D" Foreground="#F7F5F3"
                BorderBrush="#4D4658" />
       <ComboBox Grid.Column="2"

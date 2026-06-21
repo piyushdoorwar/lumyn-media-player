@@ -13,7 +13,7 @@
     Background="#111111"
     Topmost="{Binding IsAlwaysOnTop}"
     CanResize="True"
-    SystemDecorations="BorderOnly"
+    WindowDecorations="BorderOnly"
     ExtendClientAreaToDecorationsHint="False">
 
   <!--
@@ -584,6 +584,8 @@
               Minimum="0"
               Maximum="1000"
               Value="{Binding SeekValue}"
+              LoopStart="{Binding AbLoopStartValue}"
+              LoopEnd="{Binding AbLoopEndValue}"
               VerticalAlignment="Center"
               SeekCommitted="SeekSlider_OnSeekCommitted" />
 
@@ -618,6 +620,15 @@
                     IsVisible="{Binding ShowLoopButton}"
                     Command="{Binding ToggleLoopCommand}">
               <PathIcon Width="16" Height="16" Data="{StaticResource Icon.Loop}" />
+            </Button>
+
+            <Button Classes="ctrl"
+                    Width="40"
+                    Classes.dim="{Binding !IsAbLoopArmed}"
+                    IsVisible="{Binding ShowAbLoopButton}"
+                    Command="{Binding ToggleAbLoopCommand}"
+                    ToolTip.Tip="A-B repeat (R)">
+              <TextBlock Text="A·B" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" />
             </Button>
 
             <Button Classes="ctrl"

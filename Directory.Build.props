@@ -5,5 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <!-- Avalonia 12 turns compiled bindings on by default, which requires an
+         x:DataType on every view. Keep reflection bindings as the default so
+         existing DataContext bindings continue to resolve. -->
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 </Project>

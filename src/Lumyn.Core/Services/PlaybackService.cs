@@ -330,6 +330,23 @@ public sealed class PlaybackService : IDisposable
         RaiseStateChanged();
     }
 
+    /// <summary>
+    /// Sets the mpv A-B loop points (in playback time). Pass <c>null</c> for a
+    /// point to clear it. When both points are set, mpv loops playback between
+    /// them; with only A set, playback is unaffected until B is also set.
+    /// </summary>
+    public void SetAbLoop(TimeSpan? a, TimeSpan? b)
+    {
+        if (_mpv == IntPtr.Zero) return;
+        SetPropertyString("ab-loop-a", FormatAbLoop(a));
+        SetPropertyString("ab-loop-b", FormatAbLoop(b));
+    }
+
+    private static string FormatAbLoop(TimeSpan? t) =>
+        t is { } v
+            ? Math.Max(0, v.TotalSeconds).ToString("0.###", CultureInfo.InvariantCulture)
+            : "no";
+
     public bool TakeSnapshot(string outputPath)
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return false;

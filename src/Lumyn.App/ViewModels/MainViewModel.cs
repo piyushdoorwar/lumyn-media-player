@@ -12,6 +12,9 @@ namespace Lumyn.App.ViewModels;
 
 public sealed record TrackInfo(int Id, string Name, bool IsSelected = false);
 
+/// <summary>A-B repeat loop progression: off → A set, awaiting B → looping A↔B.</summary>
+public enum AbLoopState { Off, AwaitingB, Active }
+
 public sealed record ChapterInfo(int Index, string Title, TimeSpan Position)
 {
     public string FormattedTime => Position.TotalHours >= 1
@@ -139,6 +142,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private bool _isSeeking;
     private float _speed = 1.0f;
     private bool _isLooping;
+    private AbLoopState _abLoopState = AbLoopState.Off;
+    private TimeSpan _abLoopA;
+    private TimeSpan _abLoopB;
+    private double _abLoopStartValue = -1;
+    private double _abLoopEndValue = -1;
     private bool _isAlwaysOnTop;
     private bool _isCasting;
     private bool _isCastPlaying;
@@ -223,6 +231,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SpeedDownCommand       = new RelayCommand(_ => AdjustSpeed(-1));
         ResetSpeedCommand      = new RelayCommand(_ => SetSpeed(1.0f));
         ToggleLoopCommand      = new RelayCommand(_ => ToggleLoop());
+        ToggleAbLoopCommand    = new RelayCommand(_ => CycleAbLoop());
         StepFrameCommand       = new RelayCommand(_ => _playback.StepFrame());
         StepFrameBackCommand   = new RelayCommand(_ => _playback.StepFrameBack());
         TakeScreenshotCommand  = new RelayCommand(_ => TakeScreenshot());
@@ -649,6 +658,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public bool ShowCastButton => _uiVisibility.ShowCast;
     public bool ShowSeekStepButton => _uiVisibility.ShowSeekStep;
     public bool ShowLoopButton => _uiVisibility.ShowLoop;
+    public bool ShowAbLoopButton => _uiVisibility.ShowAbLoop;
     public bool ShowMarkersButton => _uiVisibility.ShowMarkers;
 
     public UiVisibilitySettings CurrentUiVisibility => _uiVisibility.Clone();
@@ -662,6 +672,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         OnPropertyChanged(nameof(ShowCastButton));
         OnPropertyChanged(nameof(ShowSeekStepButton));
         OnPropertyChanged(nameof(ShowLoopButton));
+        OnPropertyChanged(nameof(ShowAbLoopButton));
         OnPropertyChanged(nameof(ShowMarkersButton));
     }
 
@@ -669,6 +680,26 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _isLooping;
         private set => SetField(ref _isLooping, value);
+    }
+
+    /// <summary>True once an A point has been set (armed or actively looping).</summary>
+    public bool IsAbLoopArmed => _abLoopState != AbLoopState.Off;
+
+    /// <summary>True while playback is looping between A and B.</summary>
+    public bool IsAbLoopActive => _abLoopState == AbLoopState.Active;
+
+    /// <summary>A-marker position on the seek bar (0–1000 scale, -1 = hidden).</summary>
+    public double AbLoopStartValue
+    {
+        get => _abLoopStartValue;
+        private set => SetField(ref _abLoopStartValue, value);
+    }
+
+    /// <summary>B-marker position on the seek bar (0–1000 scale, -1 = hidden).</summary>
+    public double AbLoopEndValue
+    {
+        get => _abLoopEndValue;
+        private set => SetField(ref _abLoopEndValue, value);
     }
 
     public bool IsAlwaysOnTop
@@ -756,6 +787,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand SpeedDownCommand { get; }
     public ICommand ResetSpeedCommand { get; }
     public ICommand ToggleLoopCommand { get; }
+    public ICommand ToggleAbLoopCommand { get; }
     public ICommand StepFrameCommand { get; }
     public ICommand StepFrameBackCommand { get; }
     public ICommand TakeScreenshotCommand { get; }
@@ -1723,6 +1755,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         SetCoverArt(null, false);
         ChapterPositions = [];
         Chapters = [];
+        ClearAbLoop();
         // Leave the playlist intact so the user can resume or navigate.
         NotifyPlaylistState();
         RefreshState();
@@ -1856,6 +1889,84 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _playback.ToggleLoop();
         ShowOsd(_playback.IsLooping ? "Loop: On" : "Loop: Off");
     }
+
+    // ── A-B repeat loop ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Cycles the A-B repeat loop: first press sets point A at the current
+    /// position, second sets B and starts looping, third clears it. A second
+    /// press at or before A simply re-anchors A.
+    /// </summary>
+    private void CycleAbLoop()
+    {
+        if (!HasMedia) return;
+        if (IsCasting)
+        {
+            ShowOsd("A-B loop isn't available while casting");
+            return;
+        }
+
+        var pos = CurrentMediaPosition;
+        switch (_abLoopState)
+        {
+            case AbLoopState.Off:
+                _abLoopA = pos;
+                _abLoopState = AbLoopState.AwaitingB;
+                _playback.SetAbLoop(_abLoopA, null);
+                ShowOsd($"A-B loop · A = {FormatPosition(pos)}");
+                break;
+
+            case AbLoopState.AwaitingB:
+                if (pos <= _abLoopA + TimeSpan.FromMilliseconds(200))
+                {
+                    _abLoopA = pos;
+                    _playback.SetAbLoop(_abLoopA, null);
+                    ShowOsd($"A-B loop · A = {FormatPosition(pos)}");
+                }
+                else
+                {
+                    _abLoopB = pos;
+                    _abLoopState = AbLoopState.Active;
+                    _playback.SetAbLoop(_abLoopA, _abLoopB);
+                    ShowOsd($"A-B loop on · {FormatPosition(_abLoopA)} → {FormatPosition(_abLoopB)}");
+                }
+                break;
+
+            case AbLoopState.Active:
+                ClearAbLoop(announce: true);
+                return;
+        }
+
+        UpdateAbLoopMarkers();
+    }
+
+    private void ClearAbLoop(bool announce = false)
+    {
+        var wasSet = _abLoopState != AbLoopState.Off;
+        _abLoopState = AbLoopState.Off;
+        _abLoopA = TimeSpan.Zero;
+        _abLoopB = TimeSpan.Zero;
+        _playback.SetAbLoop(null, null);
+        if (announce && wasSet) ShowOsd("A-B loop cleared");
+        UpdateAbLoopMarkers();
+    }
+
+    private void UpdateAbLoopMarkers()
+    {
+        var dur = CurrentMediaDuration;
+        double ToValue(TimeSpan t) => dur > TimeSpan.Zero
+            ? Math.Clamp(t.TotalMilliseconds / dur.TotalMilliseconds * 1000.0, 0, 1000)
+            : -1;
+
+        AbLoopStartValue = _abLoopState != AbLoopState.Off ? ToValue(_abLoopA) : -1;
+        AbLoopEndValue   = _abLoopState == AbLoopState.Active ? ToValue(_abLoopB) : -1;
+        OnPropertyChanged(nameof(IsAbLoopArmed));
+        OnPropertyChanged(nameof(IsAbLoopActive));
+    }
+
+    private static string FormatPosition(TimeSpan t) => t.TotalHours >= 1
+        ? $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}"
+        : $"{t.Minutes}:{t.Seconds:D2}";
 
     public bool TakeGlowSnapshot(string path) => HasMedia && _playback.TakeSnapshot(path);
 
@@ -2122,6 +2233,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _subtitleLineIndex = -1;
         _useSubtitleOverlay = false;
         CurrentSubtitleText = null;
+        ClearAbLoop();
 
         var ext = Path.GetExtension(filePath);
         var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);

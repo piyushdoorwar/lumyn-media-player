@@ -588,9 +588,10 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 - Additional `github-release` job: generates a `checksums.sha256` manifest over all downloaded artifacts and attaches it plus all artifacts to a GitHub Release
 - `linux-snap` also publishes the built snap to the Snap Store using the `SNAPCRAFT_STORE_CREDENTIALS` secret
 
-### `static.yml` — triggered on push to `main`
+### `static.yml` — triggered on push to `main` (also after the `Release` workflow, and manual dispatch)
 
-- Deploys `/site/` directory to GitHub Pages
+- Builds and deploys the React/Vite site to GitHub Pages. Steps: checkout → `actions/setup-node@v4` (Node 20, npm cache keyed on `site/package-lock.json`) → `npm ci` in `site/` → run `generate-site-releases.js` (writes `site/public/releases.json`) → `npm run build` (Vite → `site/dist`) → upload `site/dist` via `upload-pages-artifact` → `deploy-pages`.
+- The manifest must be generated **before** the build so Vite copies `public/releases.json` into `dist/`.
 
 ---
 
@@ -623,37 +624,37 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 ## 13. Website / Site
 
 - Located at `/site/` in the repo
-- Static HTML/CSS site
-- Deployed automatically to GitHub Pages via `static.yml` on every push to `main`
+- **React + Vite + Framer Motion** app (migrated from the original vanilla HTML/CSS/JS). Keeps Lumyn's dark-green identity; motion is rebuilt in Framer Motion.
+- Deployed automatically to GitHub Pages via `static.yml` on every push to `main` (now with a **build step** — see §11)
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
-- Contains: landing page, download links, documentation
+- Contains: landing page, releases page, privacy policy page
 - Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, and Windows shows Microsoft Store + standalone `.exe`.
 
-### Motion (vanilla — no framework/build step)
+### Architecture (Vite multi-page app, rooted in `site/`)
 
-All motion is plain CSS + a small amount of JS in `site/app.js`; there is **no React/Framer Motion** (the site is static HTML served straight to GitHub Pages). The "ANIMATIONS & MOTION" block at the bottom of `site/styles.css` holds it all.
+- **MPA, not SPA**: three HTML entries map 1:1 to existing URLs (`/`, `/releases/`, `/policy/`) so GitHub Pages serves native directories with **no SPA 404 fallback**. Inputs declared in `site/vite.config.js` (`base: '/lumyn-media-player/'`).
+- **`site/public/`** holds files copied verbatim into `dist/` root: `assets/`, `image-guard.js` (still a classic script referenced from each HTML head, MutationObserver covers React-rendered imgs), `lumyn-cast.css` (unused by the site but kept at its public URL for the external Cast receiver), `releases.json` (manifest), `.nojekyll`.
+- **`site/src/`**: `entries/{landing,releases,policy}.jsx` (one `createRoot` per HTML entry, each wrapped in `<MotionConfig reducedMotion="user">`), `pages/{LandingPage,ReleasesPage,PolicyPage}.jsx`, `components/` (TopBar, Footer, SupportModal, ScrollProgress, PlayerPreview, Marquee, FeatureTimeline, DownloadSection, CopyButton), `motion/motion.js` (variants + `useTilt`), `styles/global.css` (ported from the old `styles.css`) and `styles/policy.css` (the policy page's old inline CSS; the policy entry imports only this).
+- **Paths**: assets referenced from React via `asset(file)` (`src/lib/assets.js`) using `import.meta.env.BASE_URL`; runtime fetches use `` fetch(`${BASE}releases.json`) `` so they resolve under the Pages subpath from any page. HTML files use Vite's `%BASE_URL%` token for favicon + the public `image-guard.js`.
+- Local dev: `cd site && npm install && npm run dev`; build `npm run build` → `site/dist`; `npm run preview` serves under the base path.
 
-- **Scroll progress bar** — `.scroll-progress` element created in `app.js`, width driven by a `--scroll-progress` CSS var (`scaleX`) updated in a rAF-throttled scroll handler.
-- **Hero entrance cascade** — `.hero-copy > *` stagger (`fade-up`, plus a bolder `hero-title` scale keyframe on the `h1`) via per-child `animation-delay`.
-- **Pointer-reactive 3D tilt** — the player preview is wrapped in `.preview-tilt` (holds `perspective` + `justify-self`/`width`; the inner `.player-preview` keeps its `float-glow`/`fade-up`). `app.js` sets `--rx`/`--ry` from cursor position over `.hero`, gated on `(pointer: fine)`. Disabled (`perspective: none`) under the 900px breakpoint.
-- **Alternating directional feature reveals** — `.feature-row[data-reveal]` slides in from its own side (odd from left, even from right) toward the center timeline; node dots (`.feature-node span`) pop with an overshoot on `.revealed`.
-- **Scroll-linked timeline fill** — `.feature-timeline::after` is a green line scaled vertically by `--timeline-fill`, computed in `app.js` from the section's `getBoundingClientRect`.
-- **Primary button sheen** — `.button.primary::after` gradient sweep on hover.
-- **Reduced motion** — a comprehensive `@media (prefers-reduced-motion: reduce)` block neutralizes animation/transition duration **and delay** (the delay reset matters — otherwise delayed-entrance elements backwards-fill to their hidden start state and never appear), forces `[data-reveal]` visible, and hides the scroll bar / timeline fill. The `app.js` motion module bails entirely when reduced motion is requested.
+### Motion (Framer Motion)
 
-### Releases page (`/site/releases/`)
+`useReducedMotion`/`<MotionConfig reducedMotion="user">` gate all of it (transforms suppressed, content still fades in visible). Ambient CSS loops (`float-glow`, `ring-glow`, `screen-glow`, `border-shimmer`, marquee) remain in `global.css`; orchestrated motion is Framer.
 
-- `index.html` — static markup; OS filter tabs + stable-only toggle
-- `releases.js` — fetches all non-draft releases from GitHub API, renders paginated list
+- **Hero cascade** — `heroContainer`/`heroItem`/`heroTitle` variants with `staggerChildren`.
+- **Pointer 3D tilt** — `useTilt` (`useMotionValue` + `useSpring`) on the `.preview-tilt-inner` (rotateX/rotateY), origin from the preview's rect, handlers on the hero. `.preview-tilt` holds `perspective` (disabled under 900px).
+- **Scroll progress bar** — `ScrollProgress` uses `useScroll().scrollYProgress` → `scaleX`.
+- **Alternating feature reveals** — `FeatureTimeline` rows use `whileInView` + `revealFrom(±64)`; node dots use `nodePop`.
+- **Scroll-linked timeline fill** — `.timeline-fill` motion.div, `scaleY` from `useScroll({ target, offset })`.
+- **Releases list** — `AnimatePresence` keyed on `os-stable-page`, staggered `listItem`s.
 
-**Filters:**
-- **OS tabs** — All / Linux / Windows (filters by asset type)
-- **Stable only toggle** — pill toggle, checked by default; hides pre-releases when on; unchecking reveals pre-releases (shown with `badge-pre` badge)
+### Releases page (`/site/src/pages/ReleasesPage.jsx`)
 
-**JS state variables in `releases.js`:**
-- `currentOS` — active OS tab value (`"all"`, `"linux"`, `"windows"`)
-- `stableOnly` — boolean, `true` by default; toggled by `#stableOnlyToggle` checkbox
-- `currentPage` — current pagination page (resets to 1 on any filter change)
+- Fetches the static `releases.json` manifest (generated during deploy), renders a paginated list. Mirrors the old `releases.js` behaviour exactly.
+- **OS tabs** — All / Linux / Windows (filters by asset type); arrow-key nav.
+- **Stable only toggle** — checked by default; hides pre-releases (shown with `badge-pre` when off).
+- React state: `currentOS`, `stableOnly` (default `true`), `currentPage` (reset to 1 on any filter change), `status` (`loading`/`error`/`ready`). `PER_PAGE = 10`. Asset matching: `_amd64.deb` (linux), `win-x64..._setup.exe` (windows, with `.exe`/`.zip` fallbacks).
 
 ---
 

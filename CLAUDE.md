@@ -629,6 +629,18 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 - Contains: landing page, download links, documentation
 - Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, and Windows shows Microsoft Store + standalone `.exe`.
 
+### Motion (vanilla — no framework/build step)
+
+All motion is plain CSS + a small amount of JS in `site/app.js`; there is **no React/Framer Motion** (the site is static HTML served straight to GitHub Pages). The "ANIMATIONS & MOTION" block at the bottom of `site/styles.css` holds it all.
+
+- **Scroll progress bar** — `.scroll-progress` element created in `app.js`, width driven by a `--scroll-progress` CSS var (`scaleX`) updated in a rAF-throttled scroll handler.
+- **Hero entrance cascade** — `.hero-copy > *` stagger (`fade-up`, plus a bolder `hero-title` scale keyframe on the `h1`) via per-child `animation-delay`.
+- **Pointer-reactive 3D tilt** — the player preview is wrapped in `.preview-tilt` (holds `perspective` + `justify-self`/`width`; the inner `.player-preview` keeps its `float-glow`/`fade-up`). `app.js` sets `--rx`/`--ry` from cursor position over `.hero`, gated on `(pointer: fine)`. Disabled (`perspective: none`) under the 900px breakpoint.
+- **Alternating directional feature reveals** — `.feature-row[data-reveal]` slides in from its own side (odd from left, even from right) toward the center timeline; node dots (`.feature-node span`) pop with an overshoot on `.revealed`.
+- **Scroll-linked timeline fill** — `.feature-timeline::after` is a green line scaled vertically by `--timeline-fill`, computed in `app.js` from the section's `getBoundingClientRect`.
+- **Primary button sheen** — `.button.primary::after` gradient sweep on hover.
+- **Reduced motion** — a comprehensive `@media (prefers-reduced-motion: reduce)` block neutralizes animation/transition duration **and delay** (the delay reset matters — otherwise delayed-entrance elements backwards-fill to their hidden start state and never appear), forces `[data-reveal]` visible, and hides the scroll bar / timeline fill. The `app.js` motion module bails entirely when reduced motion is requested.
+
 ### Releases page (`/site/releases/`)
 
 - `index.html` — static markup; OS filter tabs + stable-only toggle

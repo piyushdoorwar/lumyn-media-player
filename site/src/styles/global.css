@@ -41,6 +41,10 @@ img {
   -webkit-user-drag: none;
 }
 
+button {
+  font-family: inherit;
+}
+
 .topbar {
   position: sticky;
   top: 0;
@@ -176,6 +180,7 @@ h3 {
   background: var(--button);
   color: var(--text);
   font-weight: 800;
+  cursor: pointer;
 }
 
 .button.primary {
@@ -249,6 +254,7 @@ h3 {
   display: grid;
   place-items: center;
   aspect-ratio: 16 / 9;
+  isolation: isolate;
   background:
     linear-gradient(145deg, rgba(58, 155, 75, 0.32), transparent 42%),
     linear-gradient(35deg, #151515 0%, #242424 46%, #101010 100%);
@@ -259,6 +265,21 @@ h3 {
   position: absolute;
   inset: 8%;
   border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: border-shimmer 5.5s ease-in-out infinite;
+}
+
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 28% 36%,
+    rgba(58, 155, 75, 0.22) 0%,
+    transparent 55%
+  );
+  animation: screen-glow 5s ease-in-out infinite alternate;
+  pointer-events: none;
+  z-index: -1;
 }
 
 .play-ring {
@@ -270,6 +291,7 @@ h3 {
   border: 2px solid rgba(247, 245, 243, 0.35);
   border-radius: 50%;
   background: rgba(17, 17, 17, 0.55);
+  animation: ring-glow 3.6s ease-in-out infinite;
 }
 
 .play-ring span {
@@ -354,25 +376,6 @@ h3 {
   font-size: clamp(24px, 3.5vw, 58px);
 }
 
-.features-banner {
-  display: block;
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto 56px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
-  overflow: hidden;
-}
-
-.features-banner img {
-  display: block;
-  width: 100%;
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
 .feature-timeline {
   position: relative;
   display: flex;
@@ -389,6 +392,20 @@ h3 {
   background: var(--line);
   transform: translateX(-50%);
   pointer-events: none;
+}
+
+.timeline-fill {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%);
+  transform-origin: top;
+  background: linear-gradient(180deg, var(--green-bright), var(--green));
+  box-shadow: 0 0 12px rgba(73, 179, 92, 0.45);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .feature-row {
@@ -572,10 +589,6 @@ h3 {
   overflow: hidden;
 }
 
-.download-panel[hidden] {
-  display: none;
-}
-
 .download-panel-copy {
   max-width: 460px;
 }
@@ -712,10 +725,6 @@ code {
   font-family: "Ubuntu Mono", "Cascadia Code", monospace;
 }
 
-.support {
-  display: none;
-}
-
 footer {
   display: flex;
   justify-content: space-between;
@@ -770,10 +779,6 @@ footer a:hover,
   background: rgba(0, 0, 0, 0.72);
   backdrop-filter: blur(4px);
   padding: 20px;
-}
-
-.modal-backdrop.hidden {
-  display: none;
 }
 
 .modal-box {
@@ -1117,10 +1122,6 @@ footer a:hover,
   background: var(--panel);
 }
 
-.releases-state.hidden {
-  display: none;
-}
-
 .releases-state a {
   color: var(--soft);
 }
@@ -1171,34 +1172,17 @@ footer a:hover,
   cursor: default;
 }
 
+.page-label {
+  font-size: 13px;
+  color: var(--muted);
+  min-width: 100px;
+  text-align: center;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   ANIMATIONS & MOTION
+   AMBIENT MOTION (CSS loops; orchestrated motion is handled by Framer Motion)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Hero entrance ──────────────────────────────────────────────────────── */
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to   { opacity: 1; transform: none; }
-}
-
-.hero-copy > * {
-  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.hero-copy .eyebrow { animation-delay: 0.05s; }
-.hero-copy h1 {
-  animation-name: hero-title;
-  animation-duration: 0.9s;
-  animation-delay: 0.12s;
-}
-.hero-copy .lede    { animation-delay: 0.28s; }
-.hero-copy .actions { animation-delay: 0.42s; }
-
-@keyframes hero-title {
-  from { opacity: 0; transform: translateY(42px) scale(0.96); }
-  to   { opacity: 1; transform: none; }
-}
-
-/* ── Player preview: entrance then floating glow ───────────────────────── */
 @keyframes float-glow {
   0%, 100% {
     transform: translateY(0px);
@@ -1211,12 +1195,9 @@ footer a:hover,
 }
 
 .player-preview {
-  animation:
-    fade-up 0.8s 0.14s cubic-bezier(0.22, 1, 0.36, 1) both,
-    float-glow 7s 1.2s ease-in-out infinite;
+  animation: float-glow 7s 1.2s ease-in-out infinite;
 }
 
-/* ── Play ring: glow pulse ──────────────────────────────────────────────── */
 @keyframes ring-glow {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(58, 155, 75, 0);
@@ -1228,102 +1209,71 @@ footer a:hover,
   }
 }
 
-.play-ring {
-  animation: ring-glow 3.6s ease-in-out infinite;
-}
-
-/* ── Screen: animated green glow overlay ───────────────────────────────── */
-.screen {
-  isolation: isolate;
-}
-
-.screen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 28% 36%,
-    rgba(58, 155, 75, 0.22) 0%,
-    transparent 55%
-  );
-  animation: screen-glow 5s ease-in-out infinite alternate;
-  pointer-events: none;
-  z-index: -1;
-}
-
 @keyframes screen-glow {
   from { opacity: 0.38; }
   to   { opacity: 1; }
 }
 
-/* ── Screen: border shimmer ─────────────────────────────────────────────── */
 @keyframes border-shimmer {
   0%, 100% { opacity: 0.08; }
   50%       { opacity: 0.26; }
 }
 
-.screen::before {
-  animation: border-shimmer 5.5s ease-in-out infinite;
+/* ── Scroll progress bar (scaleX driven by Framer Motion) ───────────────── */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--green), var(--green-bright));
+  box-shadow: 0 0 12px rgba(73, 179, 92, 0.5);
+  z-index: 60;
+  pointer-events: none;
 }
 
-/* ── Scroll reveal ──────────────────────────────────────────────────────── */
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 0.65s ease, transform 0.65s ease;
-  transition-delay: var(--reveal-delay, 0s);
+/* ── Player preview tilt (3D, driven by Framer Motion) ──────────────────── */
+.preview-tilt {
+  justify-self: end;
+  width: min(100%, 760px);
+  perspective: 1100px;
 }
 
-[data-reveal].revealed {
-  opacity: 1;
-  transform: none;
+.preview-tilt-inner {
+  width: 100%;
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
-/* ── Button hover transitions ───────────────────────────────────────────── */
-.button {
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.12s ease,
-    opacity 0.18s ease;
-}
-
-.button:not(.disabled):hover {
-  opacity: 0.9;
-}
-
+/* ── Button hover/sheen ─────────────────────────────────────────────────── */
 .button.primary:not(.disabled):hover {
   background: var(--green-bright);
 }
 
-.button:not(.disabled):active {
-  transform: scale(0.97);
-}
-
-/* ── Nav link underline slide ───────────────────────────────────────────── */
-nav a {
+.button.primary {
   position: relative;
-  transition: color 0.18s ease;
+  overflow: hidden;
 }
 
-nav a::after {
+.button.primary::after {
   content: "";
   position: absolute;
-  left: 0;
-  bottom: -3px;
-  width: 100%;
-  height: 1px;
-  background: var(--green-bright);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.2s ease;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
 }
 
-nav a:hover::after {
-  transform: scaleX(1);
+.button.primary:not(.disabled):hover::after {
+  transform: translateX(130%);
 }
-
-
 
 /* ── Feature marquee ────────────────────────────────────────────────────── */
 .marquee-wrap {
@@ -1367,7 +1317,7 @@ nav a:hover::after {
   background: var(--panel-2);
   font-size: 13px;
   font-weight: 500;
-  color: var(--fg);
+  color: var(--soft);
   white-space: nowrap;
   transition: border-color 0.18s ease, background 0.18s ease;
   cursor: default;
@@ -1387,13 +1337,7 @@ nav a:hover::after {
   filter: invert(52%) sepia(40%) saturate(500%) hue-rotate(90deg) brightness(90%);
 }
 
-.page-label {
-  font-size: 13px;
-  color: var(--muted);
-  min-width: 100px;
-  text-align: center;
-}
-
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .hero,
   .download {
@@ -1411,7 +1355,8 @@ nav a:hover::after {
     perspective: none;
   }
 
-  .feature-timeline::before { display: none; }
+  .feature-timeline::before,
+  .timeline-fill { display: none; }
 
   .feature-row {
     grid-template-columns: 1fr;
@@ -1479,122 +1424,15 @@ nav a:hover::after {
   }
 }
 
-/* ── Scroll progress bar ────────────────────────────────────────────────── */
-.scroll-progress {
-  position: fixed;
-  top: 0;
-  left: 0;
-  height: 3px;
-  width: 100%;
-  transform: scaleX(var(--scroll-progress, 0));
-  transform-origin: left;
-  background: linear-gradient(90deg, var(--green), var(--green-bright));
-  box-shadow: 0 0 12px rgba(73, 179, 92, 0.5);
-  z-index: 60;
-  pointer-events: none;
-}
-
-/* ── Player preview: pointer-reactive 3D tilt ───────────────────────────── */
-.preview-tilt {
-  justify-self: end;
-  width: min(100%, 760px);
-  perspective: 1100px;
-  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
-  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
-}
-
-.player-preview {
-  transform-style: preserve-3d;
-}
-
-/* ── Feature rows: alternating directional reveal ───────────────────────── */
-.feature-row[data-reveal] {
-  transition:
-    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: 0s;
-}
-
-.feature-row:nth-child(odd)[data-reveal]  { transform: translateX(-64px); }
-.feature-row:nth-child(even)[data-reveal] { transform: translateX(64px); }
-.feature-row[data-reveal].revealed { transform: none; }
-
-/* Node dot pops in with a slight overshoot as its row reveals */
-.feature-node span {
-  transform: scale(0);
-  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s;
-}
-
-.feature-row.revealed .feature-node span {
-  transform: scale(1);
-}
-
-/* ── Feature timeline: scroll-linked green fill ─────────────────────────── */
-.feature-timeline::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  transform: translateX(-50%) scaleY(var(--timeline-fill, 0));
-  transform-origin: top;
-  background: linear-gradient(180deg, var(--green-bright), var(--green));
-  box-shadow: 0 0 12px rgba(73, 179, 92, 0.45);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* ── Primary button: sheen sweep on hover ───────────────────────────────── */
-.button.primary {
-  position: relative;
-  overflow: hidden;
-}
-
-.button.primary::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    110deg,
-    transparent 35%,
-    rgba(255, 255, 255, 0.28) 50%,
-    transparent 65%
-  );
-  transform: translateX(-130%);
-  transition: transform 0.6s ease;
-  pointer-events: none;
-}
-
-.button.primary:not(.disabled):hover::after {
-  transform: translateX(130%);
-}
-
-/* ── Reduced motion: hold everything at its resting state ───────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
-    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
-    transition-delay: 0s !important;
     scroll-behavior: auto !important;
   }
 
-  [data-reveal] {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-
-  .feature-node span {
-    transform: scale(1) !important;
-  }
-
-  .feature-timeline::after,
-  .scroll-progress {
-    display: none !important;
-  }
+  .scroll-progress { display: none !important; }
 }

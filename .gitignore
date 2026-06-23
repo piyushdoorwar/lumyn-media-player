@@ -5,6 +5,7 @@ artifacts/
 publish/
 out/
 dist/
+node_modules/
 parts/
 prime/
 stage/

@@ -37,16 +37,29 @@ jobs:
         uses: actions/checkout@v5
         with:
           ref: ${{ github.event.repository.default_branch }}
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+      - name: Install site dependencies
+        working-directory: site
+        run: npm ci
       - name: Generate release manifest
         env:
           GITHUB_TOKEN: ${{ github.token }}
+        # Writes site/public/releases.json so Vite copies it into the build output
         run: node .github/scripts/generate-site-releases.js
+      - name: Build site
+        working-directory: site
+        run: npm run build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'site'
+          path: 'site/dist'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5

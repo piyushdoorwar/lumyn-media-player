@@ -3,7 +3,7 @@ const path = require("node:path");
 
 const repo = process.env.GITHUB_REPOSITORY || "piyushdoorwar/lumyn-media-player";
 const token = process.env.GITHUB_TOKEN;
-const outputPath = path.resolve(process.cwd(), "site/releases.json");
+const outputPath = path.resolve(process.cwd(), "site/public/releases.json");
 
 async function githubFetch(url) {
   const headers = {

@@ -154,6 +154,68 @@ hydrateDownloadLinks();
   setInterval(tick, 1000);
 })();
 
+// ── Bold motion: scroll progress, timeline fill, pointer tilt ─────────────
+(function () {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  // Scroll progress bar (top of the page)
+  const progress = document.createElement("div");
+  progress.className = "scroll-progress";
+  document.body.appendChild(progress);
+
+  const timeline = document.querySelector(".feature-timeline");
+  let ticking = false;
+
+  function onScroll() {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const doc = document.documentElement;
+      const max = doc.scrollHeight - doc.clientHeight;
+      const p = max > 0 ? doc.scrollTop / max : 0;
+      progress.style.setProperty("--scroll-progress", p.toFixed(4));
+
+      if (timeline) {
+        const r = timeline.getBoundingClientRect();
+        // Fill from when the section reaches mid-viewport until its end passes it.
+        const fill = (window.innerHeight * 0.5 - r.top) / r.height;
+        timeline.style.setProperty(
+          "--timeline-fill",
+          Math.max(0, Math.min(1, fill)).toFixed(4)
+        );
+      }
+      ticking = false;
+    });
+  }
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", onScroll, { passive: true });
+  onScroll();
+
+  // Pointer-reactive 3D tilt on the hero player preview
+  const tilt = document.querySelector(".preview-tilt");
+  const hero = document.querySelector(".hero");
+  if (tilt && hero && window.matchMedia("(pointer: fine)").matches) {
+    const MAX = 7; // degrees
+    let raf = 0;
+    hero.addEventListener("mousemove", (e) => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        const r = tilt.getBoundingClientRect();
+        const dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+        const dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+        tilt.style.setProperty("--ry", (dx * MAX).toFixed(2) + "deg");
+        tilt.style.setProperty("--rx", (-dy * MAX).toFixed(2) + "deg");
+        raf = 0;
+      });
+    });
+    hero.addEventListener("mouseleave", () => {
+      tilt.style.setProperty("--ry", "0deg");
+      tilt.style.setProperty("--rx", "0deg");
+    });
+  }
+})();
+
 // ── Player preview: subtitle rotator ─────────────────────────────────────
 (function () {
   const el = document.querySelector(".subtitle");

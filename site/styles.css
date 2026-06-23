@@ -200,8 +200,7 @@ h3 {
 }
 
 .player-preview {
-  width: min(100%, 760px);
-  justify-self: end;
+  width: 100%;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: 8px;
@@ -1182,8 +1181,21 @@ footer a:hover,
   to   { opacity: 1; transform: none; }
 }
 
-.hero-copy {
-  animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+.hero-copy > * {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.hero-copy .eyebrow { animation-delay: 0.05s; }
+.hero-copy h1 {
+  animation-name: hero-title;
+  animation-duration: 0.9s;
+  animation-delay: 0.12s;
+}
+.hero-copy .lede    { animation-delay: 0.28s; }
+.hero-copy .actions { animation-delay: 0.42s; }
+
+@keyframes hero-title {
+  from { opacity: 0; transform: translateY(42px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ── Player preview: entrance then floating glow ───────────────────────── */
@@ -1393,8 +1405,10 @@ nav a:hover::after {
     width: 100%;
   }
 
-  .player-preview {
+  .preview-tilt {
     justify-self: stretch;
+    width: 100%;
+    perspective: none;
   }
 
   .feature-timeline::before { display: none; }
@@ -1465,8 +1479,120 @@ nav a:hover::after {
   }
 }
 
+/* ── Scroll progress bar ────────────────────────────────────────────────── */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 100%;
+  transform: scaleX(var(--scroll-progress, 0));
+  transform-origin: left;
+  background: linear-gradient(90deg, var(--green), var(--green-bright));
+  box-shadow: 0 0 12px rgba(73, 179, 92, 0.5);
+  z-index: 60;
+  pointer-events: none;
+}
+
+/* ── Player preview: pointer-reactive 3D tilt ───────────────────────────── */
+.preview-tilt {
+  justify-self: end;
+  width: min(100%, 760px);
+  perspective: 1100px;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.player-preview {
+  transform-style: preserve-3d;
+}
+
+/* ── Feature rows: alternating directional reveal ───────────────────────── */
+.feature-row[data-reveal] {
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: 0s;
+}
+
+.feature-row:nth-child(odd)[data-reveal]  { transform: translateX(-64px); }
+.feature-row:nth-child(even)[data-reveal] { transform: translateX(64px); }
+.feature-row[data-reveal].revealed { transform: none; }
+
+/* Node dot pops in with a slight overshoot as its row reveals */
+.feature-node span {
+  transform: scale(0);
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.15s;
+}
+
+.feature-row.revealed .feature-node span {
+  transform: scale(1);
+}
+
+/* ── Feature timeline: scroll-linked green fill ─────────────────────────── */
+.feature-timeline::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  transform: translateX(-50%) scaleY(var(--timeline-fill, 0));
+  transform-origin: top;
+  background: linear-gradient(180deg, var(--green-bright), var(--green));
+  box-shadow: 0 0 12px rgba(73, 179, 92, 0.45);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Primary button: sheen sweep on hover ───────────────────────────────── */
+.button.primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.button.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.28) 50%,
+    transparent 65%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.6s ease;
+  pointer-events: none;
+}
+
+.button.primary:not(.disabled):hover::after {
+  transform: translateX(130%);
+}
+
+/* ── Reduced motion: hold everything at its resting state ───────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-reveal] {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .feature-node span {
+    transform: scale(1) !important;
+  }
+
+  .feature-timeline::after,
+  .scroll-progress {
+    display: none !important;
   }
 }

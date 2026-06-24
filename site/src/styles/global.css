@@ -1299,13 +1299,13 @@ footer a:hover,
    AMBIENT MOTION (CSS loops; orchestrated motion is handled by Framer Motion)
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/* Glow-only pulse — no translate, so the player doesn't drift under a still
+   cursor (which made the cursor flicker at its moving edges near the controls). */
 @keyframes float-glow {
   0%, 100% {
-    transform: translateY(0px);
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
   }
   50% {
-    transform: translateY(-8px);
     box-shadow: 0 38px 92px rgba(0, 0, 0, 0.54), 0 0 60px rgba(58, 155, 75, 0.1);
   }
 }

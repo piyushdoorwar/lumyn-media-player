@@ -634,7 +634,7 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 
 - **MPA, not SPA**: three HTML entries map 1:1 to existing URLs (`/`, `/releases/`, `/policy/`) so GitHub Pages serves native directories with **no SPA 404 fallback**. Inputs declared in `site/vite.config.js` (`base: '/lumyn-media-player/'`).
 - **`site/public/`** holds files copied verbatim into `dist/` root: `assets/`, `image-guard.js` (still a classic script referenced from each HTML head, MutationObserver covers React-rendered imgs), `lumyn-cast.css` (unused by the site but kept at its public URL for the external Cast receiver), `releases.json` (manifest), `.nojekyll`.
-- **`site/src/`**: `entries/{landing,releases,policy}.jsx` (one `createRoot` per HTML entry, each wrapped in `<MotionConfig reducedMotion="user">`), `pages/{LandingPage,ReleasesPage,PolicyPage}.jsx`, `components/` (TopBar, Footer, SupportModal, ScrollProgress, PlayerPreview, Marquee, FeatureTimeline, DownloadSection, CopyButton), `motion/motion.js` (variants + `useTilt`), `styles/global.css` (ported from the old `styles.css`) and `styles/policy.css` (the policy page's old inline CSS; the policy entry imports only this).
+- **`site/src/`**: `entries/{landing,releases,policy}.jsx` (one `createRoot` per HTML entry, each wrapped in `<MotionConfig reducedMotion="user">`), `pages/{LandingPage,ReleasesPage,PolicyPage}.jsx`, `components/` (TopBar, Footer, SupportModal, ScrollProgress, PlayerPreview, Marquee, BentoGrid, DownloadSection, CopyButton), `motion/motion.js` (variants + `useTilt`), `styles/global.css` (ported from the old `styles.css`) and `styles/policy.css` (the policy page's old inline CSS; the policy entry imports only this).
 - **Paths**: assets referenced from React via `asset(file)` (`src/lib/assets.js`) using `import.meta.env.BASE_URL`; runtime fetches use `` fetch(`${BASE}releases.json`) `` so they resolve under the Pages subpath from any page. HTML files use Vite's `%BASE_URL%` token for favicon + the public `image-guard.js`.
 - Local dev: `cd site && npm install && npm run dev`; build `npm run build` → `site/dist`; `npm run preview` serves under the base path.
 
@@ -645,9 +645,14 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 - **Hero cascade** — `heroContainer`/`heroItem`/`heroTitle` variants with `staggerChildren`.
 - **Pointer 3D tilt** — `useTilt` (`useMotionValue` + `useSpring`) on the `.preview-tilt-inner` (rotateX/rotateY), origin from the preview's rect, handlers on the hero. `.preview-tilt` holds `perspective` (disabled under 900px).
 - **Scroll progress bar** — `ScrollProgress` uses `useScroll().scrollYProgress` → `scaleX`.
-- **Alternating feature reveals** — `FeatureTimeline` rows use `whileInView` + `revealFrom(±64)`; node dots use `nodePop`.
-- **Scroll-linked timeline fill** — `.timeline-fill` motion.div, `scaleY` from `useScroll({ target, offset })`.
+- **Bento feature grid** — `BentoGrid` is the UI/UX-Pro-Max **Bento Box Grid** showcase (replaced the old vertical feature timeline). `.bento` is a flex column of `.bento-row`s (each a 2-col grid); rows reveal via `whileInView`, tiles lift on `whileHover={{ y: -4 }}` (CSS owns border/shadow hover, Framer owns the transform to avoid inline-transform conflicts). **Only two tile types:**
+  - **`.bento-big`** — big screenshot tile: title + description in `.bento-head`, the feature's `preview-*.svg` framed below in `.bento-frame` (image is `place-items:center` + `max-width/height`, i.e. *contained* — whole mockup, no crop, scaled per tile). Subtle green corner glow + larger title. `.compact` shrinks it for narrower columns.
+  - **`.bento-card`** (no `.bento-big`) — small icon + text tile: green accent chip, title, description; stacked two-per-`.bento-stack`.
+  - **Row layouts:** row 1 is a `.bento-row.trio` (`2fr 1fr 1fr`) = one big tile + two `.compact` image tiles in their own columns; the remaining rows alternate a big tile with a `.bento-stack` of two small tiles (big swaps sides via the `side` field). Collapses to one column ≤760px.
+  - Earlier failed iterations (kept here so they aren't reintroduced): screenshots as full-bleed `cover` backgrounds with overlaid text (collided with the mockups' own labels); and short/wide `media` tiles that cropped the contained image to just its header.
 - **Releases list** — `AnimatePresence` keyed on `os-stable-page`, staggered `listItem`s.
+
+> The hero also has a `.hero-trust` chip strip (Windows & Ubuntu / Powered by mpv / No telemetry / Source available). The old `FeatureTimeline` component is gone; some now-unused `.feature-timeline`/`.timeline-fill`/`.feature-*` rules linger in `global.css` and are safe to prune.
 
 ### Releases page (`/site/src/pages/ReleasesPage.jsx`)
 

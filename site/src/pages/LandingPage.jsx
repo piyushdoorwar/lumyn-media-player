@@ -14,7 +14,7 @@ import SupportModal from "../components/SupportModal.jsx";
 import ScrollProgress from "../components/ScrollProgress.jsx";
 import PlayerPreview from "../components/PlayerPreview.jsx";
 import Marquee from "../components/Marquee.jsx";
-import FeatureTimeline from "../components/FeatureTimeline.jsx";
+import BentoGrid from "../components/BentoGrid.jsx";
 import DownloadSection from "../components/DownloadSection.jsx";
 
 export default function LandingPage() {
@@ -65,6 +65,12 @@ export default function LandingPage() {
                 <span>View source</span>
               </motion.a>
             </motion.div>
+            <motion.div className="hero-trust" variants={heroItem}>
+              <span>Windows &amp; Ubuntu</span>
+              <span>Powered by mpv</span>
+              <span>No telemetry</span>
+              <span>Source available</span>
+            </motion.div>
           </motion.div>
 
           <motion.div className="preview-tilt" variants={heroItem} ref={tilt.ref}>
@@ -90,7 +96,7 @@ export default function LandingPage() {
             <p className="eyebrow">What it does</p>
             <h2>Built for watching, not managing.</h2>
           </motion.div>
-          <FeatureTimeline />
+          <BentoGrid />
         </section>
 
         <DownloadSection />

@@ -294,15 +294,6 @@ h3 {
   animation: ring-glow 3.6s ease-in-out infinite;
 }
 
-.play-ring span {
-  width: 0;
-  height: 0;
-  margin-left: 6px;
-  border-top: 17px solid transparent;
-  border-bottom: 17px solid transparent;
-  border-left: 27px solid var(--soft);
-}
-
 .subtitle {
   position: absolute;
   bottom: 26px;
@@ -357,6 +348,121 @@ h3 {
   border-radius: 3px;
   background: var(--soft);
   opacity: 0.82;
+}
+
+/* ── Interactive hero player preview ────────────────────────────────────── */
+button.play-ring {
+  cursor: pointer;
+  padding: 0;
+  color: var(--soft);
+}
+
+.play-ring svg {
+  width: 34px;
+  height: 34px;
+}
+
+.play-ring .play-tri {
+  margin-left: 4px;
+}
+
+/* Live equalizer (top-left of the screen) */
+.eq {
+  position: absolute;
+  top: 14px;
+  left: 16px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 18px;
+  z-index: 2;
+}
+
+.eq span {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--green-bright);
+  transform-origin: bottom;
+}
+
+/* Seekable timeline + hover thumbnail bubble */
+.timeline.seekable {
+  position: relative;
+  overflow: visible;
+  cursor: pointer;
+}
+
+.timeline.seekable span {
+  border-radius: 999px;
+}
+
+.seek-knob {
+  position: absolute;
+  top: 50%;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px rgba(58, 155, 75, 0.45);
+  pointer-events: none;
+}
+
+.seek-thumb {
+  position: absolute;
+  bottom: 100%;
+  margin-bottom: 12px;
+  transform: translateX(-50%);
+  width: 96px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.seek-thumb .thumb-img {
+  height: 54px;
+  border-radius: 6px;
+  border: 1px solid rgba(58, 155, 75, 0.55);
+  background:
+    radial-gradient(120% 120% at 30% 25%, rgba(58, 155, 75, 0.4), transparent 55%),
+    linear-gradient(35deg, #151515, #242424 50%, #101010);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.55);
+}
+
+.seek-thumb .thumb-time {
+  margin-top: 5px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.control-icons .ctrl-btn {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--soft);
+  opacity: 0.82;
+  cursor: pointer;
+}
+
+.control-icons .ctrl-btn:hover {
+  opacity: 1;
+  color: var(--text);
+}
+
+.control-icons .ctrl-btn.active {
+  color: var(--green-bright);
+  opacity: 1;
+}
+
+.control-icons .ctrl-btn svg {
+  width: 17px;
+  height: 17px;
 }
 
 .band {

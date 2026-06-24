@@ -65,12 +65,6 @@ export default function LandingPage() {
                 <span>View source</span>
               </motion.a>
             </motion.div>
-            <motion.div className="hero-trust" variants={heroItem}>
-              <span>Windows &amp; Ubuntu</span>
-              <span>Powered by mpv</span>
-              <span>No telemetry</span>
-              <span>Source available</span>
-            </motion.div>
           </motion.div>
 
           <motion.div className="preview-tilt" variants={heroItem} ref={tilt.ref}>

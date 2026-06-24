@@ -169,6 +169,7 @@ export default function PlayerPreview() {
           onMouseLeave={() => setHover(null)}
         >
           <motion.span
+            className="seek-fill"
             style={{ width: `${pct}%` }}
             animate={{ width: `${pct}%` }}
             transition={{ ease: "linear", duration: active ? 0.9 : 0.2 }}

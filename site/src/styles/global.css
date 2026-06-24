@@ -1528,7 +1528,7 @@ footer a:hover,
 /* Big screenshot tile: title + description on top, framed mockup below.
    The image is contained (whole mockup, scaled to the tile, no crop). */
 .bento-big {
-  min-height: 520px;
+  min-height: 540px;
   min-width: 0;
   justify-content: flex-start;
   padding: 0;
@@ -1557,11 +1557,10 @@ footer a:hover,
   overflow: hidden;
 }
 
-/* Just the screenshot with a green border — no backdrop. */
+/* Just the screenshot with a green border — no backdrop.
+   width:100% forces the SVG to scale up and fill the frame width. */
 .bento-big .bento-frame img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
+  width: 100%;
   height: auto;
   border-radius: 8px;
   border: 1px solid rgba(58, 155, 75, 0.45);

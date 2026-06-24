@@ -15,11 +15,13 @@ const ROWS = [
       {
         title: "Resume & Bookmarks",
         body: "Pick up where you left off, and jump to favourite moments.",
+        icon: "ic-bookmark.svg",
         media: "preview-bookmarks.svg",
       },
       {
         title: "Subtitle search",
         body: "Find and download matching subtitles in-app.",
+        icon: "ic-subtitle-search.svg",
         media: "preview-subtitle-search.svg",
       },
     ],
@@ -35,11 +37,13 @@ const ROWS = [
       {
         title: "Seek thumbnail preview",
         body: "Hover the seek bar to preview any moment.",
+        icon: "ic-screenshot.svg",
         media: "preview-seek-thumbnails.svg",
       },
       {
         title: "Recently played",
         body: "Thumbnails, resume progress, and cover art.",
+        icon: "ic-open-file.svg",
         media: "preview-recently-played.svg",
       },
     ],
@@ -55,11 +59,13 @@ const ROWS = [
       {
         title: "Watch modes & audio clarity",
         body: "Cinema, Theatre, and TV modes, plus voice-focused EQ.",
+        icon: "ic-fullscreen.svg",
         media: "preview-watch-modes.svg",
       },
       {
         title: "Focused controls",
         body: "Seek, speed, screenshots, looping, and track switching.",
+        icon: "ic-speed.svg",
         media: "preview-screenshot.svg",
       },
     ],
@@ -93,10 +99,13 @@ function Big({ title, body, media, compact }) {
   );
 }
 
-function Small({ title, body, media }) {
+function Small({ title, body, media, icon }) {
   return (
     <motion.article className="bento-card split" variants={item} whileHover={{ y: -4 }}>
       <div className="bento-text">
+        <div className="bento-icon">
+          <img src={asset(icon)} alt="" />
+        </div>
         <h3>{title}</h3>
         <p>{body}</p>
       </div>

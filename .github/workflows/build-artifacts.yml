@@ -69,11 +69,6 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
 
-      - name: Install native packaging inputs
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libmpv-dev
-
       - name: Build deb
         run: ./scripts/build-linux.sh
         env:

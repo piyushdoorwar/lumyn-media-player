@@ -332,7 +332,10 @@ public sealed class PlaybackService : IDisposable
     {
         if (_mpv == IntPtr.Zero || !_audioMetering) return -1;
 
-        var raw = GetString("af-metadata/viz/lavfi.astats.Overall.RMS_level");
+        // af-metadata is a structured property. Reading a nested metadata key
+        // as a raw string crashes libmpv 0.37 (Ubuntu 24.04); request the
+        // documented node map and select the key ourselves instead.
+        var raw = GetStringMapValue("af-metadata/viz", "lavfi.astats.Overall.RMS_level");
         if (string.IsNullOrEmpty(raw)
             || !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var db))
             return -1;
@@ -882,6 +885,54 @@ public sealed class PlaybackService : IDisposable
         }
     }
 
+    private string? GetStringMapValue(string propertyName, string key)
+    {
+        if (_mpv == IntPtr.Zero) return null;
+
+        unsafe
+        {
+            var node = new MpvNative.MpvNode();
+            var result = MpvNative.mpv_get_property(
+                _mpv,
+                propertyName,
+                MpvFormat.Node,
+                (IntPtr)(&node));
+
+            if (result < 0)
+                return null;
+
+            try
+            {
+                if (node.format != MpvFormat.NodeMap || node.value.list == IntPtr.Zero)
+                    return null;
+
+                var list = Marshal.PtrToStructure<MpvNative.MpvNodeList>(node.value.list);
+                if (list.num <= 0 || list.values == IntPtr.Zero || list.keys == IntPtr.Zero)
+                    return null;
+
+                var nodeSize = Marshal.SizeOf<MpvNative.MpvNode>();
+                for (var i = 0; i < list.num; i++)
+                {
+                    var keyPtr = Marshal.ReadIntPtr(list.keys, i * IntPtr.Size);
+                    if (!string.Equals(Marshal.PtrToStringUTF8(keyPtr), key, StringComparison.Ordinal))
+                        continue;
+
+                    var valuePtr = IntPtr.Add(list.values, i * nodeSize);
+                    var value = Marshal.PtrToStructure<MpvNative.MpvNode>(valuePtr);
+                    return value.format == MpvFormat.String && value.value.@string != IntPtr.Zero
+                        ? Marshal.PtrToStringUTF8(value.value.@string)
+                        : null;
+                }
+
+                return null;
+            }
+            finally
+            {
+                MpvNative.mpv_free_node_contents(&node);
+            }
+        }
+    }
+
     private MediaTrack[] GetTracks(string type)
     {
         if (_mpv == IntPtr.Zero) return [];
@@ -1024,7 +1075,10 @@ internal enum MpvFormat
     OsdString = 2,
     Flag = 3,
     Int64 = 4,
-    Double = 5
+    Double = 5,
+    Node = 6,
+    NodeArray = 7,
+    NodeMap = 8
 }
 
 internal enum MpvEventId
@@ -1164,6 +1218,31 @@ internal static partial class MpvNative
         public readonly int error;
     }
 
+    [StructLayout(LayoutKind.Explicit)]
+    public struct MpvNodeValue
+    {
+        [FieldOffset(0)] public IntPtr @string;
+        [FieldOffset(0)] public int flag;
+        [FieldOffset(0)] public long int64;
+        [FieldOffset(0)] public double @double;
+        [FieldOffset(0)] public IntPtr list;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MpvNode
+    {
+        public MpvNodeValue value;
+        public MpvFormat format;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public readonly struct MpvNodeList
+    {
+        public readonly int num;
+        public readonly IntPtr values;
+        public readonly IntPtr keys;
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct MpvOpenGlInitParams
     {
@@ -1222,6 +1301,9 @@ internal static partial class MpvNative
 
     [LibraryImport(Library)]
     public static partial void mpv_free(IntPtr data);
+
+    [LibraryImport(Library)]
+    public static unsafe partial void mpv_free_node_contents(MpvNode* node);
 
     [LibraryImport(Library)]
     public static partial int mpv_command(IntPtr ctx, IntPtr args);

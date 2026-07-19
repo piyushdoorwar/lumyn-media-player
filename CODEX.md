@@ -121,7 +121,7 @@ lumyn-media-player/
 │       └── ChromecastCastServiceTests.cs # cast format support decisions
 │
 ├── scripts/
-│   ├── build-linux.sh               # Linux .deb packaging (134 lines)
+│   ├── build-linux.sh               # Linux .deb packaging (266 lines)
 │   ├── build-windows.ps1            # Windows installer via Inno Setup (363 lines, PowerShell)
 │   └── build-snap.sh                # Snap / Ubuntu App Center packaging wrapper
 │
@@ -311,7 +311,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Metadata reading (title, artist, album)
 - Cover art detection and display
 - **YouTube-Music-style two-pane audio view** (when the queue has 2+ tracks): left ~70% shows the cover, title/artist, and the waveform below it; right ~30% is the queue ("Up next") with a cover thumbnail, title/artist, and duration per row. Click a row to play, drag the handle to reorder, hover/right-click to remove. The currently-playing row is highlighted with a soft Lumyn-green tint (`#1649B35C`) and light-green title. A single file keeps the centered hero (the queue column collapses via `Converters.QueueColumnWidth`). **The queue UI exists only in this audio view** — there is no video/sidebar queue. Per-row duration/title/artist are filled by `QueueMetadataProbe` on a single cancellable background task; covers reuse the recent-card audio pipeline (`ExtractAudioCoverArt` → thumbs cache). Cached in `MainViewModel._queueMeta` (`QueueTrackMeta`), surfaced through `PlaylistItem`. The underlying `_playlist` still drives next/previous-track navigation for both audio and video.
-- Audio-only mode shows cover art on the left and title/artist + a live music-reactive equalizer (`AudioBars`) on the right, over a subtle ambient backdrop (the cover art stretched `UniformToFill` with a `BlurEffect` + dark `#111111` scrim, shown only when `HasCoverArt`) — like YT/Apple Music. Bars are driven by real loudness, not a fixed animation: `PlaybackService.SetAudioMetering(true)` (toggled with audio mode) adds a labelled `@viz:lavfi=[astats=metadata=1:reset=1]` pass-through filter, and `GetAudioLevel()` reads the `lavfi.astats.Overall.RMS_level` value from the structured `af-metadata/viz` node map (dBFS) and normalizes it to 0..1. Do not read that key through a nested raw-string property: it null-dereferences libmpv 0.37 on Ubuntu 24.04. `AudioBars.LevelProvider` (wired in `MainWindow.axaml.cs`) pulls that level each frame; falls back to a decorative wave when no level is available. Note: `SetAudioFilter` re-asserts the `@viz` filter so audio-clarity changes don't drop metering.
+- Audio-only mode shows cover art on the left and title/artist + a live music-reactive equalizer (`AudioBars`) on the right, over a subtle ambient backdrop (the cover art stretched `UniformToFill` with a `BlurEffect` + dark `#111111` scrim, shown only when `HasCoverArt`) — like YT/Apple Music. Bars are driven by real loudness, not a fixed animation: `PlaybackService.SetAudioMetering(true)` (toggled with audio mode) adds a labelled `@viz:lavfi=[astats=metadata=1:reset=1]` pass-through filter, and `GetAudioLevel()` reads `af-metadata/viz/lavfi.astats.Overall.RMS_level` (dBFS) normalized to 0..1. `AudioBars.LevelProvider` (wired in `MainWindow.axaml.cs`) pulls that level each frame; falls back to a decorative wave when no level is available. Note: `SetAudioFilter` re-asserts the `@viz` filter so audio-clarity changes don't drop metering.
 
 ### Navigation & Persistence
 - Recent files list (last 12 files) with resume percentage badge (top-left), full-bleed thumbnail, and miniature progress bar at card bottom
@@ -367,8 +367,7 @@ All mpv interaction is in `PlaybackService.cs` via `LibraryImport` / P/Invoke.
 **Key bindings used:**
 ```
 mpv_create, mpv_initialize, mpv_set_option_string
-mpv_observe_property, mpv_set_property, mpv_get_property,
-mpv_free_node_contents
+mpv_observe_property, mpv_set_property, mpv_get_property
 mpv_command, mpv_wait_event (250ms timeout)
 mpv_render_context_create, mpv_render_context_render, mpv_render_context_free
 ```
@@ -487,25 +486,22 @@ dotnet build Lumyn.sln
 dotnet run --project src/Lumyn.App/Lumyn.App.csproj
 ```
 
-### Linux — `.deb` package (`scripts/build-linux.sh`, 134 lines)
+### Linux — `.deb` package (`scripts/build-linux.sh`, 266 lines)
 
 1. `dotnet publish -c Release -r linux-x64 --self-contained true`
-2. Build `.deb` structure:
-   - `/opt/lumyn/` — self-contained .NET application binaries
+2. Locate `libmpv.so.2` via `ldconfig` / filesystem search
+3. Bundle libmpv + all dependencies (`ldd`)
+4. Build `.deb` structure:
+   - `/opt/lumyn/` — binaries + bundled libs
    - `/usr/bin/lumyn` — symlink to launcher script
    - `/usr/share/applications/lumyn.desktop`
    - `/usr/share/icons/`
    - `/usr/share/mime/packages/` — MIME type definitions
-3. Declare the target distribution's `libmpv2` and desktop/audio libraries as
-   package dependencies. Do not bundle host native libraries or prepend an
-   app-local library directory to `LD_LIBRARY_PATH`; doing so can ship one
-   Ubuntu release's media stack into another and cause native ABI crashes.
-4. `dpkg-deb` → `lumyn_X.X.X_amd64.deb`
-5. Supports both `amd64` and `arm64`
+5. `dpkg-deb` → `lumyn_X.X.X_amd64.deb`
+6. Supports both `amd64` and `arm64`
 
-**Dependencies needed on build machine**: `dpkg`
-**Runtime package dependencies**: `libmpv2` plus the native desktop, OpenGL,
-and audio libraries listed in the generated control file
+**Dependencies needed on build machine**: `libmpv-dev`, `dpkg`
+**Runtime package dependencies**: none (libmpv bundled; no `Depends:` field in control file)
 
 ### Linux — Ubuntu PPA (`packaging/debian/` + `.github/workflows/release.yml`)
 
@@ -558,10 +554,7 @@ File association notes:
 - Build installs .NET 10 via `dotnet-install.sh` inside the Snapcraft build part so the snap is not blocked by host SDK availability
 - Stages `libmpv2` and desktop/audio/OpenGL runtime libraries through `stage-packages`
 - `packaging/snap/lumyn-launcher` constructs runtime library paths from `$SNAP`, `uname -m`, and the architecture triplet. Keep `$SNAP/opt/lumyn` and `$SNAP/opt/lumyn/lib` first so bundled `libmpv` wins over host libraries.
-- On Linux, `PlaybackService` tries app-local bundled `libmpv` paths before
-  generic system names for strict snap confinement. The `.deb` intentionally
-  has no app-local `libmpv`, so the same resolver uses Ubuntu's packaged
-  `libmpv2` and matching dependency stack.
+- On Linux, `PlaybackService` intentionally tries app-local bundled `libmpv` paths before generic system names. This prevents `.deb` installs from silently masking packaging bugs with host libraries and is required for strict snap confinement.
 - Declared plugs include `home`, `removable-media`, `audio-playback`, `opengl`, `network`, `network-bind`, `screen-inhibit-control`, `wayland`, and `x11`
 - `removable-media` and Chromecast/mDNS-related access may need store review or manual connection depending on final Snap Store policy and interface behavior
 
@@ -586,7 +579,7 @@ lumyn
 | `linux-snap` | ubuntu-latest | `lumyn-linux-amd64-snap` (*.snap) |
 | `windows-installer` | windows-latest | `lumyn-windows-x64-installer` (*_setup.exe) |
 
-All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v5` (key: OS+arch+hash of `Directory.Packages.props`/`**/*.csproj`). The workflow has a `concurrency` group that cancels superseded runs. The arm64 `.deb` builds on a native arm64 runner so the self-contained .NET publish contains the correct native runtime assets.
+All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (key: OS+arch+hash of `Directory.Packages.props`/`**/*.csproj`). The workflow has a `concurrency` group that cancels superseded runs. The arm64 `.deb` must build on a native arm64 runner because `build-linux.sh` bundles the host-architecture `libmpv` (via `ldd`); cross-building on amd64 would ship a broken arm64 package.
 
 ### `release.yml` — triggered on `v*` tag push or manual dispatch
 

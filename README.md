@@ -29,9 +29,7 @@ Website: https://piyushdoorwar.github.io/lumyn-media-player/
 
 The Ubuntu package is the main supported build right now. It is intended for recent Ubuntu desktop releases and works best on a modern GNOME desktop session. Wayland is fine; X11 should also work.
 
-The release packages bundle the app runtime. The Ubuntu `.deb` uses the
-distribution's `libmpv2` package so mpv and its media libraries match the host
-Ubuntu release; the strictly confined snap stages its own matching mpv stack.
+The release packages bundle the app runtime and mpv pieces needed for playback.
 
 For development on Ubuntu, install the .NET SDK and libmpv development package.
 

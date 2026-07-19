@@ -99,6 +99,11 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
 
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpv2
+
       - name: Build deb
         run: ./scripts/build-linux.sh
 

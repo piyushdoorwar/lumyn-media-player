@@ -113,7 +113,6 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _positionTimer.Stop();
-            _hideControlsTimer.Stop();
             _glowTimer.Stop();
             _glowLerpTimer.Stop();
             ClearThumbBitmapCache();
@@ -1074,19 +1073,13 @@ public partial class MainWindow : Window
                 return;
             }
 
-            var tmpPath = Path.Combine(
-                Path.GetTempPath(), $"lumyn-glow-{Environment.ProcessId}-{Guid.NewGuid():N}.ppm");
-            try
-            {
-                var ok = await Task.Run(() => vm.TakeGlowSnapshot(tmpPath));
-                if (!ok) return;
+            var tmpPath = Path.Combine(Path.GetTempPath(), "lumyn_glow.ppm");
+            var ok = await Task.Run(() => vm.TakeGlowSnapshot(tmpPath));
+            if (!ok) return;
 
-                _targetGlowColor = await Task.Run(() => SamplePpmEdgeColor(tmpPath));
-            }
-            finally
-            {
-                try { File.Delete(tmpPath); } catch { }
-            }
+            var color = await Task.Run(() => SamplePpmEdgeColor(tmpPath));
+            _targetGlowColor = color;
+            try { File.Delete(tmpPath); } catch { }
         }
         finally
         {
@@ -1393,7 +1386,7 @@ public partial class MainWindow : Window
 
         var resume = ViewModel.IsPlaying;
         if (resume)
-            await ViewModel.PauseActivePlaybackAsync();
+            ViewModel.PausePlayback();
 
         try
         {
@@ -1402,7 +1395,7 @@ public partial class MainWindow : Window
         finally
         {
             if (resume && ViewModel.HasMedia)
-                await ViewModel.ResumeActivePlaybackAsync();
+                ViewModel.ResumePlayback();
 
             Focus();
             ShowControls();

@@ -13,17 +13,9 @@ public partial class SubtitleSearchDialog : Window
     private CancellationTokenSource?       _cts;
     private SubtitleSearchResult?          _selected;
 
-    public SubtitleSearchDialog() : this("") { }
-
-    public SubtitleSearchDialog(string initialQuery)
+    public SubtitleSearchDialog(string initialQuery = "")
     {
         AvaloniaXamlLoader.Load(this);
-        Closed += (_, _) =>
-        {
-            _cts?.Cancel();
-            _cts?.Dispose();
-            _cts = null;
-        };
 
         // Populate language ComboBox
         var langBox = this.FindControl<ComboBox>("LanguageBox")!;
@@ -80,19 +72,15 @@ public partial class SubtitleSearchDialog : Window
         var langIdx = this.FindControl<ComboBox>("LanguageBox")!.SelectedIndex;
         var (_, osCode, pnCode) = SubtitleSearchService.Languages[Math.Max(0, langIdx)];
 
-        var previous = _cts;
-        var current = new CancellationTokenSource();
-        _cts = current;
-        previous?.Cancel();
-        previous?.Dispose();
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
 
         SetStatus("Searching…", loading: true);
         SetResultsEnabled(false);
 
         try
         {
-            var results = await _service.SearchAsync(query, osCode, pnCode, current.Token);
-            if (!ReferenceEquals(_cts, current) || current.IsCancellationRequested) return;
+            var results = await _service.SearchAsync(query, osCode, pnCode, _cts.Token);
             var list = this.FindControl<ListBox>("ResultsList")!;
             list.ItemsSource = results;
 
@@ -104,13 +92,11 @@ public partial class SubtitleSearchDialog : Window
         catch (OperationCanceledException) { /* search was cancelled — no message */ }
         catch (Exception ex)
         {
-            if (!ReferenceEquals(_cts, current)) return;
             SetStatus($"Search failed: {ex.Message}", loading: false);
         }
         finally
         {
-            if (ReferenceEquals(_cts, current))
-                SetResultsEnabled(true);
+            SetResultsEnabled(true);
         }
     }
 
@@ -119,26 +105,17 @@ public partial class SubtitleSearchDialog : Window
     private async void DownloadAndClose()
     {
         if (_selected is null) return;
-        var selected = _selected;
-        var previous = _cts;
-        var current = new CancellationTokenSource();
-        _cts = current;
-        previous?.Cancel();
-        previous?.Dispose();
 
-        SetStatus($"Downloading {selected.FileName}…", loading: true);
+        SetStatus($"Downloading {_selected.FileName}…", loading: true);
         SetControlsEnabled(false);
 
         try
         {
-            var path = await _service.DownloadAsync(selected, current.Token);
-            if (!ReferenceEquals(_cts, current) || current.IsCancellationRequested) return;
+            var path = await _service.DownloadAsync(_selected);
             Close(path); // returns the local .srt/.ass path to SubtitleSettingsDialog
         }
-        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            if (!ReferenceEquals(_cts, current)) return;
             SetStatus($"Download failed: {ex.Message}", loading: false);
             SetControlsEnabled(true);
         }

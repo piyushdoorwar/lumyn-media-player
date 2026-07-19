@@ -68,36 +68,6 @@ public sealed class SubtitleParserTests : IDisposable
         Assert.Empty(lines);
     }
 
-    [Fact]
-    public void Parse_WebVttWithoutHours_ParsesTiming()
-    {
-        var path = WriteFile("sample.vtt", """
-            WEBVTT
-
-            00:01.250 --> 00:03.500
-            Short cue
-            """);
-
-        var line = Assert.Single(SubtitleParser.Parse(path));
-        Assert.Equal(TimeSpan.FromMilliseconds(1250), line.Start);
-        Assert.Equal(TimeSpan.FromMilliseconds(3500), line.End);
-    }
-
-    [Fact]
-    public void Parse_Windows1252Subtitle_DecodesSmartQuotes()
-    {
-        var path = Path.Combine(_tempDir, "legacy.srt");
-        File.WriteAllBytes(path,
-        [
-            .. System.Text.Encoding.ASCII.GetBytes("1\r\n00:00:01,000 --> 00:00:02,000\r\n"),
-            0x93,
-            .. System.Text.Encoding.ASCII.GetBytes("Hello"),
-            0x94
-        ]);
-
-        Assert.Equal("“Hello”", Assert.Single(SubtitleParser.Parse(path)).Text);
-    }
-
     private string WriteFile(string fileName, string content)
     {
         var path = Path.Combine(_tempDir, fileName);

@@ -19,16 +19,11 @@ namespace Lumyn.Core.Services;
 public sealed class SubtitleSearchService
 {
     private static readonly TimeSpan ProviderTimeout = TimeSpan.FromSeconds(6);
-    private const int MaxDownloadBytes = 16 * 1024 * 1024;
-    private const int MaxExtractedBytes = 64 * 1024 * 1024;
     private static readonly HttpClient Http = CreateClient();
-    private readonly string _tempDirectory = Path.Combine(
-        Path.GetTempPath(), "Lumyn", "subtitles", $"session-{Guid.NewGuid():N}");
 
     private static HttpClient CreateClient()
     {
-        var handler = new HttpClientHandler { AllowAutoRedirect = false };
-        var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(20) };
+        var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "TemporaryUserAgent");
         client.DefaultRequestHeaders.TryAddWithoutValidation("X-User-Agent", "TemporaryUserAgent");
         client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -130,7 +125,6 @@ public sealed class SubtitleSearchService
             var json = await response.Content.ReadAsStringAsync(ct);
             return ParseOpenSubtitles(json);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { return []; }
     }
 
@@ -180,7 +174,6 @@ public sealed class SubtitleSearchService
             var json = await response.Content.ReadAsStringAsync(ct);
             return ParsePodnapisi(json);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { return []; }
     }
 
@@ -252,7 +245,6 @@ public sealed class SubtitleSearchService
             var html = await Http.GetStringAsync($"https://yts-subs.com/movie-imdb/{imdbId}", ct);
             return ParseYtsSubs(html, langSlug);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { return []; }
     }
 
@@ -295,7 +287,6 @@ public sealed class SubtitleSearchService
                     return $"tt{id:0000000}";
             }
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch { }
 
         return null;
@@ -359,13 +350,14 @@ public sealed class SubtitleSearchService
     /// </summary>
     public async Task<string> DownloadAsync(SubtitleSearchResult result, CancellationToken ct = default)
     {
-        Directory.CreateDirectory(_tempDirectory);
+        var tempDir = Path.Combine(Path.GetTempPath(), "Lumyn", "subtitles");
+        Directory.CreateDirectory(tempDir);
 
-        var bytes     = await DownloadBytesAsync(result, ct);
+        var bytes     = await Http.GetByteArrayAsync(result.DownloadUrl, ct);
         var safeFile  = SanitizeFileName(result.FileName);
         if (string.IsNullOrWhiteSpace(Path.GetExtension(safeFile)))
             safeFile += $".{result.Format.ToLowerInvariant()}";
-        var destPath  = Path.Combine(_tempDirectory, $"{Guid.NewGuid():N}-{safeFile}");
+        var destPath  = Path.Combine(tempDir, safeFile);
 
         switch (result.Source)
         {
@@ -389,70 +381,20 @@ public sealed class SubtitleSearchService
         return destPath;
     }
 
-    private static async Task<byte[]> DownloadBytesAsync(SubtitleSearchResult result, CancellationToken ct)
-    {
-        if (!Uri.TryCreate(result.DownloadUrl, UriKind.Absolute, out var uri) || !IsAllowedDownloadUri(uri, result.Source))
-            throw new InvalidOperationException("The subtitle provider returned an unsafe download URL.");
-
-        for (var redirects = 0; redirects <= 5; redirects++)
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Get, uri);
-            using var response = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-            if ((int)response.StatusCode is >= 300 and < 400)
-            {
-                var location = response.Headers.Location
-                    ?? throw new HttpRequestException("Subtitle download redirect had no destination.");
-                uri = location.IsAbsoluteUri ? location : new Uri(uri, location);
-                if (!IsAllowedDownloadUri(uri, result.Source))
-                    throw new InvalidOperationException("The subtitle provider redirected to an unsafe host.");
-                continue;
-            }
-
-            response.EnsureSuccessStatusCode();
-            if (response.Content.Headers.ContentLength is > MaxDownloadBytes)
-                throw new InvalidDataException("The subtitle download is too large.");
-
-            await using var input = await response.Content.ReadAsStreamAsync(ct);
-            using var output = new MemoryStream();
-            await CopyLimitedAsync(input, output, MaxDownloadBytes, ct);
-            return output.ToArray();
-        }
-
-        throw new HttpRequestException("The subtitle download redirected too many times.");
-    }
-
-    private static bool IsAllowedDownloadUri(Uri uri, string source)
-    {
-        if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) ||
-            !string.IsNullOrEmpty(uri.UserInfo))
-            return false;
-
-        var host = uri.IdnHost;
-        return source switch
-        {
-            "OpenSubtitles" => HostMatches(host, "opensubtitles.org"),
-            "Podnapisi" => HostMatches(host, "podnapisi.net"),
-            "YTS Subtitles" => HostMatches(host, "yts-subs.com"),
-            _ => false
-        };
-    }
-
-    private static bool HostMatches(string host, string suffix) =>
-        string.Equals(host, suffix, StringComparison.OrdinalIgnoreCase) ||
-        host.EndsWith('.' + suffix, StringComparison.OrdinalIgnoreCase);
-
     private static async Task ExtractGzipAsync(byte[] bytes, string destPath, CancellationToken ct)
     {
-        if (bytes.Length < 2 || bytes[0] != 0x1F || bytes[1] != 0x8B)
+        try
         {
-            await File.WriteAllBytesAsync(destPath, bytes, ct);
-            return;
+            using var ms  = new MemoryStream(bytes);
+            using var gz  = new GZipStream(ms, CompressionMode.Decompress);
+            await using var fs = File.Create(destPath);
+            await gz.CopyToAsync(fs, ct);
         }
-
-        using var ms  = new MemoryStream(bytes);
-        using var gz  = new GZipStream(ms, CompressionMode.Decompress);
-        await using var fs = new FileStream(destPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        await CopyLimitedAsync(gz, fs, MaxExtractedBytes, ct);
+        catch (InvalidDataException)
+        {
+            // Content is not gzip — save raw
+            await File.WriteAllBytesAsync(destPath, bytes, ct);
+        }
     }
 
     private static async Task ExtractZipAsync(byte[] bytes, string destPath, CancellationToken ct)
@@ -470,27 +412,10 @@ public sealed class SubtitleSearchService
 
         if (entry is null)
             throw new InvalidDataException("No subtitle file found inside the downloaded archive.");
-        if (entry.Length > MaxExtractedBytes)
-            throw new InvalidDataException("The extracted subtitle is too large.");
 
-        await using var fs = new FileStream(destPath, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        await using var fs = File.Create(destPath);
         await using var es = entry.Open();
-        await CopyLimitedAsync(es, fs, MaxExtractedBytes, ct);
-    }
-
-    private static async Task CopyLimitedAsync(Stream input, Stream output, int maximumBytes, CancellationToken ct)
-    {
-        var buffer = new byte[64 * 1024];
-        var total = 0;
-        while (true)
-        {
-            var read = await input.ReadAsync(buffer, ct);
-            if (read == 0) return;
-            total = checked(total + read);
-            if (total > maximumBytes)
-                throw new InvalidDataException("The subtitle data exceeds the allowed size.");
-            await output.WriteAsync(buffer.AsMemory(0, read), ct);
-        }
+        await es.CopyToAsync(fs, ct);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

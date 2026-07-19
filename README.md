@@ -82,4 +82,4 @@ Build the Windows portable `.zip` from Windows PowerShell:
 
 GitHub Actions also builds release artifacts through the `Build release artifacts` workflow.
 
-Release package versions come from the pushed `v*` tag or the validated manual release-workflow input. Local packaging can set `VERSION` explicitly.
+Package versions use the base version in `VERSION` plus the GitHub Actions run number, for example `0.1.42`. Set `VERSION` in the environment to override the full package version manually.

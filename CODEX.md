@@ -32,7 +32,7 @@
 - **Repo**: `lumyn-media-player`
 - **Owner/Author**: Piyush Doorwar
 - **License**: Source available — non-commercial personal use
-- **Version source**: release tag or the release workflow's validated manual input
+- **Current version base**: `1.0` (see `VERSION` file at root)
 - **Website**: deployed to GitHub Pages from `/site/`
 
 Design philosophy: quiet, distraction-free interface. No bloat. Let the media play.
@@ -45,7 +45,7 @@ Design philosophy: quiet, distraction-free interface. No bloat. Let the media pl
 |---|---|
 | Language | C# (latest, nullable enabled, implicit usings) |
 | Runtime | .NET 10.0 |
-| UI Framework | Avalonia UI 12.0.4 |
+| UI Framework | Avalonia UI 11.3.14 |
 | UI Theme | Fluent (Windows 11 style, dark) |
 | Media Engine | mpv / libmpv (P/Invoke native bindings) |
 | Rendering | OpenGL via mpv render context |
@@ -64,6 +64,7 @@ lumyn-media-player/
 ├── Lumyn.sln                        # Visual Studio solution (3 projects)
 ├── Directory.Build.props            # Global build config (net10.0, nullable, etc.)
 ├── Directory.Packages.props         # Central NuGet version management
+├── VERSION                          # Base version string, currently "1.0"
 │
 ├── docs/
 │   └── release/
@@ -147,10 +148,10 @@ lumyn-media-player/
 ### NuGet Dependencies (`Directory.Packages.props`)
 
 ```
-Avalonia             12.0.4
-Avalonia.Desktop     12.0.4
-Avalonia.Themes.Fluent  12.0.4
-Avalonia.Fonts.Inter    12.0.4
+Avalonia             11.3.14
+Avalonia.Desktop     11.3.14
+Avalonia.Themes.Fluent  11.3.14
+Avalonia.Fonts.Inter    11.3.14
 ```
 
 `Lumyn.Core` NuGet dependencies:

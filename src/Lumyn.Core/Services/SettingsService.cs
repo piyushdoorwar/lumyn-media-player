@@ -60,9 +60,9 @@ public sealed class SettingsService : IDisposable
         _audioSettings    = settings.AudioSettings;
         _bookmarks        = settings.Bookmarks;
         _uiVisibility     = settings.UiVisibility;
-        LastVolume        = Math.Clamp(settings.LastVolume, 0, 150);
-        LastSpeed         = Math.Clamp(settings.LastSpeed, 0.25f, 4.0f);
-        SeekStep          = settings.SeekStep is 5 or 10 or 30 ? settings.SeekStep : 5;
+        LastVolume        = settings.LastVolume;
+        LastSpeed         = settings.LastSpeed;
+        SeekStep          = settings.SeekStep;
         ResumeAudio       = settings.ResumeAudio;
         ResumeVideo       = settings.ResumeVideo;
         _windowGeometry   = settings.WindowGeometry;
@@ -70,10 +70,7 @@ public sealed class SettingsService : IDisposable
         _flushTimer = new Timer(_ => FlushToDisk(), null, Timeout.Infinite, Timeout.Infinite);
     }
 
-    public IReadOnlyList<string> RecentFiles
-    {
-        get { lock (_ioLock) return _recentFiles.ToArray(); }
-    }
+    public IReadOnlyList<string> RecentFiles => _recentFiles.AsReadOnly();
 
     public UiVisibilitySettings UiVisibility => _uiVisibility.Clone();
 
@@ -120,21 +117,16 @@ public sealed class SettingsService : IDisposable
 
     public void AddRecentFile(string filePath)
     {
-        lock (_ioLock)
-        {
-            _recentFiles.Remove(filePath);
-            _recentFiles.Insert(0, filePath);
-            if (_recentFiles.Count > MaxRecentFiles)
-                _recentFiles.RemoveRange(MaxRecentFiles, _recentFiles.Count - MaxRecentFiles);
-        }
+        _recentFiles.Remove(filePath);
+        _recentFiles.Insert(0, filePath);
+        if (_recentFiles.Count > MaxRecentFiles)
+            _recentFiles.RemoveRange(MaxRecentFiles, _recentFiles.Count - MaxRecentFiles);
         Save();
     }
 
     public void RemoveRecentFile(string filePath)
     {
-        bool removed;
-        lock (_ioLock) removed = _recentFiles.Remove(filePath);
-        if (removed)
+        if (_recentFiles.Remove(filePath))
             Save();
     }
 
@@ -181,9 +173,7 @@ public sealed class SettingsService : IDisposable
     public void ClearResumePosition(string? filePath)
     {
         if (string.IsNullOrWhiteSpace(filePath)) return;
-        var key = KeyForFile(filePath);
-        _resumePositions.Remove(key);
-        _resumeDurations.Remove(key);
+        _resumePositions.Remove(KeyForFile(filePath));
         Save();
     }
 
@@ -230,20 +220,7 @@ public sealed class SettingsService : IDisposable
         try
         {
             var json = File.ReadAllText(_settingsPath);
-            var settings = JsonSerializer.Deserialize<SettingsFile>(json) ?? new SettingsFile();
-            settings.ResumePositions ??= [];
-            settings.ResumeDurations ??= [];
-            settings.RecentFiles ??= [];
-            settings.SubtitleSettings ??= [];
-            settings.AudioSettings ??= [];
-            settings.Bookmarks ??= [];
-            settings.UiVisibility ??= new UiVisibilitySettings();
-            settings.RecentFiles = settings.RecentFiles
-                .Where(path => !string.IsNullOrWhiteSpace(path))
-                .Distinct(StringComparer.Ordinal)
-                .Take(MaxRecentFiles)
-                .ToList();
-            return settings;
+            return JsonSerializer.Deserialize<SettingsFile>(json) ?? new SettingsFile();
         }
         catch
         {
@@ -253,26 +230,27 @@ public sealed class SettingsService : IDisposable
 
     private void Save()
     {
-        lock (_ioLock)
+        var settings = new SettingsFile
         {
-            var settings = new SettingsFile
-            {
-                ResumePositions  = _resumePositions,
-                ResumeDurations  = _resumeDurations,
-                RecentFiles      = _recentFiles,
-                SubtitleSettings = _subtitleSettings,
-                AudioSettings    = _audioSettings,
-                Bookmarks        = _bookmarks,
-                UiVisibility     = _uiVisibility,
-                WindowGeometry   = _windowGeometry,
-                LastVolume       = LastVolume,
-                LastSpeed        = LastSpeed,
-                SeekStep         = SeekStep,
-                ResumeAudio      = ResumeAudio,
-                ResumeVideo      = ResumeVideo
-            };
-            _pendingJson = JsonSerializer.Serialize(settings, WriteOptions);
-        }
+            ResumePositions  = _resumePositions,
+            ResumeDurations  = _resumeDurations,
+            RecentFiles      = _recentFiles,
+            SubtitleSettings = _subtitleSettings,
+            AudioSettings    = _audioSettings,
+            Bookmarks        = _bookmarks,
+            UiVisibility     = _uiVisibility,
+            WindowGeometry   = _windowGeometry,
+            LastVolume       = LastVolume,
+            LastSpeed        = LastSpeed,
+            SeekStep         = SeekStep,
+            ResumeAudio      = ResumeAudio,
+            ResumeVideo      = ResumeVideo
+        };
+        // Serialize on the calling thread (the dictionaries are only mutated
+        // here), then hand the string off to the debounced disk writer.
+        var json = JsonSerializer.Serialize(settings, WriteOptions);
+        lock (_ioLock)
+            _pendingJson = json;
         _flushTimer.Change(FlushDebounceMs, Timeout.Infinite);
     }
 
@@ -288,23 +266,27 @@ public sealed class SettingsService : IDisposable
 
     private void FlushToDisk()
     {
+        string? json;
         lock (_ioLock)
         {
-            var json = _pendingJson;
+            json = _pendingJson;
             _pendingJson = null;
-            if (json is null) return;
+        }
+        if (json is null) return;
 
-            try
-            {
-                // Atomic replace so a crash mid-write can't leave a truncated file.
-                var tmp = _settingsPath + ".tmp";
-                File.WriteAllText(tmp, json);
-                File.Move(tmp, _settingsPath, overwrite: true);
-            }
-            catch
-            {
+        try
+        {
+            // Atomic replace so a crash mid-write can't leave a truncated file.
+            var tmp = _settingsPath + ".tmp";
+            File.WriteAllText(tmp, json);
+            File.Move(tmp, _settingsPath, overwrite: true);
+        }
+        catch
+        {
+            // Don't drop the data on a transient write failure — keep the most
+            // recent pending payload so the next flush retries.
+            lock (_ioLock)
                 _pendingJson ??= json;
-            }
         }
     }
 
@@ -338,7 +320,7 @@ public sealed class SettingsService : IDisposable
         try
         {
             var kept = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var f in RecentFiles)
+            foreach (var f in _recentFiles)
                 kept.Add(GetThumbnailPath(f));
 
             foreach (var file in Directory.EnumerateFiles(_thumbsDir, "*.jpg"))

@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Security.Cryptography;
 using System.Text;
 using GoogleCast;
 using GoogleCast.Channels;
@@ -35,6 +34,7 @@ public sealed class ChromecastCastService : IDisposable
     private string? _servedFilePath;
     private string? _servedSubtitlePath;
     private string? _servedCoverArtPath;
+    private string? _servedSubtitleVttContent;
     private Uri? _servedFileUri;
     private Uri? _servedSubtitleUri;
     private Uri? _servedCoverArtUri;
@@ -45,22 +45,18 @@ public sealed class ChromecastCastService : IDisposable
 
     public ChromecastDevice? ActiveDevice => _activeDevice;
     public Uri? ServedFileUri => _servedFileUri;
-    public event EventHandler? Disconnected;
 
     public async Task<IReadOnlyList<ChromecastDevice>> DiscoverAsync(TimeSpan timeout, CancellationToken cancellationToken = default)
     {
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        linked.CancelAfter(timeout);
         try
         {
-            var receivers = await new DeviceLocator().FindReceiversAsync()
-                .WaitAsync(timeout, cancellationToken);
+            var receivers = await new DeviceLocator().FindReceiversAsync();
             return receivers
                 .Select(r => new ChromecastDevice(r.Id, r.FriendlyName, r))
                 .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase)
                 .ToList();
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
         }
         catch
         {
@@ -79,15 +75,13 @@ public sealed class ChromecastCastService : IDisposable
     {
         await DisconnectSenderAsync();
 
-        try
-        {
         var (mediaUri, subtitleUri, coverArtUri) = StartServer(filePath, subtitlePath, metadata?.CoverArtPath);
 
         var sender = new Sender();
         sender.Disconnected += OnDisconnected;
         _sender = sender;
 
-        await sender.ConnectAsync(device.Receiver).WaitAsync(cancellationToken);
+        await sender.ConnectAsync(device.Receiver);
 
         // Stop any currently running Cast app on the receiver before launching a new
         // session. This guarantees a clean slate so subtitle tracks from a previous
@@ -95,23 +89,20 @@ public sealed class ChromecastCastService : IDisposable
         try
         {
             var receiverChannel = sender.GetChannel<IReceiverChannel>();
-            await receiverChannel.StopAsync().WaitAsync(cancellationToken);
+            await receiverChannel.StopAsync();
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch { /* no app running yet, or stop not supported — safe to ignore */ }
 
         var mediaChannel = sender.GetChannel<IMediaChannel>();
         ConfigureReceiverApplicationId(mediaChannel);
-        await sender.LaunchAsync(mediaChannel).WaitAsync(cancellationToken);
+        await sender.LaunchAsync(mediaChannel);
         _mediaChannel = mediaChannel;
 
         try
         {
             var receiverChannel = sender.GetChannel<IReceiverChannel>();
-            await receiverChannel.SetVolumeAsync(Math.Clamp(volume, 0, 100) / 100f)
-                .WaitAsync(cancellationToken);
+            await receiverChannel.SetVolumeAsync(Math.Clamp(volume, 0, 100) / 100f);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch { /* volume is optional */ }
 
         Track[]? tracks = null;
@@ -143,56 +134,50 @@ public sealed class ChromecastCastService : IDisposable
             Tracks = tracks
         };
 
-        await mediaChannel.LoadAsync(mediaInfo, true, activeTrackIds).WaitAsync(cancellationToken);
+        await mediaChannel.LoadAsync(mediaInfo, true, activeTrackIds);
 
         if (startPosition > TimeSpan.Zero)
         {
-            try { await mediaChannel.SeekAsync(startPosition.TotalSeconds).WaitAsync(cancellationToken); }
-            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+            try { await mediaChannel.SeekAsync(startPosition.TotalSeconds); }
             catch { /* not all receivers support pre-seek */ }
         }
 
         _activeDevice = device;
-        }
-        catch
-        {
-            await DisconnectSenderAsync();
-            lock (_serverLock)
-                StopServerInternal();
-            throw;
-        }
     }
 
     public async Task PlayAsync(CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
-        await _mediaChannel.PlayAsync().WaitAsync(cancellationToken);
+        try { await _mediaChannel.PlayAsync(); } catch { }
     }
 
     public async Task PauseAsync(CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
-        await _mediaChannel.PauseAsync().WaitAsync(cancellationToken);
+        try { await _mediaChannel.PauseAsync(); } catch { }
     }
 
     public async Task StopAsync(CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
-        await _mediaChannel.StopAsync().WaitAsync(cancellationToken);
+        try { await _mediaChannel.StopAsync(); } catch { }
     }
 
     public async Task SetVolumeAsync(int volume, CancellationToken cancellationToken = default)
     {
         if (_sender is null) return;
-        var receiverChannel = _sender.GetChannel<IReceiverChannel>();
-        await receiverChannel.SetVolumeAsync(Math.Clamp(volume, 0, 100) / 100f)
-            .WaitAsync(cancellationToken);
+        try
+        {
+            var receiverChannel = _sender.GetChannel<IReceiverChannel>();
+            await receiverChannel.SetVolumeAsync(Math.Clamp(volume, 0, 100) / 100f);
+        }
+        catch { }
     }
 
     public async Task SeekAsync(TimeSpan position, CancellationToken cancellationToken = default)
     {
         if (_mediaChannel is null) return;
-        await _mediaChannel.SeekAsync(position.TotalSeconds).WaitAsync(cancellationToken);
+        try { await _mediaChannel.SeekAsync(position.TotalSeconds); } catch { }
     }
 
     public async Task<ChromecastPositionInfo?> GetPositionInfoAsync(CancellationToken cancellationToken = default)
@@ -200,7 +185,7 @@ public sealed class ChromecastCastService : IDisposable
         if (_mediaChannel is null) return null;
         try
         {
-            var status = await _mediaChannel.GetStatusAsync().WaitAsync(cancellationToken);
+            var status = await _mediaChannel.GetStatusAsync();
             if (status is null) return null;
             var position = TimeSpan.FromSeconds(status.CurrentTime);
             var duration = status.Media?.Duration is double d and > 0
@@ -208,7 +193,6 @@ public sealed class ChromecastCastService : IDisposable
                 : TimeSpan.Zero;
             return new ChromecastPositionInfo(position, duration);
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch { return null; }
     }
 
@@ -217,12 +201,11 @@ public sealed class ChromecastCastService : IDisposable
         if (_mediaChannel is null) return null;
         try
         {
-            var status = await _mediaChannel.GetStatusAsync().WaitAsync(cancellationToken);
+            var status = await _mediaChannel.GetStatusAsync();
             var state = status?.PlayerState;
             if (state is null) return null;
             return state is "PLAYING" or "BUFFERING";
         }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
         catch { return null; }
     }
 
@@ -233,27 +216,15 @@ public sealed class ChromecastCastService : IDisposable
             _activeDevice = null;
             StopServerInternal();
         }
-        DisconnectSenderAsync().GetAwaiter().GetResult();
+        _ = DisconnectSenderAsync();
     }
 
     public void Dispose() => StopServer();
 
     private void OnDisconnected(object? sender, EventArgs e)
     {
-        lock (_serverLock)
-        {
-            _activeDevice = null;
-            _mediaChannel = null;
-            _sender = null;
-            StopServerInternal();
-        }
-        if (sender is ISender disconnectedSender)
-        {
-            disconnectedSender.Disconnected -= OnDisconnected;
-            if (disconnectedSender is IDisposable disposable)
-                disposable.Dispose();
-        }
-        Disconnected?.Invoke(this, EventArgs.Empty);
+        _activeDevice = null;
+        _mediaChannel = null;
     }
 
     private async Task DisconnectSenderAsync()
@@ -279,9 +250,6 @@ public sealed class ChromecastCastService : IDisposable
 
     private (Uri mediaUri, Uri? subtitleUri, Uri? coverArtUri) StartServer(string filePath, string? subtitlePath, string? coverArtPath)
     {
-        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-            throw new FileNotFoundException("The media file to cast does not exist.", filePath);
-
         lock (_serverLock)
         {
             var normalizedSubtitle = !string.IsNullOrWhiteSpace(subtitlePath) && File.Exists(subtitlePath)
@@ -297,42 +265,35 @@ public sealed class ChromecastCastService : IDisposable
                 string.Equals(_servedCoverArtPath, normalizedCoverArt, StringComparison.Ordinal))
                 return (_servedFileUri!, _servedSubtitleUri, _servedCoverArtUri);
 
-            var vttContent = normalizedSubtitle is null ? null : ConvertSubtitleToVtt(normalizedSubtitle);
             StopServerInternal();
 
             var address = GetLanAddress() ?? IPAddress.Loopback;
-            _listener = new TcpListener(IPAddress.Any, 0);
-            _listener.Start();
-            var port = ((IPEndPoint)_listener.LocalEndpoint).Port;
-            var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-            var mediaRoute = $"/lumyn-cast/{token}/media/{Uri.EscapeDataString(Path.GetFileName(filePath))}";
-            var mediaUri = new Uri($"http://{address}:{port}{mediaRoute}");
+            var port = GetFreePort();
+            var mediaUri = new Uri($"http://{address}:{port}/lumyn-cast/media/{Uri.EscapeDataString(Path.GetFileName(filePath))}");
 
             Uri? subtitleUri = null;
+            string? vttContent = null;
             if (normalizedSubtitle is not null)
             {
-                subtitleUri = new Uri($"http://{address}:{port}/lumyn-cast/{token}/subtitle/{Uri.EscapeDataString(Path.GetFileNameWithoutExtension(normalizedSubtitle))}.vtt");
+                vttContent = ConvertSubtitleToVtt(normalizedSubtitle);
+                subtitleUri = new Uri($"http://{address}:{port}/lumyn-cast/subtitle/{Uri.EscapeDataString(Path.GetFileNameWithoutExtension(normalizedSubtitle))}.vtt");
             }
 
             Uri? coverArtUri = null;
             if (normalizedCoverArt is not null)
-                coverArtUri = new Uri($"http://{address}:{port}/lumyn-cast/{token}/art/{Uri.EscapeDataString(Path.GetFileName(normalizedCoverArt))}");
+                coverArtUri = new Uri($"http://{address}:{port}/lumyn-cast/art/{Uri.EscapeDataString(Path.GetFileName(normalizedCoverArt))}");
 
-            var content = new ServedContent(
-                filePath,
-                mediaRoute,
-                normalizedSubtitle is null ? null : subtitleUri!.AbsolutePath,
-                vttContent,
-                normalizedCoverArt is null ? null : coverArtUri!.AbsolutePath,
-                normalizedCoverArt);
+            _listener = new TcpListener(IPAddress.Any, port);
+            _listener.Start();
             _serverCts = new CancellationTokenSource();
             _servedFilePath = filePath;
             _servedSubtitlePath = normalizedSubtitle;
             _servedCoverArtPath = normalizedCoverArt;
+            _servedSubtitleVttContent = vttContent;
             _servedFileUri = mediaUri;
             _servedSubtitleUri = subtitleUri;
             _servedCoverArtUri = coverArtUri;
-            _ = Task.Run(() => ServerLoopAsync(_listener, content, _serverCts.Token));
+            _ = Task.Run(() => ServerLoopAsync(_listener, _serverCts.Token));
             return (mediaUri, subtitleUri, coverArtUri);
         }
     }
@@ -342,6 +303,7 @@ public sealed class ChromecastCastService : IDisposable
         _servedFilePath = null;
         _servedSubtitlePath = null;
         _servedCoverArtPath = null;
+        _servedSubtitleVttContent = null;
         _servedFileUri = null;
         _servedSubtitleUri = null;
         _servedCoverArtUri = null;
@@ -352,17 +314,14 @@ public sealed class ChromecastCastService : IDisposable
         _serverCts = null;
     }
 
-    private async Task ServerLoopAsync(TcpListener listener, ServedContent content, CancellationToken cancellationToken)
+    private async Task ServerLoopAsync(TcpListener listener, CancellationToken cancellationToken)
     {
-        var clientLimit = new SemaphoreSlim(8, 8);
         while (!cancellationToken.IsCancellationRequested)
         {
             try
             {
                 var client = await listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
-                try { await clientLimit.WaitAsync(cancellationToken).ConfigureAwait(false); }
-                catch { client.Dispose(); throw; }
-                _ = ServeClientWithLimitAsync(client, content, clientLimit, cancellationToken);
+                _ = Task.Run(() => ServeClientAsync(client, cancellationToken), cancellationToken);
             }
             catch (OperationCanceledException) { break; }
             catch
@@ -373,35 +332,18 @@ public sealed class ChromecastCastService : IDisposable
         }
     }
 
-    private async Task ServeClientWithLimitAsync(
-        TcpClient client, ServedContent content, SemaphoreSlim clientLimit, CancellationToken cancellationToken)
-    {
-        try { await ServeClientAsync(client, content, cancellationToken).ConfigureAwait(false); }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
-        catch { client.Dispose(); }
-        finally { clientLimit.Release(); }
-    }
-
-    private async Task ServeClientAsync(TcpClient client, ServedContent content, CancellationToken cancellationToken)
+    private async Task ServeClientAsync(TcpClient client, CancellationToken cancellationToken)
     {
         using var _ = client;
         using var network = client.GetStream();
 
-        using var requestCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-        requestCts.CancelAfter(TimeSpan.FromSeconds(10));
-        var request = await ReadHttpRequestAsync(network, requestCts.Token).ConfigureAwait(false);
+        var request = await ReadHttpRequestAsync(network, cancellationToken).ConfigureAwait(false);
         if (request is null) return;
 
-        if (request.Value.Method is not ("GET" or "HEAD"))
+        var isSubtitle = request.Value.Path.Contains("/subtitle/", StringComparison.OrdinalIgnoreCase);
+        if (isSubtitle)
         {
-            await WriteStatusAsync(network, 405, "Method Not Allowed", cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        var requestPath = request.Value.Path.Split('?', 2)[0];
-        if (string.Equals(requestPath, content.SubtitleRoute, StringComparison.Ordinal))
-        {
-            var vtt = content.SubtitleVttContent;
+            var vtt = _servedSubtitleVttContent;
             if (vtt is null)
             {
                 await WriteStatusAsync(network, 404, "Not Found", cancellationToken).ConfigureAwait(false);
@@ -414,9 +356,10 @@ public sealed class ChromecastCastService : IDisposable
             return;
         }
 
-        if (string.Equals(requestPath, content.CoverArtRoute, StringComparison.Ordinal))
+        var isCoverArt = request.Value.Path.Contains("/art/", StringComparison.OrdinalIgnoreCase);
+        if (isCoverArt)
         {
-            var coverArtPath = content.CoverArtPath;
+            var coverArtPath = _servedCoverArtPath;
             if (string.IsNullOrWhiteSpace(coverArtPath) || !File.Exists(coverArtPath))
             {
                 await WriteStatusAsync(network, 404, "Not Found", cancellationToken).ConfigureAwait(false);
@@ -425,25 +368,16 @@ public sealed class ChromecastCastService : IDisposable
 
             try
             {
-                var info = new FileInfo(coverArtPath);
-                await WriteResponseHeadersAsync(network, 200, "OK", GetImageMimeType(coverArtPath), info.Length, null, cancellationToken).ConfigureAwait(false);
+                var bytes = await File.ReadAllBytesAsync(coverArtPath, cancellationToken).ConfigureAwait(false);
+                await WriteResponseHeadersAsync(network, 200, "OK", GetImageMimeType(coverArtPath), bytes.Length, null, cancellationToken).ConfigureAwait(false);
                 if (!string.Equals(request.Value.Method, "HEAD", StringComparison.OrdinalIgnoreCase))
-                {
-                    await using var artwork = File.OpenRead(coverArtPath);
-                    await artwork.CopyToAsync(network, 64 * 1024, cancellationToken).ConfigureAwait(false);
-                }
+                    await network.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
             }
             catch { /* client disconnected early or artwork could not be read */ }
             return;
         }
 
-        if (!string.Equals(requestPath, content.MediaRoute, StringComparison.Ordinal))
-        {
-            await WriteStatusAsync(network, 404, "Not Found", cancellationToken).ConfigureAwait(false);
-            return;
-        }
-
-        var path = content.FilePath;
+        var path = _servedFilePath;
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
         {
             await WriteStatusAsync(network, 404, "Not Found", cancellationToken).ConfigureAwait(false);
@@ -454,23 +388,22 @@ public sealed class ChromecastCastService : IDisposable
         {
             var info = new FileInfo(path);
             var start = 0L;
-            var end = Math.Max(0, info.Length - 1);
+            var end = info.Length - 1;
             request.Value.Headers.TryGetValue("range", out var range);
             var statusCode = 200;
             string? contentRange = null;
-            if (!string.IsNullOrWhiteSpace(range))
+            if (!string.IsNullOrWhiteSpace(range) && range.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase))
             {
-                if (!TryParseRange(range, info.Length, out start, out end))
-                {
-                    await WriteResponseHeadersAsync(network, 416, "Range Not Satisfiable",
-                        GetMimeType(path), 0, $"bytes */{info.Length}", cancellationToken).ConfigureAwait(false);
-                    return;
-                }
+                var parts = range["bytes=".Length..].Split('-', 2);
+                if (long.TryParse(parts[0], out var parsedStart))
+                    start = Math.Clamp(parsedStart, 0, end);
+                if (parts.Length > 1 && long.TryParse(parts[1], out var parsedEnd))
+                    end = Math.Clamp(parsedEnd, start, info.Length - 1);
                 statusCode = 206;
                 contentRange = $"bytes {start}-{end}/{info.Length}";
             }
 
-            var length = info.Length == 0 ? 0 : end - start + 1;
+            var length = end - start + 1;
             await WriteResponseHeadersAsync(network, statusCode, statusCode == 206 ? "Partial Content" : "OK",
                 GetMimeType(path), length, contentRange, cancellationToken).ConfigureAwait(false);
 
@@ -490,41 +423,6 @@ public sealed class ChromecastCastService : IDisposable
             }
         }
         catch { /* client disconnected early — normal for range/probe requests */ }
-    }
-
-    internal static bool TryParseRange(string value, long fileLength, out long start, out long end)
-    {
-        start = 0;
-        end = Math.Max(0, fileLength - 1);
-        if (fileLength <= 0 || !value.StartsWith("bytes=", StringComparison.OrdinalIgnoreCase)) return false;
-
-        var spec = value["bytes=".Length..].Trim();
-        if (spec.Length == 0 || spec.Contains(',')) return false;
-        var parts = spec.Split('-', 2);
-        if (parts.Length != 2) return false;
-
-        if (parts[0].Length == 0)
-        {
-            if (!long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var suffix) || suffix <= 0)
-                return false;
-            start = Math.Max(0, fileLength - suffix);
-            return true;
-        }
-
-        if (!long.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out start) ||
-            start < 0 || start >= fileLength)
-            return false;
-
-        if (parts[1].Length == 0)
-        {
-            end = fileLength - 1;
-            return true;
-        }
-
-        if (!long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out end) || end < start)
-            return false;
-        end = Math.Min(end, fileLength - 1);
-        return true;
     }
 
     /// <summary>
@@ -644,27 +542,29 @@ public sealed class ChromecastCastService : IDisposable
     private static string ConvertSubtitleToVtt(string subtitlePath)
     {
         var ext = Path.GetExtension(subtitlePath).ToLowerInvariant();
-        var info = new FileInfo(subtitlePath);
-        if (info.Length > 32L * 1024 * 1024)
-            throw new InvalidDataException("The subtitle file is too large to cast.");
-        var content = SubtitleParser.DecodeSubtitleBytes(File.ReadAllBytes(subtitlePath));
+        var content = File.ReadAllText(subtitlePath, Encoding.UTF8);
         if (ext == ".vtt")
             return content.StartsWith("WEBVTT", StringComparison.Ordinal) ? content : "WEBVTT\n\n" + content;
-        var lines = SubtitleParser.Parse(subtitlePath);
-        if (lines.Count == 0)
-            throw new InvalidDataException("The subtitle format could not be converted for Chromecast.");
-
-        var output = new StringBuilder("WEBVTT\n\n");
-        foreach (var line in lines)
-        {
-            output.Append(FormatVttTime(line.Start)).Append(" --> ").AppendLine(FormatVttTime(line.End));
-            output.AppendLine(line.Text).AppendLine();
-        }
-        return output.ToString();
+        if (ext is ".srt" or ".sub")
+            return SrtToVtt(content);
+        // ASS/SSA and others: Chromecast will reject, but serve anyway so the error is on the device side
+        return content;
     }
 
-    private static string FormatVttTime(TimeSpan value) =>
-        $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}.{value.Milliseconds:000}";
+    private static string SrtToVtt(string srt)
+    {
+        var sb = new StringBuilder("WEBVTT\n\n");
+        foreach (var line in srt.ReplaceLineEndings("\n").Split('\n'))
+        {
+            // Skip cue index lines (digit-only) and blank lines between cues
+            if (string.IsNullOrWhiteSpace(line)) { sb.AppendLine(); continue; }
+            if (line.Trim().All(char.IsAsciiDigit)) continue;
+
+            // Timestamp lines: SRT uses comma, VTT uses dot for milliseconds
+            sb.AppendLine(line.Contains("-->") ? line.Replace(',', '.') : line);
+        }
+        return sb.ToString();
+    }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -694,13 +594,14 @@ public sealed class ChromecastCastService : IDisposable
             _                 => "application/octet-stream"
         };
 
-    private sealed record ServedContent(
-        string FilePath,
-        string MediaRoute,
-        string? SubtitleRoute,
-        string? SubtitleVttContent,
-        string? CoverArtRoute,
-        string? CoverArtPath);
+    private static int GetFreePort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
 
     private static IPAddress? GetLanAddress()
     {

@@ -29,9 +29,6 @@ public sealed class VideoSurface : Control
     /// </summary>
     public void PushFrame(byte[] data, int w, int h, int pitch)
     {
-        if (w <= 0 || h <= 0 || pitch < w * 4 || data.Length < checked(pitch * h))
-            return;
-
         // Recreate bitmap only when dimensions change (allocation is expensive).
         if (_bitmap is null || _bitmap.PixelSize.Width != w || _bitmap.PixelSize.Height != h)
         {
@@ -48,15 +45,9 @@ public sealed class VideoSurface : Control
         {
             fixed (byte* src = data)
             {
-                var bytesPerRow = Math.Min(pitch, fb.RowBytes);
-                for (var row = 0; row < h; row++)
-                {
-                    Buffer.MemoryCopy(
-                        src + row * pitch,
-                        (byte*)fb.Address + row * fb.RowBytes,
-                        fb.RowBytes,
-                        bytesPerRow);
-                }
+                var len = (nuint)(pitch * h);
+                // Single unmanaged copy directly into the GPU-side bitmap buffer.
+                Buffer.MemoryCopy(src, (void*)fb.Address, len, len);
             }
         }
 

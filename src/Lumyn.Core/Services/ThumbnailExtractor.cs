@@ -21,8 +21,7 @@ public sealed class ThumbnailExtractor : IDisposable
 
     private readonly record struct ThumbEntry(double Progress, byte[] Jpeg);
 
-    private IntPtr _mpv;
-    private readonly string _tempDirectory;
+    private readonly IntPtr _mpv;
     private readonly string _tempFilePath;
     private bool _disposed;
     private CancellationTokenSource? _cts;
@@ -34,14 +33,12 @@ public sealed class ThumbnailExtractor : IDisposable
 
     public ThumbnailExtractor()
     {
-        _tempDirectory = Path.Combine(
-            Path.GetTempPath(), "Lumyn",
-            $"thumb-{Environment.ProcessId}-{Guid.NewGuid():N}");
-        _tempFilePath = Path.Combine(_tempDirectory, "frame.jpg");
+        _tempFilePath = Path.Combine(
+            Path.GetTempPath(),
+            $"lumyn_thumb_{Environment.ProcessId}.jpg");
 
         try
         {
-            Directory.CreateDirectory(_tempDirectory);
             _mpv = MpvNative.mpv_create();
             if (_mpv == IntPtr.Zero) return;
 
@@ -52,20 +49,9 @@ public sealed class ThumbnailExtractor : IDisposable
             MpvNative.mpv_set_option_string(_mpv, "ao",            "null");
             MpvNative.mpv_set_option_string(_mpv, "screenshot-sw", "yes");
             MpvNative.mpv_set_option_string(_mpv, "osd-level",     "0");
-            if (MpvNative.mpv_initialize(_mpv) < 0)
-            {
-                MpvNative.mpv_destroy(_mpv);
-                _mpv = IntPtr.Zero;
-            }
+            MpvNative.mpv_initialize(_mpv);
         }
-        catch
-        {
-            if (_mpv != IntPtr.Zero)
-            {
-                try { MpvNative.mpv_destroy(_mpv); } catch { }
-                _mpv = IntPtr.Zero;
-            }
-        }
+        catch { /* thumbnails unavailable — fail silently */ }
     }
 
     public bool IsAvailable => _mpv != IntPtr.Zero;
@@ -291,15 +277,9 @@ public sealed class ThumbnailExtractor : IDisposable
         if (_disposed) return;
         _disposed = true;
         _cts?.Cancel();
-        try { _currentTask?.GetAwaiter().GetResult(); } catch { }
         _cts?.Dispose();
         if (_mpv != IntPtr.Zero)
-        {
             MpvNative.mpv_terminate_destroy(_mpv);
-            _mpv = IntPtr.Zero;
-        }
         TryDeleteTemp();
-        try { if (Directory.Exists(_tempDirectory)) Directory.Delete(_tempDirectory); }
-        catch { }
     }
 }

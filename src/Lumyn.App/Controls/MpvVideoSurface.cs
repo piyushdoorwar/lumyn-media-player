@@ -13,7 +13,7 @@ public sealed class MpvVideoSurface : OpenGlControlBase
         AvaloniaProperty.Register<MpvVideoSurface, PlaybackService?>(nameof(Playback));
 
     private bool _rendererInitialized;
-    private volatile bool _glReady;
+    private bool _glReady;
     private int _renderRequestQueued;
     private bool _isReadyForPlaybackOpen;
 

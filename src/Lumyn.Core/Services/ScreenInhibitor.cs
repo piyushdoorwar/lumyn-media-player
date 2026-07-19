@@ -31,12 +31,12 @@ public sealed partial class ScreenInhibitor : IDisposable
     public void Inhibit()
     {
         if (_inhibited) return;
-        _inhibited = true;
 
         try
         {
-            if      (OperatingSystem.IsWindows()) InhibitWindows();
-            else if (OperatingSystem.IsLinux())   InhibitLinux();
+            _inhibited = OperatingSystem.IsWindows()
+                ? InhibitWindows()
+                : OperatingSystem.IsLinux() && InhibitLinux();
         }
         catch { /* best-effort — never crash the player */ }
     }
@@ -59,8 +59,8 @@ public sealed partial class ScreenInhibitor : IDisposable
 
     // ── Windows ──────────────────────────────────────────────────────────────
 
-    private static void InhibitWindows()
-        => SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED);
+    private static bool InhibitWindows()
+        => SetThreadExecutionState(ES_CONTINUOUS | ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED) != 0;
 
     private static void UninhibitWindows()
         => SetThreadExecutionState(ES_CONTINUOUS);
@@ -68,7 +68,7 @@ public sealed partial class ScreenInhibitor : IDisposable
     // ── Linux (org.freedesktop.ScreenSaver via dbus-send) ────────────────────
     // dbus-send uses type:value tokens (no spaces), avoiding argv-splitting issues.
 
-    private void InhibitLinux()
+    private bool InhibitLinux()
     {
         // dbus-send --session --print-reply \
         //   --dest=org.freedesktop.ScreenSaver /org/freedesktop/ScreenSaver \
@@ -84,11 +84,12 @@ public sealed partial class ScreenInhibitor : IDisposable
             "string:Playing media"
         ]);
 
-        if (output is null) return;
+        if (output is null) return false;
 
         var match = Regex.Match(output, @"uint32\s+(\d+)");
         if (match.Success && uint.TryParse(match.Groups[1].Value, out var cookie))
             _linuxCookie = cookie;
+        return _linuxCookie != 0;
     }
 
     private void UninhibitLinux()
@@ -114,6 +115,7 @@ public sealed partial class ScreenInhibitor : IDisposable
             var psi = new ProcessStartInfo(exe)
             {
                 RedirectStandardOutput = true,
+                RedirectStandardError  = true,
                 UseShellExecute        = false,
                 CreateNoWindow         = true
             };
@@ -121,7 +123,21 @@ public sealed partial class ScreenInhibitor : IDisposable
                 psi.ArgumentList.Add(arg);
 
             using var proc = Process.Start(psi);
-            return proc?.StandardOutput.ReadToEnd();
+            if (proc is null) return null;
+            var stdout = proc.StandardOutput.ReadToEndAsync();
+            var stderr = proc.StandardError.ReadToEndAsync();
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            try { proc.WaitForExitAsync(cts.Token).GetAwaiter().GetResult(); }
+            catch (OperationCanceledException)
+            {
+                try { proc.Kill(entireProcessTree: true); } catch { }
+                return null;
+            }
+            finally
+            {
+                try { stderr.GetAwaiter().GetResult(); } catch { }
+            }
+            return proc.ExitCode == 0 ? stdout.GetAwaiter().GetResult() : null;
         }
         catch { return null; }
     }

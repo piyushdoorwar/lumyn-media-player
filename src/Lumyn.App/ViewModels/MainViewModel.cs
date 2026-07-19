@@ -32,7 +32,7 @@ public sealed class QueueTrackMeta
 }
 
 /// <summary>One entry in the playlist / queue shown in the sidebar and audio queue.</summary>
-public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent, QueueTrackMeta? Meta = null)
+public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent, QueueTrackMeta? Meta = null) : IDisposable
 {
     public string DisplayName => Path.GetFileName(FilePath);
 
@@ -54,6 +54,8 @@ public sealed record PlaylistItem(int Index, string FilePath, bool IsCurrent, Qu
     {
         try { return new Avalonia.Media.Imaging.Bitmap(path); } catch { return null; }
     }
+
+    public void Dispose() => _cachedCover?.Dispose();
 }
 
 /// <summary>A recently-played file shown on the start screen.</summary>
@@ -62,7 +64,7 @@ public sealed record RecentFileItem(
     double ProgressPct,
     TimeSpan ResumePosition,
     bool IsAudio = false,
-    string? ThumbnailPath = null)
+    string? ThumbnailPath = null) : IDisposable
 {
     public string DisplayName     => Path.GetFileNameWithoutExtension(FilePath);
     public string Directory       => Path.GetDirectoryName(FilePath) ?? "";
@@ -84,6 +86,8 @@ public sealed record RecentFileItem(
     {
         try { return new Avalonia.Media.Imaging.Bitmap(path); } catch { return null; }
     }
+
+    public void Dispose() => _cachedBitmap?.Dispose();
 }
 
 public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
@@ -115,6 +119,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private readonly System.Collections.Concurrent.ConcurrentDictionary<string, QueueTrackMeta> _queueMeta = new(StringComparer.Ordinal);
     private CancellationTokenSource? _queueProbeCts;
     private Task? _queueProbeTask;
+    private CancellationTokenSource? _openCts;
+    private long _openGeneration;
+    private bool _disposed;
     private string? _thumbnailsLoadedForFile;
     private string? _recentThumbExtractedForFile;
     private int _stateRefreshQueued;
@@ -173,6 +180,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     private double _subtitleFontSizeValue = 22;
     private FontFamily _subtitleFontFamily = FontFamily.Default;
     private IBrush _subtitleForeground = Brushes.White;
+    private double _subtitleShadowBlurRadius = 3;
+    private double _subtitleShadowOpacity = 0.7;
     // ── Video adjustments ───────────────────────────────────────────────
     private Lumyn.App.Models.VideoAdjustments _videoAdjustments = Lumyn.App.Models.VideoAdjustments.Default;
     private AudioClarityMode _audioClarityMode = AudioClarityMode.Off;
@@ -188,6 +197,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     // ── Playlist / queue ───────────────────────────────────────────────
     private List<string> _playlist = [];
     private int _playlistIndex = -1;
+    private IReadOnlyList<RecentFileItem> _recentFileItems = [];
 
     public MainViewModel(
         PlaybackService playback,
@@ -199,6 +209,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         _settings   = settings;
         _casting    = casting    ?? new ChromecastCastService();
         _thumbnails = thumbnails ?? new ThumbnailExtractor();
+        _casting.Disconnected += OnCastingDisconnected;
         _uiVisibility = _settings.UiVisibility;
 
         // Restore persisted session preferences
@@ -244,7 +255,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         PreviousTrackCommand   = new RelayCommand(_ => { _ = NavigateTrackAsync(-1); });
         NextTrackCommand       = new RelayCommand(_ => { _ = NavigateTrackAsync(+1); });
         OpenPlaylistItemCommand   = new RelayCommand(p => { if (p is int i) _ = PlayFromIndexAsync(i); });
-        RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
+        RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) _ = RemoveFromPlaylistAsync(i); });
         RemoveRecentFileCommand = new RelayCommand(p => { if (p is string path) RemoveRecentFile(path); });
         PreviousChapterCommand = new RelayCommand(_ => _playback.SeekToChapter(-1));
         NextChapterCommand     = new RelayCommand(_ => _playback.SeekToChapter(+1));
@@ -267,6 +278,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = message);
 
         ErrorMessage = _playback.InitializationError;
+        RebuildRecentFileItems();
 
         Task.Run(BackfillRecentThumbnails);
         Task.Run(_settings.PruneOrphanedThumbnails);
@@ -285,8 +297,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public bool HasRecentFiles => _settings.RecentFiles.Any(File.Exists);
 
-    public IReadOnlyList<RecentFileItem> RecentFileItems =>
-        _settings.RecentFiles
+    public IReadOnlyList<RecentFileItem> RecentFileItems => _recentFileItems;
+
+    private void RebuildRecentFileItems()
+    {
+        var next = _settings.RecentFiles
             .Where(File.Exists)
             .Select(f =>
             {
@@ -300,6 +315,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
                 return new RecentFileItem(f, pct, pos, isAudio, thumb);
             })
             .ToList();
+        foreach (var item in _recentFileItems) item.Dispose();
+        _recentFileItems = next;
+    }
 
     public IReadOnlyList<RecentFileItem> RecentVideoItems =>
         RecentFileItems.Where(i => !i.IsAudio).ToList();
@@ -436,6 +454,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         get => _subtitleForeground;
         private set => SetField(ref _subtitleForeground, value);
+    }
+
+    public double SubtitleShadowBlurRadius
+    {
+        get => _subtitleShadowBlurRadius;
+        private set => SetField(ref _subtitleShadowBlurRadius, value);
+    }
+
+    public double SubtitleShadowOpacity
+    {
+        get => _subtitleShadowOpacity;
+        private set => SetField(ref _subtitleShadowOpacity, value);
     }
 
     // ── Video adjustments ───────────────────────────────────────────────
@@ -810,9 +840,33 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     public ICommand CastVolumeUpCommand { get; }
     // ── Public methods ───────────────────────────────────────────────────────
 
-    public void PausePlayback() => _playback.Pause();
+    public async Task PauseActivePlaybackAsync()
+    {
+        if (IsCasting)
+        {
+            await _casting.PauseAsync();
+            IsCastPlaying = false;
+            IsPlaying = false;
+        }
+        else
+        {
+            _playback.Pause();
+        }
+    }
 
-    public void ResumePlayback() => _playback.Play();
+    public async Task ResumeActivePlaybackAsync()
+    {
+        if (IsCasting)
+        {
+            await _casting.PlayAsync();
+            IsCastPlaying = true;
+            IsPlaying = true;
+        }
+        else
+        {
+            _playback.Play();
+        }
+    }
 
     public async Task RefreshCastDevicesAsync()
     {
@@ -931,6 +985,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
+    private void OnCastingDisconnected(object? sender, EventArgs e)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_disposed || !IsCasting) return;
+            IsCasting = false;
+            IsCastPlaying = false;
+            _castDuration = TimeSpan.Zero;
+            CastTargetName = null;
+            CastStatusText = "Cast device disconnected";
+            RefreshState();
+            ShowOsd(CastStatusText);
+        });
+    }
+
     private async Task ToggleCastPlaybackAsync()
     {
         if (!IsCasting) return;
@@ -990,6 +1059,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public async Task OpenFileAsync(string filePath)
     {
+        if (IsCasting)
+            await StopCastingAsync();
+
         // Single-file open: build playlist (folder-scanned for audio, single item for video).
         var ext = Path.GetExtension(filePath);
         var audioOnly = AudioExtensions.Contains(ext, StringComparer.OrdinalIgnoreCase);
@@ -1018,6 +1090,9 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var subtitlePath = paths.FirstOrDefault(IsSubtitleFile);
 
         if (mediaPaths.Count == 0) return;
+
+        if (IsCasting)
+            await StopCastingAsync();
 
         var firstExt = Path.GetExtension(mediaPaths[0]);
         var audioOnly = AudioExtensions.Contains(firstExt, StringComparer.OrdinalIgnoreCase);
@@ -1061,6 +1136,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     {
         // Parse off the UI thread so large SRT files don't freeze the window.
         var lines = await Task.Run(() => Lumyn.Core.Services.SubtitleParser.Parse(path));
+        if (_disposed) return;
         _subtitleLines = lines;
         _subtitleLineIndex = -1;
 
@@ -1126,6 +1202,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         else
         {
             await LoadSubtitleFileAsync(s.FilePath);
+            if (_disposed) return;
             _playback.SubtitleDelayMs = s.DelayMs;
             if (s.DelayMs != 0)
                 ShowOsd($"Subtitle delay: {s.DelayMs:+0;-0} ms");
@@ -1166,6 +1243,32 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             SubtitleColor.Black  => new SolidColorBrush(Color.Parse("#111111")),
             _                    => Brushes.White
         };
+
+        var outlined = s.Color == SubtitleColor.WhiteWithBorder;
+        SubtitleShadowBlurRadius = outlined ? 6 : 3;
+        SubtitleShadowOpacity = outlined ? 1.0 : 0.7;
+
+        var nativeFont = s.Font switch
+        {
+            SubtitleFont.Serif => "Liberation Serif",
+            SubtitleFont.Monospace => "Liberation Mono",
+            SubtitleFont.Arial => "Arial",
+            _ => "sans-serif"
+        };
+        var nativeColor = s.Color switch
+        {
+            SubtitleColor.Yellow => "#FFE600",
+            SubtitleColor.Grey => "#BBBBBB",
+            SubtitleColor.Black => "#111111",
+            _ => "#FFFFFF"
+        };
+        var nativeSize = s.FontSize switch
+        {
+            SubtitleFontSize.Small => 42,
+            SubtitleFontSize.Large => 70,
+            _ => 55
+        };
+        _playback.SetSubtitleAppearance(nativeSize, nativeFont, nativeColor, outlined);
     }
 
     private static SubtitleSettings SubtitleSettingsFromEntry(SubtitleEntry e) => new(
@@ -1401,7 +1504,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         RefreshTracksIfNeeded();
 
         // Update Avalonia subtitle overlay text.
-        if (_useSubtitleOverlay && _subtitleLines.Count > 0 && state.IsPlaying)
+        if (_useSubtitleOverlay && _subtitleLines.Count > 0 && HasMedia)
         {
             CurrentSubtitleText = FindSubtitleText(state.Position);
         }
@@ -1507,13 +1610,21 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
         SaveResumePosition();
         _osdTimer.Stop();
+        _openCts?.Cancel();
+        foreach (var item in _recentFileItems) item.Dispose();
+        foreach (var item in PlaylistItems) item.Dispose();
         _coverArtBitmap?.Dispose();
         _screenInhibitor.Dispose();
         _thumbnails.Dispose();
         _queueProbeCts?.Cancel();
+        try { _queueProbeTask?.GetAwaiter().GetResult(); } catch { }
+        _queueProbeCts?.Dispose();
         _queueProbe.Dispose();
+        _casting.Disconnected -= OnCastingDisconnected;
         _casting.Dispose();
         _playback.Dispose();
         // Flush any debounced settings writes so nothing is lost on close.
@@ -1554,6 +1665,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void NotifyRecentFilesChanged()
     {
+        RebuildRecentFileItems();
         OnPropertyChanged(nameof(RecentFiles));
         OnPropertyChanged(nameof(RecentFileItems));
         OnPropertyChanged(nameof(StartScreenItems));
@@ -1594,46 +1706,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             var outputPath = _settings.GetThumbnailPath(filePath);
 
-            // 1. Use the same external cover art file the player shows (fastest path).
             var externalCover = FindCoverArtPath(filePath);
-            if (externalCover is not null)
-            {
-                File.Copy(externalCover, outputPath, overwrite: true);
+            var input = externalCover ?? filePath;
+            if (ExtractImageWithFfmpeg(input, outputPath, TimeSpan.FromSeconds(10)))
                 Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
-                return;
-            }
-
-            // 2. Fall back to ffmpeg extracting embedded cover art from the audio file.
-            var tempPath = outputPath + ".tmp";
-
-            var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg")
-            {
-                UseShellExecute        = false,
-                CreateNoWindow         = true,
-                RedirectStandardError  = true,
-                RedirectStandardOutput = true
-            };
-            psi.ArgumentList.Add("-y");
-            psi.ArgumentList.Add("-i");
-            psi.ArgumentList.Add(filePath);
-            psi.ArgumentList.Add("-map");
-            psi.ArgumentList.Add("0:v:0");
-            psi.ArgumentList.Add("-vframes");
-            psi.ArgumentList.Add("1");
-            psi.ArgumentList.Add("-vf");
-            psi.ArgumentList.Add("scale=320:-2");
-            psi.ArgumentList.Add("-f");
-            psi.ArgumentList.Add("image2");
-            psi.ArgumentList.Add(tempPath);
-
-            using var proc = System.Diagnostics.Process.Start(psi);
-            proc?.WaitForExit(10_000);
-
-            if (File.Exists(tempPath))
-            {
-                File.Move(tempPath, outputPath, overwrite: true);
-                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
-            }
         }
         catch { }
     }
@@ -1643,23 +1719,42 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         try
         {
             var outputPath = _settings.GetThumbnailPath(filePath);
-            var tempPath   = outputPath + ".tmp";
             var maxSec     = duration == TimeSpan.MaxValue ? seekTarget.TotalSeconds : Math.Max(0, duration.TotalSeconds - 1);
             var seekSec    = Math.Clamp(seekTarget.TotalSeconds, 0, maxSec);
+            if (ExtractImageWithFfmpeg(filePath, outputPath, TimeSpan.FromSeconds(15), seekSec))
+                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
+        }
+        catch { }
+    }
 
+    private static bool ExtractImageWithFfmpeg(
+        string inputPath, string outputPath, TimeSpan timeout, double? seekSeconds = null)
+    {
+        var directory = Path.GetDirectoryName(outputPath);
+        if (string.IsNullOrWhiteSpace(directory)) return false;
+        Directory.CreateDirectory(directory);
+        var tempPath = Path.Combine(directory, $".{Path.GetFileName(outputPath)}-{Guid.NewGuid():N}.tmp.jpg");
+
+        try
+        {
             var psi = new System.Diagnostics.ProcessStartInfo("ffmpeg")
             {
-                UseShellExecute        = false,
-                CreateNoWindow         = true,
-                RedirectStandardError  = true,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardError = true,
                 RedirectStandardOutput = true
             };
             psi.ArgumentList.Add("-y");
-            psi.ArgumentList.Add("-ss");
-            psi.ArgumentList.Add(seekSec.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+            if (seekSeconds is { } seconds)
+            {
+                psi.ArgumentList.Add("-ss");
+                psi.ArgumentList.Add(seconds.ToString("F2", System.Globalization.CultureInfo.InvariantCulture));
+            }
             psi.ArgumentList.Add("-i");
-            psi.ArgumentList.Add(filePath);
-            psi.ArgumentList.Add("-vframes");
+            psi.ArgumentList.Add(inputPath);
+            psi.ArgumentList.Add("-map");
+            psi.ArgumentList.Add("0:v:0");
+            psi.ArgumentList.Add("-frames:v");
             psi.ArgumentList.Add("1");
             psi.ArgumentList.Add("-vf");
             psi.ArgumentList.Add("scale=320:-2");
@@ -1667,20 +1762,40 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             psi.ArgumentList.Add("image2");
             psi.ArgumentList.Add(tempPath);
 
-            using var proc = System.Diagnostics.Process.Start(psi);
-            proc?.WaitForExit(15_000);
-
-            if (File.Exists(tempPath))
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null) return false;
+            var stdout = process.StandardOutput.ReadToEndAsync();
+            var stderr = process.StandardError.ReadToEndAsync();
+            using var timeoutCts = new CancellationTokenSource(timeout);
+            try
             {
-                File.Move(tempPath, outputPath, overwrite: true);
-                Avalonia.Threading.Dispatcher.UIThread.Post(NotifyRecentFilesChanged);
+                process.WaitForExitAsync(timeoutCts.Token).GetAwaiter().GetResult();
             }
+            catch (OperationCanceledException)
+            {
+                try { process.Kill(entireProcessTree: true); } catch { }
+                process.WaitForExit();
+                return false;
+            }
+            finally
+            {
+                try { Task.WhenAll(stdout, stderr).GetAwaiter().GetResult(); } catch { }
+            }
+
+            if (process.ExitCode != 0 || !File.Exists(tempPath)) return false;
+            File.Move(tempPath, outputPath, overwrite: true);
+            return true;
         }
-        catch { }
+        finally
+        {
+            try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+        }
     }
 
     private string? FindSubtitleText(TimeSpan position)
     {
+        position -= TimeSpan.FromMilliseconds(CurrentSubtitleSettings.DelayMs);
+        if (position < TimeSpan.Zero) return null;
         var lines = _subtitleLines;
         if (lines.Count == 0)
             return null;
@@ -2079,7 +2194,10 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             .Select(t => new TrackInfo(t.Id, string.IsNullOrWhiteSpace(t.Name) ? (t.Id < 0 ? "Off" : $"Track {t.Id}") : t.Name, t.IsSelected))];
 
         var chapters = _playback.GetChapters();
-        ChapterPositions = [.. chapters.Select(c => c.Position.TotalSeconds)];
+        var durationSeconds = _playback.Duration.TotalSeconds;
+        ChapterPositions = durationSeconds > 0
+            ? [.. chapters.Select(c => Math.Clamp(c.Position.TotalSeconds / durationSeconds * 1000.0, 0, 1000))]
+            : [];
         Chapters = [.. chapters.Select(c => new ChapterInfo(c.Index, c.Title, c.Position))];
     }
 
@@ -2223,7 +2341,20 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
     /// </summary>
     private async Task OpenPlaylistIndexInternalAsync(int index)
     {
+        if (index < 0 || index >= _playlist.Count) return;
+
+        var generation = Interlocked.Increment(ref _openGeneration);
+        var previousOpen = _openCts;
+        _openCts = new CancellationTokenSource();
+        previousOpen?.Cancel();
+        previousOpen?.Dispose();
+        var ct = _openCts.Token;
         var filePath = _playlist[index];
+        bool IsCurrentOpen() =>
+            !ct.IsCancellationRequested &&
+            generation == Interlocked.Read(ref _openGeneration) &&
+            string.Equals(_playback.CurrentFilePath, filePath, StringComparison.Ordinal);
+
         SaveResumePosition();
         ErrorMessage = null;
 
@@ -2250,7 +2381,8 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         var resume = _settings.ResumeEnabledFor(audioOnly)
             ? _settings.GetResumePosition(filePath)
             : TimeSpan.Zero;
-        await _playback.OpenAsync(filePath, resume);
+        if (!await _playback.OpenAsync(filePath, resume)) return;
+        if (!IsCurrentOpen()) return;
         _settings.AddRecentFile(filePath);
         NotifyRecentFilesChanged();
 
@@ -2264,8 +2396,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         {
             var restored = SubtitleSettingsFromEntry(cached);
             CurrentSubtitleSettings = restored;
-            await Task.Delay(400);
+            try { await Task.Delay(400, ct); }
+            catch (OperationCanceledException) { return; }
+            if (!IsCurrentOpen()) return;
             await ApplySubtitleSettingsAsync(restored, saveToCache: false);
+            if (!IsCurrentOpen()) return;
         }
         else
         {
@@ -2274,8 +2409,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
             var matchingSubtitle = FindMatchingSubtitleFile(filePath);
             if (!string.IsNullOrWhiteSpace(matchingSubtitle))
             {
-                await Task.Delay(400);
+                try { await Task.Delay(400, ct); }
+                catch (OperationCanceledException) { return; }
+                if (!IsCurrentOpen()) return;
                 await LoadSubtitleFileAsync(matchingSubtitle);
+                if (!IsCurrentOpen()) return;
             }
         }
 
@@ -2293,21 +2431,37 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
         if (audioOnly)
         {
-            await Task.Delay(600);
+            try { await Task.Delay(600, ct); }
+            catch (OperationCanceledException) { return; }
+            if (!IsCurrentOpen()) return;
             TrackTitle  = _playback.GetMetadata("title")  ?? Path.GetFileNameWithoutExtension(filePath);
             TrackArtist = _playback.GetMetadata("artist");
             TrackAlbum  = _playback.GetMetadata("album");
         }
     }
 
-    private void RemoveFromPlaylist(int index)
+    private async Task RemoveFromPlaylistAsync(int index)
     {
         if (index < 0 || index >= _playlist.Count) return;
+        var removingCurrent = index == _playlistIndex;
         _playlist.RemoveAt(index);
-        if (_playlistIndex >= _playlist.Count)
-            _playlistIndex = Math.Max(0, _playlist.Count - 1);
+        if (_playlist.Count == 0)
+        {
+            _playlistIndex = -1;
+            if (removingCurrent) Stop();
+        }
+        else if (index < _playlistIndex)
+        {
+            _playlistIndex--;
+        }
+        else if (removingCurrent)
+        {
+            _playlistIndex = Math.Min(index, _playlist.Count - 1);
+        }
         RebuildPlaylistItems();
         NotifyPlaylistState();
+        if (removingCurrent && _playlistIndex >= 0)
+            await OpenPlaylistIndexInternalAsync(_playlistIndex);
     }
 
     public void MovePlaylistItem(int from, int to)
@@ -2337,6 +2491,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
     private void RebuildPlaylistItems()
     {
+        foreach (var item in PlaylistItems) item.Dispose();
         PlaylistItems = _playlist.Count == 0
             ? []
             : [.. _playlist.Select((p, i) => new PlaylistItem(
@@ -2395,6 +2550,16 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
 
                 if (!ct.IsCancellationRequested)
                     Dispatcher.UIThread.Post(RebuildPlaylistItems, DispatcherPriority.Background);
+            }
+
+            if (!ct.IsCancellationRequested)
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (_disposed) return;
+                    _queueProbeTask = null;
+                    RebuildPlaylistItems();
+                }, DispatcherPriority.Background);
             }
         }, ct);
     }

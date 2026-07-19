@@ -61,6 +61,35 @@ public sealed class SettingsServiceTests : IDisposable
     }
 
     [Fact]
+    public void ClearResumePosition_RemovesPositionAndDuration()
+    {
+        var settings = CreateSettings();
+        var file = Path.Combine(_settingsDir, "movie.mp4");
+        settings.SaveResumePosition(file, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(120));
+        settings.ClearResumePosition(file);
+        settings.Flush();
+
+        using var json = System.Text.Json.JsonDocument.Parse(
+            File.ReadAllText(Path.Combine(_settingsDir, "settings.json")));
+        Assert.Empty(json.RootElement.GetProperty("ResumePositions").EnumerateObject());
+        Assert.Empty(json.RootElement.GetProperty("ResumeDurations").EnumerateObject());
+    }
+
+    [Fact]
+    public void LoadSettings_NormalizesNullCollectionsAndInvalidPreferences()
+    {
+        Directory.CreateDirectory(_settingsDir);
+        File.WriteAllText(Path.Combine(_settingsDir, "settings.json"),
+            """{"ResumePositions":null,"RecentFiles":null,"LastVolume":999,"LastSpeed":99,"SeekStep":42}""");
+
+        using var settings = CreateSettings();
+        Assert.Empty(settings.RecentFiles);
+        Assert.Equal(150, settings.LastVolume);
+        Assert.Equal(4.0f, settings.LastSpeed);
+        Assert.Equal(5, settings.SeekStep);
+    }
+
+    [Fact]
     public void PerFileSettings_UseHashedKeysInsteadOfRawPaths()
     {
         var settings = CreateSettings();

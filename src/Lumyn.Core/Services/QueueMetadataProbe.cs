@@ -14,7 +14,7 @@ public readonly record struct QueueProbeResult(TimeSpan? Duration, string? Title
 /// </summary>
 public sealed class QueueMetadataProbe : IDisposable
 {
-    private readonly IntPtr _mpv;
+    private IntPtr _mpv;
     private bool _disposed;
 
     public QueueMetadataProbe()
@@ -30,9 +30,20 @@ public sealed class QueueMetadataProbe : IDisposable
             MpvNative.mpv_set_option_string(_mpv, "vo",       "null");
             MpvNative.mpv_set_option_string(_mpv, "ao",       "null");
             MpvNative.mpv_set_option_string(_mpv, "osd-level", "0");
-            MpvNative.mpv_initialize(_mpv);
+            if (MpvNative.mpv_initialize(_mpv) < 0)
+            {
+                MpvNative.mpv_destroy(_mpv);
+                _mpv = IntPtr.Zero;
+            }
         }
-        catch { /* metadata probing unavailable — fail silently */ }
+        catch
+        {
+            if (_mpv != IntPtr.Zero)
+            {
+                try { MpvNative.mpv_destroy(_mpv); } catch { }
+                _mpv = IntPtr.Zero;
+            }
+        }
     }
 
     public bool IsAvailable => _mpv != IntPtr.Zero;
@@ -134,6 +145,9 @@ public sealed class QueueMetadataProbe : IDisposable
         if (_disposed) return;
         _disposed = true;
         if (_mpv != IntPtr.Zero)
+        {
             MpvNative.mpv_terminate_destroy(_mpv);
+            _mpv = IntPtr.Zero;
+        }
     }
 }

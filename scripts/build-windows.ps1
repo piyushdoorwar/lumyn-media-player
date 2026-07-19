@@ -3,7 +3,10 @@ param(
     [string]$Rid = $env:RID,
     [string]$Version = $env:VERSION,
     [string]$MpvBinDir = $env:MPV_BIN_DIR,
-    [string]$MpvArchiveUrl = $env:MPV_ARCHIVE_URL
+    [string]$MpvArchiveUrl = $env:MPV_ARCHIVE_URL,
+    [string]$MpvArchiveSha256 = $env:MPV_ARCHIVE_SHA256,
+    [string]$FfmpegArchiveUrl = $env:FFMPEG_ARCHIVE_URL,
+    [string]$FfmpegArchiveSha256 = $env:FFMPEG_ARCHIVE_SHA256
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,45 +31,31 @@ $packageDir = Join-Path $repoRoot "artifacts\pkg\lumyn-windows"
 $packageRoot = Join-Path $packageDir "Lumyn"
 $packageOutDir = Join-Path $repoRoot "artifacts\packages"
 
-function Get-MpvArchiveUrl {
+function Get-MpvArchiveInfo {
     param(
         [ValidateSet("Runtime", "Dev")]
         [string]$Kind
     )
 
-    $apiUrl = "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest"
-    
-    # Build headers with GitHub token if available (for authenticated requests with higher rate limits)
-    $headers = @{ "User-Agent" = "Lumyn-Packager" }
-    if (-not [string]::IsNullOrWhiteSpace($env:GITHUB_TOKEN)) {
-        $headers["Authorization"] = "token $($env:GITHUB_TOKEN)"
-    }
-    
-    $release = Invoke-RestMethod -Uri $apiUrl -Headers $headers
-
-    $pattern = if ($Kind -eq "Dev") {
-        '^mpv-dev-x86_64.*\.7z$'
+    # Pinned upstream release and GitHub-published asset digests. Update all
+    # three values together after reviewing a newer upstream release.
+    if ($Kind -eq "Dev") {
+        return @{
+            Url = "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/mpv-dev-x86_64-20260610-git-304426c.7z"
+            Sha256 = "8cbb25ea784f01afbb3f904217cab1317430a8bcfd5680fd827a866367f71cc9"
+        }
     } else {
-        '^mpv-x86_64.*\.7z$'
+        return @{
+            Url = "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/mpv-x86_64-20260610-git-304426c.7z"
+            Sha256 = "facac536baa73c7b925771af5e39a3c9cb16b8d75b59a6e9800de89799dffca7"
+        }
     }
-
-    $asset = $release.assets |
-        Where-Object {
-            $_.name -match $pattern -and
-            $_.name -notmatch 'debug|symbols'
-        } |
-        Select-Object -First 1
-
-    if ($null -eq $asset) {
-        throw "Could not find a win-x64 mpv $Kind archive in the latest shinchiro/mpv-winbuild-cmake release."
-    }
-
-    return $asset.browser_download_url
 }
 
 function Expand-MpvArchive {
     param(
         [string]$ArchiveUrl,
+        [string]$ExpectedSha256,
         [string]$Destination,
         [string]$FileName
     )
@@ -74,6 +63,13 @@ function Expand-MpvArchive {
     New-Item -ItemType Directory -Force -Path $Destination | Out-Null
     $archivePath = Join-Path $Destination $FileName
     Invoke-WebRequest -Uri $ArchiveUrl -OutFile $archivePath -Headers @{ "User-Agent" = "Lumyn-Packager" }
+    if ([string]::IsNullOrWhiteSpace($ExpectedSha256)) {
+        throw "A SHA-256 digest is required for downloaded native archives."
+    }
+    $actualSha256 = (Get-FileHash -Algorithm SHA256 -Path $archivePath).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $ExpectedSha256.Trim().ToLowerInvariant()) {
+        throw "SHA-256 verification failed for $ArchiveUrl. Expected $ExpectedSha256, got $actualSha256."
+    }
 
     $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
     if ($null -eq $sevenZip) {
@@ -89,7 +85,8 @@ function Expand-MpvArchive {
 function Resolve-MpvDirectory {
     param(
         [string]$ProvidedDir,
-        [string]$ArchiveUrl
+        [string]$ArchiveUrl,
+        [string]$ArchiveSha256
     )
 
     if (-not [string]::IsNullOrWhiteSpace($ProvidedDir)) {
@@ -107,12 +104,12 @@ function Resolve-MpvDirectory {
     Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
 
     if ([string]::IsNullOrWhiteSpace($ArchiveUrl)) {
-        $runtimeUrl = Get-MpvArchiveUrl -Kind Runtime
-        $devUrl = Get-MpvArchiveUrl -Kind Dev
-        Expand-MpvArchive -ArchiveUrl $runtimeUrl -Destination $extractDir -FileName "mpv-runtime.7z"
-        Expand-MpvArchive -ArchiveUrl $devUrl -Destination $extractDir -FileName "mpv-dev.7z"
+        $runtime = Get-MpvArchiveInfo -Kind Runtime
+        $dev = Get-MpvArchiveInfo -Kind Dev
+        Expand-MpvArchive -ArchiveUrl $runtime.Url -ExpectedSha256 $runtime.Sha256 -Destination $extractDir -FileName "mpv-runtime.7z"
+        Expand-MpvArchive -ArchiveUrl $dev.Url -ExpectedSha256 $dev.Sha256 -Destination $extractDir -FileName "mpv-dev.7z"
     } else {
-        Expand-MpvArchive -ArchiveUrl $ArchiveUrl -Destination $extractDir -FileName "mpv.7z"
+        Expand-MpvArchive -ArchiveUrl $ArchiveUrl -ExpectedSha256 $ArchiveSha256 -Destination $extractDir -FileName "mpv.7z"
     }
 
     $mpvDll = Get-ChildItem -Path $extractDir -Recurse -File |
@@ -303,14 +300,15 @@ function Get-FfmpegExe {
     # needs avcodec-*/avformat-*/avfilter-* DLLs that we don't ship (mpv statically
     # links its own ffmpeg into mpv-2.dll), which causes "DLL not found" loader
     # popups on launch. We only copy ffmpeg.exe below, so static is required.
-    $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+    if ([string]::IsNullOrWhiteSpace($FfmpegArchiveUrl)) {
+        $FfmpegArchiveUrl = "https://github.com/shinchiro/mpv-winbuild-cmake/releases/download/20260610/ffmpeg-x86_64-git-2576e0943.7z"
+        $FfmpegArchiveSha256 = "4de65c5c43b399ca857dc9a3d081b0571eed479e718997fb802a9d63df3d52cd"
+    }
     $extractDir = Join-Path "artifacts/downloads" "ffmpeg-win-x64"
     Remove-Item -Recurse -Force $extractDir -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $extractDir | Out-Null
 
-    $zipPath = Join-Path $extractDir "ffmpeg.zip"
-    Invoke-WebRequest -Uri $ffmpegUrl -OutFile $zipPath -Headers @{ "User-Agent" = "Lumyn-Packager" }
-    Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+    Expand-MpvArchive -ArchiveUrl $FfmpegArchiveUrl -ExpectedSha256 $FfmpegArchiveSha256 -Destination $extractDir -FileName "ffmpeg.7z"
 
     $ffmpegExe = Get-ChildItem -Path $extractDir -Recurse -File -Filter "ffmpeg.exe" | Select-Object -First 1
     if ($null -eq $ffmpegExe) {
@@ -482,7 +480,7 @@ dotnet build Lumyn.sln -c $Configuration --no-restore
 dotnet publish $appProject -c $Configuration -r $Rid --self-contained true -o $publishDir `
     -p:Version=$Version -p:InformationalVersion=$Version
 
-$mpvDir = Resolve-MpvDirectory -ProvidedDir $MpvBinDir -ArchiveUrl $MpvArchiveUrl
+$mpvDir = Resolve-MpvDirectory -ProvidedDir $MpvBinDir -ArchiveUrl $MpvArchiveUrl -ArchiveSha256 $MpvArchiveSha256
 
 Remove-Item -Recurse -Force $packageDir -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $packageRoot, $packageOutDir | Out-Null

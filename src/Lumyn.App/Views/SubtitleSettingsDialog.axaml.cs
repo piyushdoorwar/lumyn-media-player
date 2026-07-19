@@ -59,6 +59,12 @@ public partial class SubtitleSettingsDialog : Window
         IEnumerable<TrackInfo>? embeddedSubtitleTracks = null)
     {
         AvaloniaXamlLoader.Load(this);
+        Closed += (_, _) =>
+        {
+            _cts?.Cancel();
+            _cts?.Dispose();
+            _cts = null;
+        };
 
         _filePath = current.FilePath;
         _fontSize = current.FontSize;
@@ -182,10 +188,12 @@ public partial class SubtitleSettingsDialog : Window
 
         SetSearchStatus($"Downloading {result.FileName}…", loading: true);
         SetSearchInputEnabled(false);
+        var current = ReplaceOperationToken();
 
         try
         {
-            var tempPath = await _service.DownloadAsync(result);
+            var tempPath = await _service.DownloadAsync(result, current.Token);
+            if (!ReferenceEquals(_cts, current) || current.IsCancellationRequested) return;
             await using var source = File.OpenRead(tempPath);
             await using var destination = await target.OpenWriteAsync();
             destination.SetLength(0);
@@ -193,13 +201,15 @@ public partial class SubtitleSettingsDialog : Window
 
             SetSearchStatus($"Downloaded: {Path.GetFileName(targetPath)}", loading: false);
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (!ReferenceEquals(_cts, current)) return;
             SetSearchStatus($"Download failed: {ex.Message}", loading: false);
         }
         finally
         {
-            SetSearchInputEnabled(true);
+            if (ReferenceEquals(_cts, current)) SetSearchInputEnabled(true);
         }
     }
 
@@ -211,38 +221,48 @@ public partial class SubtitleSettingsDialog : Window
         var langIdx = this.FindControl<ComboBox>("LanguageBox")!.SelectedIndex;
         var (_, osCode, pnCode) = SubtitleSearchService.Languages[Math.Max(0, langIdx)];
 
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
+        var current = ReplaceOperationToken();
 
         SetSearchStatus("Searching…", loading: true);
         SetSearchInputEnabled(false);
 
         try
         {
-            var results = await _service.SearchAsync(query, osCode, pnCode, _cts.Token);
+            var results = await _service.SearchAsync(query, osCode, pnCode, current.Token);
+            if (!ReferenceEquals(_cts, current) || current.IsCancellationRequested) return;
             this.FindControl<ListBox>("ResultsList")!.ItemsSource = results;
             SetSearchStatus(results.Count == 0
                 ? "No results found. Try a different title or language."
                 : $"{results.Count} results found.",
                 loading: false);
         }
-        catch (OperationCanceledException) { SetSearchStatus("", loading: false); }
-        catch (Exception ex)              { SetSearchStatus($"Search failed: {ex.Message}", loading: false); }
-        finally                           { SetSearchInputEnabled(true); }
+        catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(_cts, current))
+                SetSearchStatus($"Search failed: {ex.Message}", loading: false);
+        }
+        finally
+        {
+            if (ReferenceEquals(_cts, current)) SetSearchInputEnabled(true);
+        }
     }
 
     private async void DownloadSelected()
     {
         if (_selectedResult is null) return;
+        var selected = _selectedResult;
+        var current = ReplaceOperationToken();
 
-        SetSearchStatus($"Downloading {_selectedResult.FileName}…", loading: true);
+        SetSearchStatus($"Downloading {selected.FileName}…", loading: true);
         SetSearchInputEnabled(false);
         var useBtn = this.FindControl<Button>("UseButton");
         if (useBtn is not null) useBtn.IsEnabled = false;
 
         try
         {
-            var path = await _service.DownloadAsync(_selectedResult);
+            var path = await _service.DownloadAsync(selected, current.Token);
+            if (!ReferenceEquals(_cts, current) || current.IsCancellationRequested) return;
             if (!string.IsNullOrWhiteSpace(path))
             {
                 _filePath = path;
@@ -252,12 +272,24 @@ public partial class SubtitleSettingsDialog : Window
                 SetSearchStatus($"Ready: {Path.GetFileName(path)}", loading: false);
             }
         }
+        catch (OperationCanceledException) { }
         catch (Exception ex)
         {
+            if (!ReferenceEquals(_cts, current)) return;
             SetSearchStatus($"Download failed: {ex.Message}", loading: false);
             if (useBtn is not null) useBtn.IsEnabled = _selectedResult is not null;
         }
-        finally { SetSearchInputEnabled(true); }
+        finally { if (ReferenceEquals(_cts, current)) SetSearchInputEnabled(true); }
+    }
+
+    private CancellationTokenSource ReplaceOperationToken()
+    {
+        var previous = _cts;
+        var current = new CancellationTokenSource();
+        _cts = current;
+        previous?.Cancel();
+        previous?.Dispose();
+        return current;
     }
 
     // ── Appearance tab handlers ───────────────────────────────────────────────

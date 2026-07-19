@@ -40,8 +40,9 @@ public sealed class PlaybackService : IDisposable
     private readonly MediaState _state = new();
     private readonly Thread? _eventThread;
     private readonly object _stateLock = new();
-    private readonly IntPtr _mpv;
-    private bool _disposed;
+    private IntPtr _mpv;
+    private volatile bool _disposed;
+    private bool _initialized;
     private bool _loop;
     private bool _pause = true;
     private bool _rendererReady;
@@ -54,6 +55,10 @@ public sealed class PlaybackService : IDisposable
     private int _lastRenderFramebuffer = -1;
     private int _lastRenderWidth;
     private int _lastRenderHeight;
+    private long _openGeneration;
+    private long _pendingResumeGeneration;
+    private TimeSpan _pendingResumePosition;
+    private string? _pendingResumeFilePath;
 
     public PlaybackService()
     {
@@ -76,8 +81,11 @@ public sealed class PlaybackService : IDisposable
             if (init < 0)
             {
                 InitializationError = $"mpv initialization failed: {init}.";
+                MpvNative.mpv_destroy(_mpv);
+                _mpv = IntPtr.Zero;
                 return;
             }
+            _initialized = true;
 
             Observe("time-pos", MpvFormat.Double);
             Observe("duration", MpvFormat.Double);
@@ -100,15 +108,17 @@ public sealed class PlaybackService : IDisposable
         catch (DllNotFoundException ex)
         {
             InitializationError = $"libmpv could not be loaded: {ex.Message}";
+            DestroyAfterInitializationFailure();
         }
         catch (Exception ex)
         {
             InitializationError = $"mpv could not be initialized: {ex.Message}";
+            DestroyAfterInitializationFailure();
         }
     }
 
     public string? InitializationError { get; }
-    public string? CurrentFilePath => _state.FilePath;
+    public string? CurrentFilePath => Snapshot().FilePath;
     public TimeSpan Position => Snapshot().Position;
     public TimeSpan Duration => Snapshot().Duration;
     public bool IsPlaying => Snapshot().IsPlaying;
@@ -122,20 +132,23 @@ public sealed class PlaybackService : IDisposable
     public event EventHandler? EndReached;
     public event EventHandler<string>? ErrorOccurred;
 
-    public async Task OpenAsync(string filePath, TimeSpan resumePosition)
+    public Task<bool> OpenAsync(string filePath, TimeSpan resumePosition)
     {
         if (_mpv == IntPtr.Zero)
         {
             ErrorOccurred?.Invoke(this, InitializationError ?? "mpv is not available.");
-            return;
+            return Task.FromResult(false);
         }
 
         if (!File.Exists(filePath))
         {
             ErrorOccurred?.Invoke(this, "The selected file does not exist.");
-            return;
+            return Task.FromResult(false);
         }
+        filePath = Path.GetFullPath(filePath);
 
+        var generation = Interlocked.Increment(ref _openGeneration);
+        var previousState = Snapshot();
         lock (_stateLock)
         {
             _state.FilePath = filePath;
@@ -143,20 +156,34 @@ public sealed class PlaybackService : IDisposable
             _state.Duration = TimeSpan.Zero;
             _state.IsPlaying = true;
             _pause = false;
+            _pendingResumeGeneration = generation;
+            _pendingResumePosition = resumePosition > TimeSpan.Zero ? resumePosition : TimeSpan.Zero;
+            _pendingResumeFilePath = filePath;
         }
 
-        await Task.Run(() => Command("loadfile", filePath, "replace")).ConfigureAwait(false);
-
-        if (resumePosition > TimeSpan.Zero)
+        var result = Command("loadfile", filePath, "replace");
+        if (result < 0)
         {
-            _ = Task.Run(async () =>
+            lock (_stateLock)
             {
-                await Task.Delay(250).ConfigureAwait(false);
-                Seek(resumePosition);
-            });
+                if (_pendingResumeGeneration == generation)
+                {
+                    _pendingResumeGeneration = 0;
+                    _pendingResumePosition = TimeSpan.Zero;
+                    _pendingResumeFilePath = null;
+                }
+                _state.FilePath = previousState.FilePath;
+                _state.Position = previousState.Position;
+                _state.Duration = previousState.Duration;
+                _pause = !previousState.IsPlaying;
+            }
+            ErrorOccurred?.Invoke(this, $"mpv could not open the selected file (error {result}).");
+            RaiseStateChanged();
+            return Task.FromResult(false);
         }
 
         RaiseStateChanged();
+        return Task.FromResult(true);
     }
 
     public void Stop()
@@ -177,6 +204,10 @@ public sealed class PlaybackService : IDisposable
     public void TogglePlayPause()
     {
         if (_mpv == IntPtr.Zero || string.IsNullOrWhiteSpace(_state.FilePath)) return;
+        var snapshot = Snapshot();
+        if (_pause && snapshot.Duration > TimeSpan.Zero &&
+            snapshot.Position >= snapshot.Duration - TimeSpan.FromMilliseconds(250))
+            Seek(TimeSpan.Zero);
         SetFlag("pause", !_pause);
     }
 
@@ -324,7 +355,7 @@ public sealed class PlaybackService : IDisposable
     public void ToggleLoop()
     {
         _loop = !_loop;
-        SetOption("loop-file", _loop ? "inf" : "no");
+        SetPropertyString("loop-file", _loop ? "inf" : "no");
         lock (_stateLock)
             _state.IsLooping = _loop;
         RaiseStateChanged();
@@ -409,6 +440,15 @@ public sealed class PlaybackService : IDisposable
     {
         get => (long)(GetDouble("sub-delay") * 1000);
         set => SetDouble("sub-delay", value / 1000.0);
+    }
+
+    public void SetSubtitleAppearance(double fontSize, string fontFamily, string color, bool outlined)
+    {
+        SetDouble("sub-font-size", Math.Clamp(fontSize, 8, 120));
+        SetPropertyString("sub-font", fontFamily);
+        SetPropertyString("sub-color", color);
+        SetDouble("sub-border-size", outlined ? 3.5 : 1.5);
+        SetPropertyString("sub-border-color", "#000000");
     }
 
     public void CycleAudioTrack()
@@ -561,7 +601,26 @@ public sealed class PlaybackService : IDisposable
                 case MpvEventId.Shutdown:
                     return;
                 case MpvEventId.FileLoaded:
-                    lock (_stateLock) _pause = GetFlag("pause");
+                    TimeSpan resumePosition;
+                    var loadedPath = GetString("path");
+                    lock (_stateLock)
+                    {
+                        _pause = GetFlag("pause");
+                        if (_pendingResumeGeneration == Interlocked.Read(ref _openGeneration) &&
+                            string.Equals(loadedPath, _pendingResumeFilePath, StringComparison.Ordinal))
+                        {
+                            resumePosition = _pendingResumePosition;
+                            _pendingResumeGeneration = 0;
+                            _pendingResumePosition = TimeSpan.Zero;
+                            _pendingResumeFilePath = null;
+                        }
+                        else
+                        {
+                            resumePosition = TimeSpan.Zero;
+                        }
+                    }
+                    if (resumePosition > TimeSpan.Zero)
+                        Seek(resumePosition);
                     MarkTracksChanged();
                     RaiseStateChanged();
                     break;
@@ -574,11 +633,24 @@ public sealed class PlaybackService : IDisposable
                     // reason 0 = MPV_END_FILE_REASON_EOF (natural end).
                     // Any other reason (stop=2, quit=3, error=4, redirect=5) means the file
                     // was replaced or stopped externally — do NOT auto-advance in those cases.
-                    if (!_loop && evt.data != IntPtr.Zero)
+                    if (evt.data != IntPtr.Zero)
                     {
                         var endFileEvt = Marshal.PtrToStructure<MpvNative.MpvEventEndFile>(evt.data);
-                        if (endFileEvt.reason == 0)
+                        if (endFileEvt.reason == 4 || (endFileEvt.reason == 0 && !_loop))
+                        {
+                            lock (_stateLock)
+                            {
+                                _pause = true;
+                                _state.IsPlaying = false;
+                                if (endFileEvt.reason == 0 && _state.Duration > TimeSpan.Zero)
+                                    _state.Position = _state.Duration;
+                            }
+                        }
+
+                        if (!_loop && endFileEvt.reason == 0)
                             EndReached?.Invoke(this, EventArgs.Empty);
+                        else if (endFileEvt.reason == 4)
+                            ErrorOccurred?.Invoke(this, $"Playback ended because mpv reported error {endFileEvt.error}.");
                     }
                     RaiseStateChanged();
                     break;
@@ -901,10 +973,28 @@ public sealed class PlaybackService : IDisposable
         ShutdownRenderer();
 
         if (_mpv != IntPtr.Zero)
-            MpvNative.mpv_terminate_destroy(_mpv);
+            MpvNative.mpv_wakeup(_mpv);
 
         if (_eventThread is { IsAlive: true })
-            _eventThread.Join(TimeSpan.FromMilliseconds(500));
+            _eventThread.Join();
+
+        if (_mpv != IntPtr.Zero)
+        {
+            MpvNative.mpv_terminate_destroy(_mpv);
+            _mpv = IntPtr.Zero;
+            _initialized = false;
+        }
+    }
+
+    private void DestroyAfterInitializationFailure()
+    {
+        if (_mpv == IntPtr.Zero) return;
+        if (_initialized)
+            MpvNative.mpv_terminate_destroy(_mpv);
+        else
+            MpvNative.mpv_destroy(_mpv);
+        _mpv = IntPtr.Zero;
+        _initialized = false;
     }
 
     private void ResetRenderTarget()
@@ -1102,6 +1192,12 @@ internal static partial class MpvNative
 
     [LibraryImport(Library)]
     public static partial void mpv_terminate_destroy(IntPtr ctx);
+
+    [LibraryImport(Library)]
+    public static partial void mpv_destroy(IntPtr ctx);
+
+    [LibraryImport(Library)]
+    public static partial void mpv_wakeup(IntPtr ctx);
 
     [LibraryImport(Library)]
     public static partial int mpv_initialize(IntPtr ctx);

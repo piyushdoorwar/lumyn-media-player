@@ -11,7 +11,7 @@ on:
         default: '0.0.0-dev'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # ── Determine version from tag or manual input ────────────────────────────
@@ -20,17 +20,27 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.ver.outputs.version }}
+      tag: ${{ steps.ver.outputs.tag }}
     steps:
       - name: Extract version
         id: ver
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            VERSION="${{ inputs.version }}"
+            VERSION="$INPUT_VERSION"
+            TAG="v${VERSION}"
           else
             # Strip 'v' prefix: v1.2.3 -> 1.2.3
             VERSION="${GITHUB_REF_NAME#v}"
+            TAG="$GITHUB_REF_NAME"
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: $VERSION" >&2
+            exit 1
           fi
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
   # ── Platform builds ───────────────────────────────────────────────────────
   unit-tests:
@@ -89,11 +99,10 @@ jobs:
           key: ${{ runner.os }}-${{ runner.arch }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
           restore-keys: ${{ runner.os }}-${{ runner.arch }}-nuget-
 
-      - name: Cache apt packages
-        uses: awalsh128/cache-apt-pkgs-action@latest
-        with:
-          packages: libmpv2
-          version: 1.0-${{ matrix.arch }}
+      - name: Install native build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpv2
 
       - name: Build deb
         run: ./scripts/build-linux.sh
@@ -275,6 +284,8 @@ jobs:
     name: Attach artifacts to release
     runs-on: ubuntu-latest
     needs: [prepare, linux-deb, linux-snap, windows-installer]
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v5
@@ -295,7 +306,7 @@ jobs:
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ needs.prepare.outputs.tag }}
           name: "Lumyn ${{ needs.prepare.outputs.version }}"
           files: |
             release-artifacts/**/*
@@ -305,7 +316,7 @@ jobs:
   publish-ppa:
     name: Publish to Ubuntu PPA
     runs-on: ubuntu-latest
-    needs: [prepare]
+    needs: [prepare, unit-tests]
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
     steps:

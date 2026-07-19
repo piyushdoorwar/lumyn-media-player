@@ -127,7 +127,9 @@
                  TextWrapping="Wrap"
                  MaxWidth="900">
         <TextBlock.Effect>
-          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="Black" Opacity="0.9" />
+          <DropShadowEffect BlurRadius="{Binding SubtitleShadowBlurRadius}"
+                            OffsetX="1" OffsetY="1" Color="Black"
+                            Opacity="{Binding SubtitleShadowOpacity}" />
         </TextBlock.Effect>
       </TextBlock>
     </Border>
@@ -380,6 +382,7 @@
 
         <controls:FlowWatermark Grid.RowSpan="2"
                                 Margin="-24,-18,-24,-12"
+                                IsVisible="{Binding !HasMedia}"
                                 Opacity="0.95" />
 
         <!-- Heading -->
@@ -584,6 +587,7 @@
               Minimum="0"
               Maximum="1000"
               Value="{Binding SeekValue}"
+              ChapterPositions="{Binding ChapterPositions}"
               LoopStart="{Binding AbLoopStartValue}"
               LoopEnd="{Binding AbLoopEndValue}"
               VerticalAlignment="Center"

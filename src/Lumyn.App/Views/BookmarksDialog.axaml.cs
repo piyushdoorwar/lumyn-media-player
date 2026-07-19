@@ -10,13 +10,17 @@ namespace Lumyn.App.Views;
 
 public partial class BookmarksDialog : Window
 {
-    private readonly MainViewModel _vm;
+    private readonly MainViewModel? _vm;
     private List<BookmarkEntry> _entries = [];
     private IReadOnlyList<ChapterInfo> _chapters = [];
 
-    public BookmarksDialog(MainViewModel vm)
+    public BookmarksDialog()
     {
         AvaloniaXamlLoader.Load(this);
+    }
+
+    public BookmarksDialog(MainViewModel vm) : this()
+    {
         _vm = vm;
 
         var filePath = vm.CurrentFilePath ?? "";
@@ -30,6 +34,7 @@ public partial class BookmarksDialog : Window
 
     private void Refresh()
     {
+        if (_vm is null) return;
         _entries = [.. _vm.GetBookmarksForCurrentFile()];
         _chapters = _vm.Chapters;
 
@@ -137,7 +142,7 @@ public partial class BookmarksDialog : Window
         void CommitEdit()
         {
             var newLabel = labelBox.Text?.Trim() ?? "";
-            _vm.RenameBookmark(index, newLabel);
+            _vm?.RenameBookmark(index, newLabel);
             var hasLabel = !string.IsNullOrWhiteSpace(newLabel);
             labelText.Text = hasLabel ? newLabel : "Add label…";
             labelText.FontStyle = hasLabel ? Avalonia.Media.FontStyle.Normal : Avalonia.Media.FontStyle.Italic;
@@ -312,7 +317,7 @@ public partial class BookmarksDialog : Window
 
     private void JumpBtn_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: BookmarkEntry entry })
+        if (_vm is not null && sender is Button { Tag: BookmarkEntry entry })
         {
             _vm.JumpToBookmark(entry.Position);
             Close();
@@ -321,7 +326,7 @@ public partial class BookmarksDialog : Window
 
     private void DeleteBtn_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: int idx })
+        if (_vm is not null && sender is Button { Tag: int idx })
         {
             _vm.RemoveBookmark(idx);
             Refresh();
@@ -330,6 +335,7 @@ public partial class BookmarksDialog : Window
 
     private void AddButton_Click(object? sender, RoutedEventArgs e)
     {
+        if (_vm is null) return;
         _vm.AddBookmarkAtCurrentPosition("");
         // Refresh and immediately put the new row into edit mode
         _entries = [.. _vm.GetBookmarksForCurrentFile()];
@@ -347,7 +353,7 @@ public partial class BookmarksDialog : Window
 
     private void ChapterJumpBtn_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: ChapterInfo chapter })
+        if (_vm is not null && sender is Button { Tag: ChapterInfo chapter })
         {
             _vm.JumpToChapter(chapter);
             Close();

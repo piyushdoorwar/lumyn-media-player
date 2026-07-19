@@ -35,13 +35,28 @@ public sealed class FlowWatermark : Control
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        _timer.Start();
+        UpdateTimer();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _timer.Stop();
         base.OnDetachedFromVisualTree(e);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == IsVisibleProperty)
+            UpdateTimer();
+    }
+
+    private void UpdateTimer()
+    {
+        if (VisualRoot is not null && IsVisible)
+            _timer.Start();
+        else
+            _timer.Stop();
     }
 
     public override void Render(DrawingContext context)

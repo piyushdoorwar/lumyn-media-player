@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /lumyn-media-player/
+
+Sitemap: https://piyushdoorwar.github.io/lumyn-media-player/sitemap.xml

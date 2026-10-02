@@ -26,7 +26,7 @@
   <SolidColorBrush x:Key="Lumyn.Ink" Color="#F7F5F3" />
   <SolidColorBrush x:Key="Lumyn.Text" Color="#DEDAD5" />
   <SolidColorBrush x:Key="Lumyn.Muted" Color="#9D9B98" />
-  <SolidColorBrush x:Key="Lumyn.Faint" Color="#6A6560" />
+  <SolidColorBrush x:Key="Lumyn.Faint" Color="#96918B" />
 
   <!-- Accent (Lumyn green) -->
   <SolidColorBrush x:Key="Lumyn.Accent" Color="#3A9B4B" />

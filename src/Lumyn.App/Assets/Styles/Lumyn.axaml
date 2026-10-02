@@ -216,8 +216,9 @@
   <Style Selector="Button.nav PathIcon">
     <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
   </Style>
+  <!-- ContentPresenter is a visual ancestor, not a logical ($parent) ancestor. -->
   <Style Selector="Button.nav TextBlock">
-    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType=ContentPresenter, Tree=Visual}}" />
   </Style>
   <Style Selector="Button.nav.selected PathIcon">
     <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentBright}" />
@@ -265,10 +266,10 @@
     <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
   </Style>
   <Style Selector="Button.link PathIcon">
-    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType=ContentPresenter, Tree=Visual}}" />
   </Style>
   <Style Selector="Button.link TextBlock">
-    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+    <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType=ContentPresenter, Tree=Visual}}" />
   </Style>
 
   <!-- ── Player chrome ─────────────────────────────────────────────────────── -->

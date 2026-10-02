@@ -38,6 +38,11 @@
   <SolidColorBrush x:Key="Lumyn.AccentSofter" Color="#123A9B4B" />
   <SolidColorBrush x:Key="Lumyn.AccentLine" Color="#663A9B4B" />
 
+  <!-- Filled text buttons need darker greens for readable white labels. -->
+  <SolidColorBrush x:Key="Lumyn.Primary" Color="#287737" />
+  <SolidColorBrush x:Key="Lumyn.PrimaryHover" Color="#2F803E" />
+  <SolidColorBrush x:Key="Lumyn.PrimaryPressed" Color="#23652F" />
+
   <!-- Status -->
   <SolidColorBrush x:Key="Lumyn.Danger" Color="#E5534B" />
   <SolidColorBrush x:Key="Lumyn.DangerSoft" Color="#1FE5534B" />

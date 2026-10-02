@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { GITHUB_URL } from "../lib/assets.js";
-import { fetchReleases, linuxAsset, windowsAsset } from "../lib/releases.js";
+import { fetchReleases, linuxAsset, hasLinuxAsset, windowsAsset } from "../lib/releases.js";
 import { listContainer, listItem } from "../motion/motion.js";
 import TopBar from "../components/TopBar.jsx";
 import Footer from "../components/Footer.jsx";
@@ -16,7 +16,7 @@ const OS_TABS = [
   { os: "windows", label: "Windows", icon: "windows" },
 ];
 
-const FINDERS = { linux: linuxAsset, windows: windowsAsset };
+const FINDERS = { linux: hasLinuxAsset, windows: windowsAsset };
 
 function formatDate(iso) {
   return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -36,12 +36,12 @@ function timeAgo(iso) {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-function DownloadButton({ asset, icon }) {
+function DownloadButton({ asset, icon, architecture }) {
   if (!asset) return null;
   const ext = asset.name.split(".").pop().toLowerCase();
   return (
     <a className="btn btn-secondary btn-sm" href={asset.browser_download_url} title={`Download ${asset.name}`}>
-      <Icon name={icon} />.{ext}
+      <Icon name={icon} />.{ext}{architecture && ` · ${architecture}`}
     </a>
   );
 }
@@ -174,6 +174,7 @@ export default function ReleasesPage() {
                 >
                   {pageItems.map((r) => {
                     const linux = showLinux ? linuxAsset(r) : null;
+                    const linuxArm = showLinux ? linuxAsset(r, "arm64") : null;
                     const windows = showWindows ? windowsAsset(r) : null;
                     return (
                       <motion.article className="release" key={r.id} variants={listItem}>
@@ -188,9 +189,10 @@ export default function ReleasesPage() {
                           </time>
                         </div>
                         <div className="release-downloads">
-                          {linux || windows ? (
+                          {linux || linuxArm || windows ? (
                             <>
-                              <DownloadButton asset={linux} icon="ubuntu" />
+                              <DownloadButton asset={linux} icon="ubuntu" architecture="x64" />
+                              <DownloadButton asset={linuxArm} icon="ubuntu" architecture="ARM64" />
                               <DownloadButton asset={windows} icon="windows" />
                             </>
                           ) : (

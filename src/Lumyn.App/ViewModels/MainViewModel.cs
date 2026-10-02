@@ -247,7 +247,7 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         PreviousTrackCommand   = new RelayCommand(_ => { _ = NavigateTrackAsync(-1); });
         NextTrackCommand       = new RelayCommand(_ => { _ = NavigateTrackAsync(+1); });
         OpenPlaylistItemCommand   = new RelayCommand(p => { if (p is int i) _ = PlayFromIndexAsync(i); });
-        RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) RemoveFromPlaylist(i); });
+        RemovePlaylistItemCommand = new RelayCommand(p => { if (p is int i) _ = RemoveFromPlaylistAsync(i); });
         RemoveRecentFileCommand = new RelayCommand(p => { if (p is string path) RemoveRecentFile(path); });
         PreviousChapterCommand = new RelayCommand(_ => _playback.SeekToChapter(-1));
         NextChapterCommand     = new RelayCommand(_ => _playback.SeekToChapter(+1));
@@ -2311,14 +2311,25 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         }
     }
 
-    private void RemoveFromPlaylist(int index)
+    private async Task RemoveFromPlaylistAsync(int index)
     {
         if (index < 0 || index >= _playlist.Count) return;
+        var removedCurrent = index == _playlistIndex;
         _playlist.RemoveAt(index);
-        if (_playlistIndex >= _playlist.Count)
-            _playlistIndex = Math.Max(0, _playlist.Count - 1);
+        if (_playlist.Count == 0)
+            _playlistIndex = -1;
+        else if (index < _playlistIndex)
+            _playlistIndex--;
+        else if (removedCurrent)
+            _playlistIndex = Math.Min(index, _playlist.Count - 1);
+
         RebuildPlaylistItems();
         NotifyPlaylistState();
+        if (removedCurrent)
+        {
+            if (_playlistIndex < 0) Stop();
+            else await OpenPlaylistIndexInternalAsync(_playlistIndex);
+        }
     }
 
     public void MovePlaylistItem(int from, int to)

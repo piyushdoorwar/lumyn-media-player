@@ -61,7 +61,7 @@ const ROWS = [
       {
         icon: "monitor",
         title: "Watch modes & audio clarity",
-        body: "Cinema, Theatre and TV presets, plus voice-focused EQ.",
+        body: "Cinema, Lecture, Language Learning, Night and Music Video presets, plus voice-focused EQ.",
         media: "preview-watch-modes.svg",
       },
       {

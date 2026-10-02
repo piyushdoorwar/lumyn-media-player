@@ -168,10 +168,12 @@
         </Grid.ColumnDefinitions>
 
         <!-- LEFT: cover, song info, waveform below the cover -->
-        <StackPanel Grid.Column="0"
-                    VerticalAlignment="Center"
-                    HorizontalAlignment="Center"
-                    Spacing="18" Margin="24,0">
+        <Grid Grid.Column="0" RowDefinitions="*,Auto" Name="AudioHeroRegion">
+          <Grid Grid.Row="0" Name="AudioHero" RowDefinitions="*,Auto,60"
+                RowSpacing="18" Margin="24,12" MaxHeight="392"
+                VerticalAlignment="Center">
+          <Viewbox Grid.Row="0" Stretch="Uniform" StretchDirection="DownOnly"
+                   HorizontalAlignment="Center">
 
           <Border Width="216" Height="216"
                   CornerRadius="{StaticResource Lumyn.RadiusLg}"
@@ -193,7 +195,8 @@
             </Panel>
           </Border>
 
-          <StackPanel Spacing="4" HorizontalAlignment="Center">
+          </Viewbox>
+          <StackPanel Grid.Row="1" Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="{Binding TrackTitle}"
                        FontSize="22" FontWeight="SemiBold"
                        HorizontalAlignment="Center" TextAlignment="Center"
@@ -210,11 +213,14 @@
           </StackPanel>
 
           <!-- Music-reactive equalizer bars, sized to match the cover -->
-          <controls:AudioBars Name="AudioVisualizer"
+          <controls:AudioBars Grid.Row="2" Name="AudioVisualizer"
                               Width="216" Height="60"
                               HorizontalAlignment="Center"
                               IsActive="{Binding IsPlaying}" />
-        </StackPanel>
+          </Grid>
+          <!-- Reserve the measured controls height, including wrapped rows. -->
+          <Border Grid.Row="1" Height="{Binding #ControlBar.Bounds.Height}" />
+        </Grid>
 
         <!-- RIGHT: the queue ("Up next"), only when there are 2+ tracks -->
         <Border Grid.Column="1"

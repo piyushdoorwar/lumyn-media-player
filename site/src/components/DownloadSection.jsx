@@ -73,6 +73,7 @@ function Terminal({ children }) {
 export default function DownloadSection() {
   const [os, setOS] = useState("linux");
   const [debUrl, setDebUrl] = useState(null);
+  const [armDebUrl, setArmDebUrl] = useState(null);
   const [exeUrl, setExeUrl] = useState(null);
   const tabs = useRef([]);
 
@@ -82,6 +83,7 @@ export default function DownloadSection() {
       .then((all) => {
         const stable = all.filter((r) => !r.prerelease);
         setDebUrl(firstUrl(stable, linuxAsset));
+        setArmDebUrl(firstUrl(stable, (r) => linuxAsset(r, "arm64")));
         setExeUrl(firstUrl(stable, windowsInstaller));
       })
       .catch(() => {
@@ -162,7 +164,8 @@ Start-Process $out`
                   <Icon name="snapcraft" />
                   Ubuntu App Center
                 </a>
-                {direct(debUrl, "Download .deb", "Download the Lumyn .deb package")}
+                {direct(debUrl, ".deb · Intel / AMD 64-bit", "Download Lumyn for Ubuntu Intel or AMD 64-bit")}
+                {direct(armDebUrl, ".deb · ARM64", "Download Lumyn for Ubuntu ARM64")}
               </div>
               <Terminal>
                 <Command label="Snap" text={SNAP_CMD} copyLabel="Copy snap install command" />

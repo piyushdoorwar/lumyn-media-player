@@ -5,22 +5,48 @@ import Icon from "./Icon.jsx";
 
 export default function SupportModal({ open, onClose }) {
   const closeRef = useRef(null);
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    const backdrop = dialogRef.current?.parentElement;
+    const siblings = [...(backdrop?.parentElement?.children ?? [])]
+      .filter((el) => el !== backdrop)
+      .map((el) => [el, el.inert]);
+    siblings.forEach(([el]) => { el.inert = true; });
     document.body.style.overflow = "hidden";
     closeRef.current?.focus();
     const onKey = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onCloseRef.current();
+      }
+      if (e.key !== "Tab") return;
+      const items = [...dialogRef.current.querySelectorAll(
+        'a[href], button:not([disabled]), [tabindex="0"]'
+      )];
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
     };
     document.addEventListener("keydown", onKey);
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      siblings.forEach(([el, inert]) => { el.inert = inert; });
       document.removeEventListener("keydown", onKey);
       previous?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   return (
     <AnimatePresence>
@@ -36,6 +62,7 @@ export default function SupportModal({ open, onClose }) {
           transition={{ duration: 0.18 }}
         >
           <motion.div
+            ref={dialogRef}
             className="modal"
             role="dialog"
             aria-modal="true"

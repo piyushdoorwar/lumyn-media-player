@@ -1,7 +1,10 @@
 import { BASE } from "./assets.js";
 
 // Asset matchers shared by the download section and the releases page.
-export const linuxAsset = (release) => release.assets.find((a) => /_amd64\.deb$/i.test(a.name));
+export const linuxAsset = (release, arch = "amd64") =>
+  release.assets.find((a) => a.name.toLowerCase().endsWith(`_${arch}.deb`));
+
+export const hasLinuxAsset = (release) => !!(linuxAsset(release) || linuxAsset(release, "arm64"));
 
 export const windowsAsset = (release) =>
   release.assets.find((a) => /win-x64.*_setup\.exe$/i.test(a.name)) ??

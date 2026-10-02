@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Text;
 using Lumyn.Core.Models;
 
@@ -301,9 +302,9 @@ public sealed class PlaybackService : IDisposable
     {
         if (_mpv == IntPtr.Zero || !_audioMetering) return -1;
 
-        var raw = GetString("af-metadata/viz/lavfi.astats.Overall.RMS_level");
-        if (string.IsNullOrEmpty(raw)
-            || !double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var db))
+        // Read the whole metadata map, not the "af-metadata/viz/<key>" sub-property:
+        // libmpv 0.37 (bundled in the .deb) segfaults on keyed af-metadata lookups.
+        if (!TryReadRmsLevel(GetString("af-metadata/viz"), out var db))
             return -1;
 
         // astats reports RMS in dBFS (≤ 0; -inf for digital silence).
@@ -311,6 +312,34 @@ public sealed class PlaybackService : IDisposable
         if (double.IsNegativeInfinity(db) || db <= -60.0) return 0.0;
         if (db >= 0.0) return 1.0;
         return (db + 60.0) / 60.0;
+    }
+
+    // af-metadata renders as a flat JSON object of strings, e.g.
+    // {"lavfi.astats.Overall.RMS_level":"-24.99", ...}. Values may be "-inf".
+    internal static bool TryReadRmsLevel(string? json, out double db)
+    {
+        db = 0;
+        if (string.IsNullOrEmpty(json)) return false;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object
+                || !doc.RootElement.TryGetProperty("lavfi.astats.Overall.RMS_level", out var value)
+                || value.ValueKind != JsonValueKind.String)
+                return false;
+
+            var text = value.GetString();
+            if (string.Equals(text, "-inf", StringComparison.OrdinalIgnoreCase))
+            {
+                db = double.NegativeInfinity; // digital silence
+                return true;
+            }
+            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out db);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
     }
 
     // ── Metadata / track info ──────────────────────────────────────────────

@@ -12,6 +12,9 @@ internal static class Program
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SESSION_MANAGER")))
             Environment.SetEnvironmentVariable("SESSION_MANAGER", "");
 
+        // Keep the .deb's bundled libs out of ffmpeg / dbus-send / xdg-open child processes.
+        Lumyn.Core.Services.LibraryPathScrubber.RemoveBundledLibDirectory();
+
         BuildAvaloniaApp()
             .StartWithClassicDesktopLifetime(args);
     }

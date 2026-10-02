@@ -159,7 +159,7 @@
         <Border Background="{StaticResource Lumyn.Bg}" Opacity="0.6" />
       </Panel>
 
-      <!-- YouTube-Music two-pane: hero on the left (~60%), queue on the right (~40%).
+      <!-- YouTube-Music two-pane: hero on the left (~70%), queue on the right (~30%).
            The queue column collapses to 0 for a single file so the hero stays centred. -->
       <Grid>
         <Grid.ColumnDefinitions>
@@ -563,8 +563,22 @@
       </StackPanel>
     </Border>
 
+    <!-- Match the audio split so controls never cover or intercept the queue. -->
+    <Grid Name="ControlBarLayout" VerticalAlignment="Bottom">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="7*" />
+        <ColumnDefinition>
+          <ColumnDefinition.Width>
+            <MultiBinding Converter="{x:Static conv:Converters.AudioQueueColumnWidth}">
+              <Binding Path="IsAudioMode" />
+              <Binding Path="HasPlaylist" />
+            </MultiBinding>
+          </ColumnDefinition.Width>
+        </ColumnDefinition>
+      </Grid.ColumnDefinitions>
     <Border
         Name="ControlBar"
+        SizeChanged="ControlBar_SizeChanged"
         VerticalAlignment="Bottom"
         Padding="12,0,12,10"
         IsVisible="{Binding ControlsVisible}"
@@ -613,12 +627,12 @@
                      MinWidth="50" />
         </Grid>
 
-        <!-- Transport row -->
-        <Grid ColumnDefinitions="*,Auto,*"
+        <!-- Transport groups reflow when the music pane is narrow. -->
+        <Grid Name="TransportLayout" ColumnDefinitions="*,Auto,*" RowDefinitions="Auto,Auto,Auto"
               Margin="28,0,28,0"
               MinHeight="42">
 
-          <StackPanel Grid.Column="0"
+          <StackPanel Name="SecondaryTransport" Grid.Column="0"
                       Orientation="Horizontal"
                       Spacing="2"
                       HorizontalAlignment="Left">
@@ -667,7 +681,7 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Grid.Column="1"
+          <StackPanel Name="PrimaryTransport" Grid.Column="1"
                       Orientation="Horizontal"
                       Spacing="5"
                       HorizontalAlignment="Center">
@@ -706,7 +720,7 @@
             </Button>
           </StackPanel>
 
-          <StackPanel Grid.Column="2"
+          <StackPanel Name="VolumeTransport" Grid.Column="2"
                       Orientation="Horizontal"
                       Spacing="2"
                       HorizontalAlignment="Right">
@@ -757,6 +771,8 @@
         </Grid>
       </StackPanel>
     </Border>
+
+    </Grid>
 
     <!-- ── Seek thumbnail preview ────────────────────────────────────────── -->
     <Border Name="SeekThumbnailPopup"

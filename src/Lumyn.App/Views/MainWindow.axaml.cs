@@ -4,6 +4,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
@@ -412,6 +413,31 @@ public partial class MainWindow : Window
         => ToggleFullscreen();
 
     // ── Custom title bar drag + window chrome ────────────────────────────────
+
+    private void ControlBar_SizeChanged(object? sender, SizeChangedEventArgs e)
+    {
+        // Keep all actions reachable when the playlist leaves less room for controls.
+        var primary = this.FindControl<StackPanel>("PrimaryTransport");
+        var secondary = this.FindControl<StackPanel>("SecondaryTransport");
+        var volume = this.FindControl<StackPanel>("VolumeTransport");
+        if (primary is null || secondary is null || volume is null) return;
+
+        var compact = e.NewSize.Width < 820;
+        var narrow = e.NewSize.Width < 600;
+        Place(primary, 0, compact ? 0 : 1, compact ? 3 : 1, HorizontalAlignment.Center);
+        Place(secondary, compact ? 1 : 0, 0, narrow ? 3 : 1,
+            narrow ? HorizontalAlignment.Center : HorizontalAlignment.Left);
+        Place(volume, narrow ? 2 : compact ? 1 : 0, narrow ? 0 : 2, narrow ? 3 : 1,
+            narrow ? HorizontalAlignment.Center : HorizontalAlignment.Right);
+
+        static void Place(Control control, int row, int column, int span, HorizontalAlignment alignment)
+        {
+            Grid.SetRow(control, row);
+            Grid.SetColumn(control, column);
+            Grid.SetColumnSpan(control, span);
+            control.HorizontalAlignment = alignment;
+        }
+    }
 
     private void TitleBar_PointerPressed(object? sender, PointerPressedEventArgs e)
     {

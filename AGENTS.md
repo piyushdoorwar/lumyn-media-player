@@ -462,7 +462,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 └─────────────────────────────────────────────┘
 ```
 
-In audio mode with 2+ tracks the centre area becomes a 70/30 split: cover + info + waveform on the left, the "Up next" queue on the right. Video has no queue UI.
+In audio mode with 2+ tracks the centre area becomes a 70/30 split: cover + info + waveform on the left, the "Up next" queue on the right. The seek/transport bar occupies only the left 70%, leaving the queue unobstructed to the bottom. `Converters.AudioQueueColumnWidth` reserves that space only when both `IsAudioMode` and `HasPlaylist` are true; video and single-track audio keep full-width controls. `ControlBar_SizeChanged` reflows transport groups into two rows below 820px and three below 600px to avoid overlap. Video has no queue UI.
 
 ### Recent Files Start Screen
 

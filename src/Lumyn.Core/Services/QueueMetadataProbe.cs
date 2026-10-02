@@ -46,25 +46,63 @@ public sealed class QueueMetadataProbe : IDisposable
     {
         if (_mpv == IntPtr.Zero || ct.IsCancellationRequested) return default;
 
-        RunCommand("loadfile", filePath, "replace");
-
-        // Wait for the demuxer to report a duration (also signals tags are loaded).
-        if (!PollUntil(() => ReadDouble("duration") > 0, 5_000, ct))
+        // stop/loadfile schedule work on mpv's playback thread. A positive
+        // duration can still belong to the previous file, so it is not a
+        // readiness signal. Start idle and discard events from earlier probes.
+        if (RunCommand("stop") < 0 ||
+            !PollUntil(() => GetString("idle-active") == "yes", 5_000, ct))
             return default;
+        while (ReadEvent(0) != MpvEventId.None)
+            if (ct.IsCancellationRequested) return default;
 
-        var durSec = ReadDouble("duration");
-        TimeSpan? duration = durSec > 0 ? TimeSpan.FromSeconds(durSec) : null;
+        try
+        {
+            if (ct.IsCancellationRequested || RunCommand("loadfile", filePath, "replace") < 0 ||
+                !WaitForFileLoaded(ct))
+                return default;
 
-        var title  = NullIfBlank(GetString("media-title"));
-        var artist = NullIfBlank(GetString("metadata/by-key/Artist"))
-                     ?? NullIfBlank(GetString("metadata/by-key/artist"))
-                     ?? NullIfBlank(GetString("metadata/by-key/album_artist"));
+            var durSec = ReadDouble("duration");
+            TimeSpan? duration = double.IsFinite(durSec) && durSec > 0
+                ? TimeSpan.FromSeconds(durSec) : null;
 
-        // Unload so the instance is idle and ready for the next file.
-        RunCommand("stop");
+            var title  = NullIfBlank(GetString("media-title"));
+            var artist = NullIfBlank(GetString("metadata/by-key/Artist"))
+                         ?? NullIfBlank(GetString("metadata/by-key/artist"))
+                         ?? NullIfBlank(GetString("metadata/by-key/album_artist"));
 
-        return new QueueProbeResult(duration, title, artist);
+            return ct.IsCancellationRequested ? default : new QueueProbeResult(duration, title, artist);
+        }
+        finally
+        {
+            // Also unload after cancellation, a failed load, or a timeout.
+            RunCommand("stop");
+        }
     }
+
+    private bool WaitForFileLoaded(CancellationToken ct)
+    {
+        var deadline = Environment.TickCount64 + 5_000;
+        var started = false;
+        while (Environment.TickCount64 < deadline && !ct.IsCancellationRequested)
+        {
+            switch (ReadEvent(0.05))
+            {
+                case MpvEventId.StartFile:
+                    started = true;
+                    break;
+                case MpvEventId.FileLoaded when started:
+                    return true;
+                // A previous stop's EndFile can arrive after idle becomes true.
+                case MpvEventId.EndFile when started:
+                case MpvEventId.Shutdown:
+                    return false;
+            }
+        }
+        return false;
+    }
+
+    private MpvEventId ReadEvent(double timeout) =>
+        Marshal.PtrToStructure<MpvNative.MpvEvent>(MpvNative.mpv_wait_event(_mpv, timeout)).event_id;
 
     private static string? NullIfBlank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 

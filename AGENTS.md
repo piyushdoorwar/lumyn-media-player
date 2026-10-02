@@ -268,7 +268,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 | `src/Lumyn.App/Controls/SeekBar.cs` | — | Custom timeline scrubbing control |
 | `src/Lumyn.App/Controls/MiniProgressBar.cs` | — | Custom 3px recent-card progress indicator; avoid default `ProgressBar` template for tiny bars |
 | `src/Lumyn.Core/Services/ThumbnailExtractor.cs` | — | Secondary silent mpv instance for seek-bar hover frame previews. Generates JPEG frames in a background Task in two phases: `Phase1Count` (20) coarse evenly-spaced frames first, then `Phase2PerMinute` (12/min) refinement. `GetNearest(progress)` returns the closest frame's bytes. |
-| `src/Lumyn.Core/Services/QueueMetadataProbe.cs` | — | Secondary silent mpv instance that reads duration / `media-title` / artist for a queued file without playing it (`Probe(path, ct)` → `QueueProbeResult`). Drives the audio-queue rows. |
+| `src/Lumyn.Core/Services/QueueMetadataProbe.cs` | — | Secondary silent mpv instance that reads duration / `media-title` / artist for a queued file without playing it (`Probe(path, ct)` → `QueueProbeResult`). Drives the audio-queue rows. Probes wait for idle, drain old events, then wait for `FileLoaded` before reading metadata; a positive duration alone can still belong to the previous file. Always stops in `finally` after a load attempt. |
 | `src/Lumyn.Core/Services/MediaTime.cs` | — | `FormatDuration(TimeSpan?)` → `m:ss` / `h:mm:ss` (blank if unknown). Unit-tested. |
 | `src/Lumyn.App/Converters.cs` | — | `Converters.QueueColumnWidth` (`FuncValueConverter<bool,GridLength>`): true → `3*` (~30% beside the `7*` hero), false → `0`; collapses the audio queue column for a single track. Referenced via `x:Static`. |
 

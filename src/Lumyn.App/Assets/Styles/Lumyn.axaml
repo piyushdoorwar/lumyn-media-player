@@ -1,150 +1,341 @@
-<Styles xmlns="https://github.com/avaloniaui">
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Shared control styles. Colours, radii and fonts come from Theme.axaml.
+    Fluent paints Button state backgrounds on the template's ContentPresenter,
+    so state overrides target "/template/ ContentPresenter#PART_ContentPresenter".
+  -->
+
   <Style Selector="Window">
-    <Setter Property="FontFamily" Value="Cantarell, Ubuntu, Inter, Segoe UI, sans-serif" />
+    <Setter Property="FontFamily" Value="{StaticResource Lumyn.Font}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
   </Style>
 
-  <Style Selector="Button">
-    <Setter Property="Background" Value="#3D3846" />
-    <Setter Property="Foreground" Value="#F7F5F3" />
-    <Setter Property="BorderBrush" Value="#5E5968" />
-    <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="5" />
-    <Setter Property="Padding" Value="12,6" />
-    <Setter Property="MinHeight" Value="34" />
+  <Style Selector="TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+  </Style>
+
+  <Style Selector="PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+  </Style>
+
+  <!-- ── Type ramp (sentence case; no uppercase micro-labels) ─────────────── -->
+
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="19" />
     <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+    <Setter Property="LetterSpacing" Value="-0.2" />
+  </Style>
+
+  <Style Selector="TextBlock.h2">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Text}" />
+  </Style>
+
+  <Style Selector="TextBlock.lede">
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.label">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Text}" />
+  </Style>
+
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+  </Style>
+
+  <Style Selector="TextBlock.hint">
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.faint">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Faint}" />
+  </Style>
+
+  <Style Selector="TextBlock.value">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+  </Style>
+
+  <!-- ── Surfaces ──────────────────────────────────────────────────────────── -->
+
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface2}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Line}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.Radius}" />
+    <Setter Property="Padding" Value="12,10" />
+  </Style>
+
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{StaticResource Lumyn.Line}" />
+  </Style>
+
+  <Style Selector="Border.footer">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Line}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="18,12" />
+  </Style>
+
+  <!-- Keyboard key cap -->
+  <Style Selector="Border.kbd">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface3}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.LineStrong}" />
+    <Setter Property="BorderThickness" Value="1,1,1,2" />
+    <Setter Property="CornerRadius" Value="5" />
+    <Setter Property="Padding" Value="7,2" />
+  </Style>
+  <Style Selector="Border.kbd > TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Lumyn.Mono}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Text}" />
+  </Style>
+
+  <!-- Tinted pill, e.g. "Active" -->
+  <Style Selector="Border.badge">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSoft}" />
+    <Setter Property="CornerRadius" Value="999" />
+    <Setter Property="Padding" Value="8,2" />
+  </Style>
+  <Style Selector="Border.badge > TextBlock">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+
+  <!-- ── Buttons ───────────────────────────────────────────────────────────── -->
+
+  <!-- Default = secondary: solid surface, hairline border -->
+  <Style Selector="Button">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
+    <Setter Property="Padding" Value="14,7" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="Focusable" Value="False" />
     <Setter Property="Transitions">
       <Transitions />
     </Setter>
   </Style>
 
-  <Style Selector="Button:pointerover">
-    <Setter Property="Background" Value="#4D4658" />
-  </Style>
-
-  <Style Selector="Button:pressed">
-    <Setter Property="Background" Value="#2D2834" />
-  </Style>
-
-  <Style Selector="Button.accent">
-    <Setter Property="Background" Value="#3A9B4B" />
-    <Setter Property="BorderBrush" Value="#48B35A" />
+  <!-- Primary: solid Lumyn green -->
+  <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Accent}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Accent}" />
     <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
-
-  <Style Selector="Button.accent:pointerover">
-    <Setter Property="Background" Value="#43AD56" />
+  <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentHover}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.AccentHover}" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentPressed}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.AccentPressed}" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="Button.accent">
+    <Setter Property="FontWeight" Value="SemiBold" />
   </Style>
 
-  <Style Selector="Button.accent:pressed">
-    <Setter Property="Background" Value="#2F7D3D" />
-  </Style>
-
-  <Style Selector="Button.icon">
-    <Setter Property="Width" Value="36" />
-    <Setter Property="MinWidth" Value="36" />
-    <Setter Property="Height" Value="32" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="HorizontalContentAlignment" Value="Center" />
-    <Setter Property="VerticalContentAlignment" Value="Center" />
-  </Style>
-
-  <Style Selector="Button.icon:pointerover">
+  <!-- Danger: red outline -->
+  <Style Selector="Button.danger /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.DangerLine}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Danger}" />
+  </Style>
+  <Style Selector="Button.danger:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.DangerSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Danger}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Danger}" />
   </Style>
 
-  <Style Selector="Button.downloadIcon">
+  <!-- Soft accent: tinted green, e.g. "+ Bookmark" -->
+  <Style Selector="Button.soft /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSofter}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.AccentLine}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+  <Style Selector="Button.soft:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Accent}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+
+  <!-- Ghost: no chrome until hover (row actions, list items) -->
+  <Style Selector="Button.ghost /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.ghost:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface3}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+
+  <!-- Sidebar navigation item; "selected" class marks the open section -->
+  <Style Selector="Button.nav">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="MinHeight" Value="34" />
+  </Style>
+  <Style Selector="Button.nav /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Text}" />
+  </Style>
+  <Style Selector="Button.nav:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface2}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+  </Style>
+  <Style Selector="Button.nav.selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSofter}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.AccentLine}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+  <Style Selector="Button.nav PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
+  </Style>
+  <Style Selector="Button.nav TextBlock">
+    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+  </Style>
+  <Style Selector="Button.nav.selected PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentBright}" />
+  </Style>
+
+  <!-- Segmented option (rotation, size, colour presets); "selected" = chosen -->
+  <Style Selector="Button.chip">
+    <Setter Property="Padding" Value="10,5" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.chip.selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSoft}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Accent}" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+
+  <!-- Selectable card (watch mode, audio clarity preset) -->
+  <Style Selector="Button.option">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.Radius}" />
+  </Style>
+  <Style Selector="Button.option.selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSofter}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Lumyn.Accent}" />
+  </Style>
+
+  <!-- Link-style text buttons -->
+  <Style Selector="Button.link">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+  <Style Selector="Button.link /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentBright}" />
+  </Style>
+  <Style Selector="Button.link:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
+  </Style>
+  <Style Selector="Button.link PathIcon">
+    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+  </Style>
+  <Style Selector="Button.link TextBlock">
+    <Setter Property="Foreground" Value="{Binding $parent[ContentPresenter].Foreground}" />
+  </Style>
+
+  <!-- ── Player chrome ─────────────────────────────────────────────────────── -->
+
+  <!-- Square icon buttons (top bar, control bar overlay) -->
+  <Style Selector="Button.ctrl">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
     <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
     <Setter Property="Width" Value="34" />
     <Setter Property="MinWidth" Value="34" />
     <Setter Property="Height" Value="34" />
     <Setter Property="MinHeight" Value="34" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="CornerRadius" Value="4" />
-  </Style>
-
-  <Style Selector="Button.downloadIcon:pointerover">
-    <Setter Property="Background" Value="#223D3846" />
-  </Style>
-
-  <Style Selector="Button.downloadIcon:pressed">
-    <Setter Property="Background" Value="#334D4658" />
-  </Style>
-
-  <Style Selector="Slider">
-    <Setter Property="Foreground" Value="#3A9B4B" />
-    <Setter Property="Focusable" Value="False" />
-  </Style>
-
-  <!-- Transparent icon buttons for the control bar overlay -->
-  <Style Selector="Button.ctrl">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="#F7F5F3" />
-    <Setter Property="CornerRadius" Value="4" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="Width" Value="36" />
-    <Setter Property="MinWidth" Value="36" />
-    <Setter Property="Height" Value="36" />
-    <Setter Property="MinHeight" Value="36" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Focusable" Value="False" />
   </Style>
-
-  <Style Selector="Button.ctrl:pointerover">
+  <Style Selector="Button.ctrl /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.ctrl:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#14FFFFFF" />
+  </Style>
+  <Style Selector="Button.ctrl:pressed /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#24FFFFFF" />
   </Style>
 
-  <Style Selector="Button.ctrl:pressed">
-    <Setter Property="Background" Value="#1AFFFFFF" />
+  <!-- Top bar: slightly smaller hit targets -->
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="MinWidth" Value="34" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="MinHeight" Value="30" />
   </Style>
 
   <Style Selector="Button.play-primary">
-    <Setter Property="Background" Value="#3A9B4B" />
     <Setter Property="CornerRadius" Value="22" />
     <Setter Property="Width" Value="44" />
     <Setter Property="MinWidth" Value="44" />
     <Setter Property="Height" Value="44" />
     <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
-
-  <Style Selector="Button.play-primary:pointerover">
-    <Setter Property="Background" Value="#43AD56" />
+  <Style Selector="Button.play-primary /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Accent}" />
   </Style>
-
   <Style Selector="Button.play-primary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#43AD56" />
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentHover}" />
   </Style>
-
-  <Style Selector="Button.play-primary:pressed">
-    <Setter Property="Background" Value="#2F7D3D" />
-  </Style>
-
   <Style Selector="Button.play-primary:pressed /template/ ContentPresenter#PART_ContentPresenter">
-    <Setter Property="Background" Value="#2F7D3D" />
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentPressed}" />
   </Style>
-
-  <Style Selector="PathIcon">
-    <Setter Property="Foreground" Value="#F7F5F3" />
+  <Style Selector="Button.play-primary PathIcon">
+    <Setter Property="Foreground" Value="#FFFFFF" />
   </Style>
 
   <!-- Dim state for toggle buttons (loop, always-on-top) when inactive -->
   <Style Selector="Button.dim">
-    <Setter Property="Opacity" Value="0.35" />
+    <Setter Property="Opacity" Value="0.4" />
   </Style>
 
   <!-- Window chrome buttons (minimize / maximize / close) -->
   <Style Selector="Button.wchrome">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="#AAAAAA" />
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
     <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="Width" Value="42" />
     <Setter Property="MinWidth" Value="42" />
@@ -152,49 +343,98 @@
     <Setter Property="MinHeight" Value="38" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
-    <Setter Property="Focusable" Value="False" />
   </Style>
-
-  <Style Selector="Button.wchrome:pointerover">
+  <Style Selector="Button.wchrome PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Muted}" />
+  </Style>
+  <Style Selector="Button.wchrome /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
-
-  <Style Selector="Button.wchrome:pressed">
-    <Setter Property="Background" Value="#333333" />
+  <Style Selector="Button.wchrome:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.Surface3}" />
   </Style>
-
-  <Style Selector="Button.wchrome.close:pointerover">
-    <Setter Property="Background" Value="Transparent" />
+  <Style Selector="Button.wchrome:pointerover PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Ink}" />
   </Style>
-
-  <Style Selector="Button.wchrome.close:pressed">
+  <Style Selector="Button.wchrome.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="#C42B1C" />
+  </Style>
+  <Style Selector="Button.wchrome.close:pointerover PathIcon">
+    <Setter Property="Foreground" Value="#FFFFFF" />
+  </Style>
+  <Style Selector="Button.wchrome.close:pressed /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="#A01E12" />
   </Style>
 
-  <!-- Link-style text buttons (About dialog footer) -->
-  <Style Selector="Button.link">
+  <!-- Download icon in subtitle search results -->
+  <Style Selector="Button.downloadIcon">
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.downloadIcon /template/ ContentPresenter#PART_ContentPresenter">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="BorderBrush" Value="Transparent" />
-    <Setter Property="BorderThickness" Value="0" />
-    <Setter Property="Foreground" Value="#3A9B4B" />
-    <Setter Property="Padding" Value="0" />
-    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="Button.downloadIcon:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSoft}" />
+  </Style>
+
+  <!-- ── Inputs ────────────────────────────────────────────────────────────── -->
+
+  <Style Selector="TextBox">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
+    <Setter Property="CaretBrush" Value="{StaticResource Lumyn.AccentBright}" />
+    <Setter Property="SelectionBrush" Value="{StaticResource Lumyn.AccentLine}" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="10,6" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
+    <Setter Property="MinHeight" Value="32" />
+  </Style>
+
+  <Style Selector="Slider">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Accent}" />
+    <Setter Property="Focusable" Value="False" />
+  </Style>
+
+  <Style Selector="CheckBox">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.Text}" />
+  </Style>
+
+  <!-- ── Floating layers: the only surfaces with elevation ─────────────────── -->
+
+  <Style Selector="ContextMenu">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusLg}" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontFamily" Value="{StaticResource Lumyn.Font}" />
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+  <Style Selector="ComboBox /template/ Border#PopupBorder">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.Radius}" />
+  </Style>
+
+  <Style Selector="ToolTip">
+    <Setter Property="CornerRadius" Value="{StaticResource Lumyn.RadiusSm}" />
+    <Setter Property="FontFamily" Value="{StaticResource Lumyn.Font}" />
     <Setter Property="FontSize" Value="12" />
-    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Padding" Value="8,4" />
   </Style>
 
-  <Style Selector="Button.link:pointerover">
-    <Setter Property="Background" Value="Transparent" />
-    <Setter Property="Foreground" Value="#48B35A" />
-  </Style>
+  <!-- ── Scrollbar ─────────────────────────────────────────────────────────── -->
 
-  <Style Selector="TextBlock">
-    <Setter Property="Foreground" Value="#F7F5F3" />
-  </Style>
-
-  <!-- ── Scrollbar ──────────────────────────────────────────────────────── -->
-
-  <!-- Thin track -->
   <Style Selector="ScrollBar:vertical">
     <Setter Property="Width" Value="6" />
     <Setter Property="Background" Value="Transparent" />
@@ -215,22 +455,19 @@
 
   <!-- Green thumb — opacity drives hover/press since Fluent overrides Background internally -->
   <Style Selector="ScrollBar /template/ Thumb">
-    <Setter Property="Background" Value="#3A9B4B" />
+    <Setter Property="Background" Value="{StaticResource Lumyn.Accent}" />
     <Setter Property="CornerRadius" Value="3" />
     <Setter Property="MinHeight" Value="20" />
     <Setter Property="MinWidth" Value="4" />
     <Setter Property="Opacity" Value="0.35" />
   </Style>
-
   <Style Selector="ScrollBar /template/ Thumb:pointerover">
     <Setter Property="Opacity" Value="0.75" />
   </Style>
-
   <Style Selector="ScrollBar /template/ Thumb:pressed">
     <Setter Property="Opacity" Value="1.0" />
   </Style>
 
-  <!-- Track area behind the thumb -->
   <Style Selector="ScrollBar /template/ Border#PART_TrackBorder">
     <Setter Property="Background" Value="#0DFFFFFF" />
     <Setter Property="CornerRadius" Value="3" />

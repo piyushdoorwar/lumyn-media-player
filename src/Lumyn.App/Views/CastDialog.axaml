@@ -9,20 +9,13 @@
     MinWidth="500"
     MinHeight="340"
     CanResize="True"
-    WindowStartupLocation="CenterOwner"
-    Background="#1E1E1E">
+    WindowStartupLocation="CenterOwner">
 
-  <Grid RowDefinitions="Auto,*,Auto" Margin="18,14,18,16">
-    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+  <Grid RowDefinitions="Auto,*,Auto">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="18,16,18,12">
       <StackPanel Grid.Column="0" Spacing="3">
-        <TextBlock Text="CAST TO"
-                   FontSize="10"
-                   FontWeight="SemiBold"
-                   Foreground="#807C79" />
-        <TextBlock Text="Choose a device on your network"
-                   FontSize="18"
-                   FontWeight="SemiBold"
-                   Foreground="#F7F5F3" />
+        <TextBlock Classes="h1" Text="Cast to a device" />
+        <TextBlock Classes="lede" Text="Choose a device on your network." />
       </StackPanel>
       <Button Grid.Column="1"
               Name="RefreshButton"
@@ -31,12 +24,8 @@
               Click="RefreshButton_Click" />
     </Grid>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,14,190">
-      <Border Grid.Column="0"
-              Background="#161616"
-              BorderBrush="#333333"
-              BorderThickness="1"
-              CornerRadius="5">
+    <Grid Grid.Row="1" ColumnDefinitions="*,14,190" Margin="18,0,18,14">
+      <Border Grid.Column="0" Classes="card" Padding="0">
         <Grid RowDefinitions="Auto,*">
           <Grid Grid.Row="0" ColumnDefinitions="Auto,*" Margin="12,10,12,8">
             <ProgressBar Grid.Column="0"
@@ -44,16 +33,15 @@
                          Classes="circular"
                          IsIndeterminate="True"
                          IsVisible="False"
-                         Foreground="#4CAF50"
+                         Foreground="{StaticResource Lumyn.AccentBright}"
                          Width="14"
                          Height="14"
                          VerticalAlignment="Center"
                          Margin="0,0,7,0" />
             <TextBlock Grid.Column="1"
                        Name="DevicesStatusText"
+                       Classes="hint"
                        Text="Searching for devices..."
-                       Foreground="#807C79"
-                       FontSize="12"
                        VerticalAlignment="Center" />
           </Grid>
           <ListBox Grid.Row="1"
@@ -71,12 +59,11 @@
                             Width="17"
                             Height="17"
                             Data="{StaticResource Icon.Cast}"
-                            Foreground="#49B35C"
+                            Foreground="{StaticResource Lumyn.AccentBright}"
                             VerticalAlignment="Center"
                             Margin="0,0,10,0" />
                   <TextBlock Grid.Column="1"
                              Text="{Binding Name}"
-                             Foreground="#F7F5F3"
                              TextTrimming="CharacterEllipsis"
                              VerticalAlignment="Center" />
                 </Grid>
@@ -86,29 +73,18 @@
         </Grid>
       </Border>
 
-      <Border Grid.Column="2"
-              Background="#181818"
-              BorderBrush="#333333"
-              BorderThickness="1"
-              CornerRadius="5"
-              Padding="14">
+      <Border Grid.Column="2" Classes="card" Padding="14">
         <StackPanel Spacing="10">
-          <TextBlock Text="STATUS"
-                     FontSize="10"
-                     FontWeight="SemiBold"
-                     Foreground="#807C79" />
+          <TextBlock Classes="h2" Text="Status" />
           <TextBlock Name="CastStateText"
                      Text="Not casting"
                      FontSize="14"
                      FontWeight="SemiBold"
-                     Foreground="#F7F5F3"
                      TextWrapping="Wrap" />
           <TextBlock Name="CastDetailText"
-                     Text="Open a media file, then choose a device to start casting."
-                     FontSize="12"
-                     Foreground="#9D9B98"
-                     TextWrapping="Wrap" />
-          <Border Height="1" Background="#303030" Margin="0,2" />
+                     Classes="hint"
+                     Text="Open a media file, then choose a device to start casting." />
+          <Border Classes="divider" Margin="0,2" />
           <Button Name="DisconnectButton"
                   Content="Disconnect"
                   Click="DisconnectButton_Click" />
@@ -116,14 +92,12 @@
       </Border>
     </Grid>
 
-    <Border Grid.Row="2" BorderBrush="#333333" BorderThickness="0,1,0,0" Margin="-18,14,-18,0">
-      <Grid ColumnDefinitions="Auto,*,Auto,8,Auto" Margin="18,10,18,0">
+    <Border Grid.Row="2" Classes="footer">
+      <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
         <TextBlock Grid.Column="0"
                    Name="FooterStatusText"
-                   Foreground="#807C79"
-                   FontSize="12"
+                   Classes="hint"
                    VerticalAlignment="Center" />
-        <Border Grid.Column="1" />
         <Button Grid.Column="2"
                 Name="CloseButton"
                 Content="Close"

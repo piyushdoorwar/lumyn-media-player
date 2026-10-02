@@ -1,8 +1,10 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Input;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Lumyn.App.ViewModels;
 using Lumyn.Core.Services;
 
@@ -62,95 +64,61 @@ public partial class BookmarksDialog : Window
         list.IsVisible = hasChapters;
         list.Items.Clear();
         foreach (var chapter in _chapters)
-            list.Items.Add(BuildChapterRow(chapter));
+            list.Items.Add(BuildChapterRow(chapter, JumpToChapter));
     }
 
-    private Grid BuildBookmarkRow(BookmarkEntry entry, int index, bool startEditing = false)
+    private Border BuildBookmarkRow(BookmarkEntry entry, int index, bool startEditing = false)
     {
         // Columns: [timestamp pill] [label / edit box] [pencil] [jump] [delete]
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,Auto,Auto"),
             ColumnSpacing = 6,
-            Margin = new Avalonia.Thickness(0, 3),
-            MinHeight = 34
+            MinHeight = 30
         };
 
-        // ── Timestamp pill ──────────────────────────────────────────────────
-        var timeBorder = new Border
-        {
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A2A2A")),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            Padding = new Avalonia.Thickness(8, 4),
-            Margin = new Avalonia.Thickness(0, 0, 10, 0),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Child = new TextBlock
-            {
-                Text = entry.FormattedTime,
-                FontSize = 12,
-                FontWeight = Avalonia.Media.FontWeight.SemiBold,
-                Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B"))
-            }
-        };
+        var timeBorder = BuildTimePill(entry.FormattedTime, Palette.AccentText);
         Grid.SetColumn(timeBorder, 0);
 
         // ── Label panel (TextBlock + TextBox toggled) ───────────────────────
         var labelPanel = new Panel
         {
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Stretch
         };
 
         var labelText = new TextBlock
         {
-            Text = string.IsNullOrWhiteSpace(entry.Label) ? "Add label…" : entry.Label,
             FontSize = 12,
-            FontStyle = string.IsNullOrWhiteSpace(entry.Label)
-                ? Avalonia.Media.FontStyle.Italic
-                : Avalonia.Media.FontStyle.Normal,
-            Foreground = new Avalonia.Media.SolidColorBrush(
-                string.IsNullOrWhiteSpace(entry.Label)
-                    ? Avalonia.Media.Color.Parse("#3A3937")
-                    : Avalonia.Media.Color.Parse("#C8C3C2")),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis,
             IsVisible = !startEditing
         };
+        ApplyLabel(labelText, entry.Label);
 
         var labelBox = new TextBox
         {
             Text = entry.Label,
             FontSize = 12,
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#252525")),
-            Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#E8E4E0")),
-            CaretBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")),
-            SelectionBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B40")),
-            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A3937")),
-            BorderThickness = new Avalonia.Thickness(1),
-            Padding = new Avalonia.Thickness(8, 5),
-            CornerRadius = new Avalonia.CornerRadius(4),
+            MinHeight = 28,
+            Padding = new Thickness(8, 4),
             PlaceholderText = "Add a name…",
-            IsVisible = startEditing,
-            Tag = (index, labelText)
+            IsVisible = startEditing
         };
 
         void CommitEdit()
         {
             var newLabel = labelBox.Text?.Trim() ?? "";
             _vm.RenameBookmark(index, newLabel);
-            var hasLabel = !string.IsNullOrWhiteSpace(newLabel);
-            labelText.Text = hasLabel ? newLabel : "Add label…";
-            labelText.FontStyle = hasLabel ? Avalonia.Media.FontStyle.Normal : Avalonia.Media.FontStyle.Italic;
-            labelText.Foreground = new Avalonia.Media.SolidColorBrush(
-                hasLabel ? Avalonia.Media.Color.Parse("#C8C3C2") : Avalonia.Media.Color.Parse("#3A3937"));
+            ApplyLabel(labelText, newLabel);
             labelBox.IsVisible = false;
             labelText.IsVisible = true;
         }
 
         labelBox.KeyDown += (_, e) =>
         {
-            if (e.Key == Avalonia.Input.Key.Enter) { CommitEdit(); e.Handled = true; }
-            if (e.Key == Avalonia.Input.Key.Escape) { labelBox.IsVisible = false; labelText.IsVisible = true; e.Handled = true; }
+            if (e.Key == Key.Enter) { CommitEdit(); e.Handled = true; }
+            if (e.Key == Key.Escape) { labelBox.IsVisible = false; labelText.IsVisible = true; e.Handled = true; }
         };
         labelBox.LostFocus += (_, _) => { if (labelBox.IsVisible) CommitEdit(); };
 
@@ -159,21 +127,8 @@ public partial class BookmarksDialog : Window
         Grid.SetColumn(labelPanel, 1);
 
         // ── Pencil edit button ──────────────────────────────────────────────
-        var editBtn = new Button
-        {
-            Background = Avalonia.Media.Brushes.Transparent,
-            BorderThickness = new Avalonia.Thickness(0),
-            Padding = new Avalonia.Thickness(6, 4),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
-            Opacity = 0.5
-        };
-        if (Application.Current?.Resources.TryGetResource("Icon.Edit", Avalonia.Styling.ThemeVariant.Default, out var editIcon) == true
-            && editIcon is Avalonia.Media.StreamGeometry geom)
-            editBtn.Content = new PathIcon { Data = geom, Width = 11, Height = 11, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A6560")) };
-        else
-            editBtn.Content = new TextBlock { Text = "✎", FontSize = 12, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A6560")) };
-
+        var editBtn = BuildIconButton("Icon.Edit", 11, Palette.Muted);
+        ToolTip.SetTip(editBtn, "Rename");
         editBtn.Click += (_, _) =>
         {
             labelText.IsVisible = false;
@@ -183,47 +138,14 @@ public partial class BookmarksDialog : Window
         };
         Grid.SetColumn(editBtn, 2);
 
-        // ── Jump button ─────────────────────────────────────────────────────
-        var jumpContent = new StackPanel
-        {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
-            Spacing = 5,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
-        if (Application.Current?.Resources.TryGetResource("Icon.Play", Avalonia.Styling.ThemeVariant.Default, out var playIcon) == true
-            && playIcon is Avalonia.Media.StreamGeometry playGeom)
-            jumpContent.Children.Add(new PathIcon { Data = playGeom, Width = 10, Height = 10, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")) });
-        jumpContent.Children.Add(new TextBlock { Text = "Jump", FontSize = 11, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
-        var jumpBtn = new Button
-        {
-            Content = jumpContent,
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A3A2E")),
-            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A5A40")),
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            Padding = new Avalonia.Thickness(10, 5),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Tag = entry
-        };
+        var jumpBtn = BuildJumpButton(entry);
         jumpBtn.Click += JumpBtn_Click;
         Grid.SetColumn(jumpBtn, 3);
 
         // ── Delete button ───────────────────────────────────────────────────
-        var deleteBtn = new Button
-        {
-            Background = Avalonia.Media.Brushes.Transparent,
-            Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7A3535")),
-            BorderThickness = new Avalonia.Thickness(0),
-            Padding = new Avalonia.Thickness(6, 4),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Tag = index
-        };
-        if (Application.Current?.Resources.TryGetResource("Icon.WindowClose", Avalonia.Styling.ThemeVariant.Default, out var closeIcon) == true
-            && closeIcon is Avalonia.Media.StreamGeometry closeGeom)
-            deleteBtn.Content = new PathIcon { Data = closeGeom, Width = 10, Height = 10, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#7A3535")) };
-        else
-            deleteBtn.Content = new TextBlock { Text = "✕", FontSize = 11 };
+        var deleteBtn = BuildIconButton("Icon.WindowClose", 10, Palette.Danger);
+        deleteBtn.Tag = index;
+        ToolTip.SetTip(deleteBtn, "Delete");
         deleteBtn.Click += DeleteBtn_Click;
         Grid.SetColumn(deleteBtn, 4);
 
@@ -237,77 +159,116 @@ public partial class BookmarksDialog : Window
             Avalonia.Threading.Dispatcher.UIThread.Post(() => { labelBox.SelectAll(); labelBox.Focus(); },
                 Avalonia.Threading.DispatcherPriority.Input);
 
-        return grid;
+        return WrapRow(grid);
     }
 
-    private Grid BuildChapterRow(ChapterInfo chapter)
+    private static Border BuildChapterRow(ChapterInfo chapter, Action<ChapterInfo> onJump)
     {
         var grid = new Grid
         {
             ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
             ColumnSpacing = 8,
-            Margin = new Avalonia.Thickness(0, 3),
-            MinHeight = 34
+            MinHeight = 30
         };
 
-        var timeBorder = new Border
-        {
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#242424")),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            Padding = new Avalonia.Thickness(8, 4),
-            Margin = new Avalonia.Thickness(0, 0, 10, 0),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Child = new TextBlock
-            {
-                Text = chapter.FormattedTime,
-                FontSize = 12,
-                FontWeight = Avalonia.Media.FontWeight.SemiBold,
-                Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A9B6F"))
-            }
-        };
+        var timeBorder = BuildTimePill(chapter.FormattedTime, Palette.Muted);
         Grid.SetColumn(timeBorder, 0);
 
         var title = new TextBlock
         {
             Text = chapter.Title,
             FontSize = 12,
-            Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#C8C3C2")),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            TextTrimming = Avalonia.Media.TextTrimming.CharacterEllipsis
+            Foreground = Palette.Text,
+            VerticalAlignment = VerticalAlignment.Center,
+            TextTrimming = TextTrimming.CharacterEllipsis
         };
         Grid.SetColumn(title, 1);
 
-        var jumpContent = new StackPanel
-        {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
-            Spacing = 5,
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-        };
-        if (Application.Current?.Resources.TryGetResource("Icon.Play", Avalonia.Styling.ThemeVariant.Default, out var playIcon) == true
-            && playIcon is Avalonia.Media.StreamGeometry playGeom)
-            jumpContent.Children.Add(new PathIcon { Data = playGeom, Width = 10, Height = 10, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")) });
-        jumpContent.Children.Add(new TextBlock { Text = "Jump", FontSize = 11, Foreground = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B")), VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
-
-        var jumpBtn = new Button
-        {
-            Content = jumpContent,
-            Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#2A3A2E")),
-            BorderBrush = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A5A40")),
-            BorderThickness = new Avalonia.Thickness(1),
-            CornerRadius = new Avalonia.CornerRadius(4),
-            Padding = new Avalonia.Thickness(10, 5),
-            VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            VerticalContentAlignment = Avalonia.Layout.VerticalAlignment.Center,
-            Tag = chapter
-        };
-        jumpBtn.Click += ChapterJumpBtn_Click;
+        var jumpBtn = BuildJumpButton(chapter);
+        jumpBtn.Click += (_, _) => onJump(chapter);
         Grid.SetColumn(jumpBtn, 2);
 
         grid.Children.Add(timeBorder);
         grid.Children.Add(title);
         grid.Children.Add(jumpBtn);
 
-        return grid;
+        return WrapRow(grid);
+    }
+
+    // ── Row building blocks ─────────────────────────────────────────────────
+
+    private static Border WrapRow(Control content)
+    {
+        var row = new Border
+        {
+            Padding = new Thickness(8, 6),
+            Margin = new Thickness(0, 0, 0, 6),
+            Child = content
+        };
+        row.Classes.Add("card");
+        return row;
+    }
+
+    private static Border BuildTimePill(string text, IBrush foreground) => new()
+    {
+        Background = Palette.Surface3,
+        CornerRadius = new CornerRadius(4),
+        Padding = new Thickness(8, 3),
+        Margin = new Thickness(0, 0, 6, 0),
+        VerticalAlignment = VerticalAlignment.Center,
+        Child = new TextBlock
+        {
+            Text = text,
+            FontFamily = Palette.Mono,
+            FontSize = 11.5,
+            FontWeight = FontWeight.SemiBold,
+            Foreground = foreground
+        }
+    };
+
+    private static void ApplyLabel(TextBlock labelText, string? label)
+    {
+        var hasLabel = !string.IsNullOrWhiteSpace(label);
+        labelText.Text = hasLabel ? label : "Add label…";
+        labelText.FontStyle = hasLabel ? FontStyle.Normal : FontStyle.Italic;
+        labelText.Foreground = hasLabel ? Palette.Text : Palette.Faint;
+    }
+
+    private static Button BuildIconButton(string iconKey, double size, IBrush foreground)
+    {
+        var btn = new Button
+        {
+            Padding = new Thickness(6, 4),
+            MinHeight = 26,
+            VerticalAlignment = VerticalAlignment.Center,
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Content = new PathIcon { Data = Palette.Icon(iconKey), Width = size, Height = size, Foreground = foreground }
+        };
+        btn.Classes.Add("ghost");
+        return btn;
+    }
+
+    private static Button BuildJumpButton(object tag)
+    {
+        var content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 5,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        content.Children.Add(new PathIcon { Data = Palette.Icon("Icon.Play"), Width = 10, Height = 10, Foreground = Palette.AccentText });
+        content.Children.Add(new TextBlock { Text = "Jump", FontSize = 11.5, Foreground = Palette.AccentText, VerticalAlignment = VerticalAlignment.Center });
+
+        var btn = new Button
+        {
+            Content = content,
+            Padding = new Thickness(10, 4),
+            MinHeight = 26,
+            VerticalAlignment = VerticalAlignment.Center,
+            Tag = tag
+        };
+        btn.Classes.Add("soft");
+        return btn;
     }
 
     private void JumpBtn_Click(object? sender, RoutedEventArgs e)
@@ -330,27 +291,28 @@ public partial class BookmarksDialog : Window
 
     private void AddButton_Click(object? sender, RoutedEventArgs e)
     {
+        var before = _entries;
         _vm.AddBookmarkAtCurrentPosition("");
-        // Refresh and immediately put the new row into edit mode
         _entries = [.. _vm.GetBookmarksForCurrentFile()];
+
+        // Bookmarks are kept sorted by position, so the new entry is not
+        // necessarily last: it is the one that was not in the previous snapshot.
+        var newIndex = _entries.Count > before.Count
+            ? _entries.FindIndex(entry => !before.Contains(entry))
+            : -1;
+
         var empty = this.FindControl<TextBlock>("EmptyBookmarksText");
         var list  = this.FindControl<ItemsControl>("BookmarksList");
         if (empty is not null) empty.IsVisible = _entries.Count == 0;
         if (list is null) return;
         list.Items.Clear();
         for (int i = 0; i < _entries.Count; i++)
-        {
-            var isNew = i == _entries.Count - 1;
-            list.Items.Add(BuildBookmarkRow(_entries[i], i, startEditing: isNew));
-        }
+            list.Items.Add(BuildBookmarkRow(_entries[i], i, startEditing: i == newIndex));
     }
 
-    private void ChapterJumpBtn_Click(object? sender, RoutedEventArgs e)
+    private void JumpToChapter(ChapterInfo chapter)
     {
-        if (sender is Button { Tag: ChapterInfo chapter })
-        {
-            _vm.JumpToChapter(chapter);
-            Close();
-        }
+        _vm.JumpToChapter(chapter);
+        Close();
     }
 }

@@ -8,92 +8,60 @@
     MinWidth="640"
     MinHeight="460"
     CanResize="True"
-    WindowStartupLocation="CenterOwner"
-    Background="#1A1A1A">
+    WindowStartupLocation="CenterOwner">
 
   <Grid RowDefinitions="*,Auto">
     <Grid Grid.Row="0" ColumnDefinitions="1*,4*" MinHeight="0">
 
       <Border Grid.Column="0"
-              Background="#151515"
-              BorderBrush="#2A2A2A"
+              Background="{StaticResource Lumyn.Bg}"
+              BorderBrush="{StaticResource Lumyn.Line}"
               BorderThickness="0,0,1,0"
-              Padding="10,12">
+              Padding="10,14">
         <Grid RowDefinitions="*,Auto">
-          <StackPanel Grid.Row="0" Spacing="6">
-            <TextBlock Text="SETTINGS"
-                       FontSize="10"
-                       FontWeight="SemiBold"
-                       Foreground="#807C79"
-                       Margin="4,0,0,8" />
+          <StackPanel Grid.Row="0" Spacing="2">
+            <TextBlock Classes="h2" Text="Settings" Margin="10,0,0,10" />
 
-            <Button Name="WatchModesNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="WatchModesNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="◐" Width="15" FontSize="13" HorizontalAlignment="Center" />
-                <TextBlock Text="Watch Modes" VerticalAlignment="Center" />
+            <Button Name="WatchModesNavButton" Classes="nav" Click="WatchModesNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
+                <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Contrast}" />
+                <TextBlock Text="Watch modes" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-
-            <Button Name="PlaybackNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="PlaybackNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="PlaybackNavButton" Classes="nav" Click="PlaybackNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Play}" />
                 <TextBlock Text="Playback" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-
-            <Button Name="VideoNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="VideoNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="VideoNavButton" Classes="nav" Click="VideoNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="15" Height="15" Data="{StaticResource Icon.VideoAdjust}" />
                 <TextBlock Text="Video" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-
-            <Button Name="AudioClarityNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="AudioClarityNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="AudioClarityNavButton" Classes="nav" Click="AudioClarityNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="15" Height="15" Data="{StaticResource Icon.AudioTrack}" />
-                <TextBlock Text="Audio Clarity" VerticalAlignment="Center" />
+                <TextBlock Text="Audio clarity" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-
-            <Button Name="InterfaceNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="InterfaceNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="InterfaceNavButton" Classes="nav" Click="InterfaceNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Settings}" />
                 <TextBlock Text="Interface" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
-
-            <Button Name="ShortcutsNavButton"
-                    HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Left"
-                    Click="ShortcutsNavButton_Click">
-              <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Name="ShortcutsNavButton" Classes="nav" Click="ShortcutsNavButton_Click">
+              <StackPanel Orientation="Horizontal" Spacing="9">
                 <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Keyboard}" />
                 <TextBlock Text="Shortcuts" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
           </StackPanel>
 
-          <Button Grid.Row="1"
-                  Name="TransmuxNavButton"
-                  HorizontalAlignment="Stretch"
-                  HorizontalContentAlignment="Left"
-                  Click="TransmuxNavButton_Click">
-            <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Grid.Row="1" Name="TransmuxNavButton" Classes="nav" Click="TransmuxNavButton_Click">
+            <StackPanel Orientation="Horizontal" Spacing="9">
               <Image Width="15" Height="15" Source="{StaticResource Icon.TransmuxLogo}" />
               <TextBlock Text="Transmux" VerticalAlignment="Center" />
             </StackPanel>
@@ -101,49 +69,31 @@
         </Grid>
       </Border>
 
-      <Grid Grid.Column="1" Margin="18,14,18,0" MinHeight="0">
+      <Grid Grid.Column="1" Margin="20,16,20,0" MinHeight="0">
         <ScrollViewer Name="WatchModesPanel" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Watch Modes"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,8" />
-            <TextBlock Text="Presets tune Lumyn for the way you are watching."
-                       FontSize="12"
-                       Foreground="#9D9B98"
-                       Margin="0,0,0,16" />
+          <StackPanel>
+            <TextBlock Classes="h1" Text="Watch modes" Margin="0,0,0,4" />
+            <TextBlock Classes="lede" Text="Presets tune Lumyn for the way you are watching." Margin="0,0,0,16" />
             <StackPanel Name="WatchModesList" Spacing="8" />
           </StackPanel>
         </ScrollViewer>
 
         <ScrollViewer Name="PlaybackPanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Playback"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,8" />
-            <TextBlock Text="Remember where you left off and resume there next time you open a file."
-                       FontSize="12"
-                       Foreground="#9D9B98"
-                       Margin="0,0,0,16" />
+          <StackPanel>
+            <TextBlock Classes="h1" Text="Playback" Margin="0,0,0,4" />
+            <TextBlock Classes="lede" Text="Remember where you left off and resume there next time you open a file." Margin="0,0,0,16" />
 
             <StackPanel Spacing="8">
-
               <!-- Audio (above), default off -->
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1"
-                      CornerRadius="6" Padding="12,10">
+              <Border Classes="card">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <PathIcon Grid.Column="0" Width="16" Height="16"
                             Data="{StaticResource Icon.AudioTrack}"
-                            Foreground="#BDB9B3" VerticalAlignment="Center"
+                            Foreground="{StaticResource Lumyn.Muted}" VerticalAlignment="Center"
                             Margin="0,0,10,0" />
                   <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="Resume audio files" FontSize="13"
-                               FontWeight="SemiBold" Foreground="White" />
-                    <TextBlock Text="Remember the last position for songs and other audio. Off by default."
-                               FontSize="11" Foreground="#8E8A86" TextWrapping="Wrap" />
+                    <TextBlock Classes="title" Text="Resume audio files" />
+                    <TextBlock Classes="hint" Text="Remember the last position for songs and other audio. Off by default." />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="2" Name="ResumeAudioToggle"
                                 VerticalAlignment="Center" />
@@ -151,121 +101,90 @@
               </Border>
 
               <!-- Video (below), default on -->
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1"
-                      CornerRadius="6" Padding="12,10">
+              <Border Classes="card">
                 <Grid ColumnDefinitions="Auto,*,Auto">
                   <PathIcon Grid.Column="0" Width="16" Height="16"
                             Data="{StaticResource Icon.VideoAdjust}"
-                            Foreground="#BDB9B3" VerticalAlignment="Center"
+                            Foreground="{StaticResource Lumyn.Muted}" VerticalAlignment="Center"
                             Margin="0,0,10,0" />
                   <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="Resume video files" FontSize="13"
-                               FontWeight="SemiBold" Foreground="White" />
-                    <TextBlock Text="Pick up movies and clips where you left off. On by default."
-                               FontSize="11" Foreground="#8E8A86" TextWrapping="Wrap" />
+                    <TextBlock Classes="title" Text="Resume video files" />
+                    <TextBlock Classes="hint" Text="Pick up movies and clips where you left off. On by default." />
                   </StackPanel>
                   <ToggleSwitch Grid.Column="2" Name="ResumeVideoToggle"
                                 VerticalAlignment="Center" />
                 </Grid>
               </Border>
-
             </StackPanel>
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer Name="VideoPanel" VerticalScrollBarVisibility="Auto">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Video Adjustments"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,16" />
+        <ScrollViewer Name="VideoPanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel>
+            <TextBlock Classes="h1" Text="Video adjustments" Margin="0,0,0,16" />
 
-            <TextBlock Text="COLOR CORRECTION"
-                       FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79"
-                       Margin="0,0,0,10" />
+            <TextBlock Classes="h2" Text="Color correction" Margin="0,0,0,10" />
 
             <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
-              <TextBlock Grid.Column="0" Text="Brightness"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+              <TextBlock Grid.Column="0" Text="Brightness" Classes="label" VerticalAlignment="Center" />
               <Slider Grid.Column="1"
                       Name="BrightnessSlider"
                       Minimum="-100" Maximum="100"
                       TickFrequency="1" IsSnapToTickEnabled="True"
                       ValueChanged="BrightnessSlider_Changed"
                       VerticalAlignment="Center" />
-              <TextBlock Grid.Column="2" Name="BrightnessVal"
+              <TextBlock Grid.Column="2" Name="BrightnessVal" Classes="value"
                          Text="+0"
-                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
                          VerticalAlignment="Center" HorizontalAlignment="Right" />
             </Grid>
-
             <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
-              <TextBlock Grid.Column="0" Text="Contrast"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+              <TextBlock Grid.Column="0" Text="Contrast" Classes="label" VerticalAlignment="Center" />
               <Slider Grid.Column="1"
                       Name="ContrastSlider"
                       Minimum="-100" Maximum="100"
                       TickFrequency="1" IsSnapToTickEnabled="True"
                       ValueChanged="ContrastSlider_Changed"
                       VerticalAlignment="Center" />
-              <TextBlock Grid.Column="2" Name="ContrastVal"
+              <TextBlock Grid.Column="2" Name="ContrastVal" Classes="value"
                          Text="+0"
-                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
                          VerticalAlignment="Center" HorizontalAlignment="Right" />
             </Grid>
-
             <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,20">
-              <TextBlock Grid.Column="0" Text="Saturation"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+              <TextBlock Grid.Column="0" Text="Saturation" Classes="label" VerticalAlignment="Center" />
               <Slider Grid.Column="1"
                       Name="SaturationSlider"
                       Minimum="-100" Maximum="100"
                       TickFrequency="1" IsSnapToTickEnabled="True"
                       ValueChanged="SaturationSlider_Changed"
                       VerticalAlignment="Center" />
-              <TextBlock Grid.Column="2" Name="SaturationVal"
+              <TextBlock Grid.Column="2" Name="SaturationVal" Classes="value"
                          Text="+0"
-                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
                          VerticalAlignment="Center" HorizontalAlignment="Right" />
             </Grid>
 
-            <TextBlock Text="GEOMETRY"
-                       FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79"
-                       Margin="0,0,0,10" />
+            <TextBlock Classes="h2" Text="Geometry" Margin="0,0,0,10" />
 
-            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,10">
-              <TextBlock Grid.Column="0" Text="Zoom"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+            <Grid ColumnDefinitions="96,*,60" Margin="0,0,0,6">
+              <TextBlock Grid.Column="0" Text="Zoom" Classes="label" VerticalAlignment="Center" />
               <Slider Grid.Column="1"
                       Name="ZoomSlider"
                       Minimum="-100" Maximum="100"
                       TickFrequency="5" IsSnapToTickEnabled="True"
                       ValueChanged="ZoomSlider_Changed"
                       VerticalAlignment="Center" />
-              <TextBlock Grid.Column="2" Name="ZoomVal"
+              <TextBlock Grid.Column="2" Name="ZoomVal" Classes="value"
                          Text="100%"
-                         Foreground="#F7F5F3" FontSize="12" FontWeight="SemiBold"
                          VerticalAlignment="Center" HorizontalAlignment="Right" />
             </Grid>
 
-            <TextBlock Text="0 = original size  ·  positive = zoom in  ·  negative = zoom out"
-                       FontSize="10" Foreground="#807C79" Margin="96,0,0,14" />
+            <TextBlock Classes="hint"
+                       Text="0 = original size  ·  positive = zoom in  ·  negative = zoom out"
+                       Margin="96,0,0,14" />
 
             <Grid ColumnDefinitions="96,*" Margin="0,0,0,14">
-              <TextBlock Grid.Column="0" Text="Aspect ratio"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+              <TextBlock Grid.Column="0" Text="Aspect ratio" Classes="label" VerticalAlignment="Center" />
               <ComboBox Grid.Column="1"
                         Name="AspectCombo"
-                        Background="#2D2D2D" Foreground="#F7F5F3"
-                        BorderBrush="#4D4658"
                         MaxDropDownHeight="220"
                         Focusable="True"
                         HorizontalAlignment="Stretch"
@@ -273,132 +192,67 @@
             </Grid>
 
             <Grid ColumnDefinitions="96,*" Margin="0,0,0,20">
-              <TextBlock Grid.Column="0" Text="Rotation"
-                         VerticalAlignment="Center"
-                         Foreground="#DEDAD5" FontSize="13" />
+              <TextBlock Grid.Column="0" Text="Rotation" Classes="label" VerticalAlignment="Center" />
               <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
-                <Button Name="Rot0Btn" Content="0°" MinWidth="58" Click="RotButton_Click" Tag="0" />
-                <Button Name="Rot90Btn" Content="90°" MinWidth="58" Click="RotButton_Click" Tag="90" />
-                <Button Name="Rot180Btn" Content="180°" MinWidth="58" Click="RotButton_Click" Tag="180" />
-                <Button Name="Rot270Btn" Content="270°" MinWidth="58" Click="RotButton_Click" Tag="270" />
+                <Button Name="Rot0Btn" Classes="chip" Content="0°" MinWidth="58" Click="RotButton_Click" Tag="0" />
+                <Button Name="Rot90Btn" Classes="chip" Content="90°" MinWidth="58" Click="RotButton_Click" Tag="90" />
+                <Button Name="Rot180Btn" Classes="chip" Content="180°" MinWidth="58" Click="RotButton_Click" Tag="180" />
+                <Button Name="Rot270Btn" Classes="chip" Content="270°" MinWidth="58" Click="RotButton_Click" Tag="270" />
               </StackPanel>
             </Grid>
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer Name="AudioClarityPanel"
-                      VerticalScrollBarVisibility="Auto"
-                      IsVisible="False">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Audio Clarity"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,8" />
-            <TextBlock Text="Make dialogue clear without opening an equalizer."
-                       FontSize="12"
-                       Foreground="#9D9B98"
-                       Margin="0,0,0,16" />
+        <ScrollViewer Name="AudioClarityPanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel>
+            <TextBlock Classes="h1" Text="Audio clarity" Margin="0,0,0,4" />
+            <TextBlock Classes="lede" Text="Make dialogue clear without opening an equalizer." Margin="0,0,0,16" />
             <StackPanel Name="AudioClarityList" Spacing="8" />
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer Name="InterfacePanel"
-                      VerticalScrollBarVisibility="Auto"
-                      IsVisible="False">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Interface"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,8" />
-            <TextBlock Text="Hide controls you do not use for a cleaner player surface."
-                       FontSize="12"
-                       Foreground="#9D9B98"
-                       Margin="0,0,0,16" />
+        <ScrollViewer Name="InterfacePanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel>
+            <TextBlock Classes="h1" Text="Interface" Margin="0,0,0,4" />
+            <TextBlock Classes="lede" Text="Hide controls you do not use for a cleaner player surface." Margin="0,0,0,16" />
             <StackPanel Name="InterfaceOptionsList" Spacing="8" />
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer Name="ShortcutsPanel"
-                      VerticalScrollBarVisibility="Auto"
-                      IsVisible="False">
-          <StackPanel Spacing="0">
-            <TextBlock Text="Keyboard Shortcuts"
-                       FontSize="20"
-                       FontWeight="SemiBold"
-                       Foreground="#F7F5F3"
-                       Margin="0,0,0,16" />
-
-            <TextBlock Text="PLAYBACK" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,0,0,8" />
-            <Grid Name="PlaybackGroup" />
-
-            <TextBlock Text="SEEKING" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="SeekingGroup" />
-
-            <TextBlock Text="VOLUME" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="VolumeGroup" />
-
-            <TextBlock Text="SPEED" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="SpeedGroup" />
-
-            <TextBlock Text="TRACKS" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="TracksGroup" />
-
-            <TextBlock Text="WINDOW" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="WindowGroup" />
-
-            <TextBlock Text="FILE &amp; DIALOGS" FontSize="10" FontWeight="SemiBold"
-                       Foreground="#807C79" Margin="0,16,0,8" />
-            <Grid Name="FileGroup" />
+        <ScrollViewer Name="ShortcutsPanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel Margin="0,0,0,16">
+            <TextBlock Classes="h1" Text="Keyboard shortcuts" Margin="0,0,0,16" />
+            <StackPanel Name="ShortcutsList" />
           </StackPanel>
         </ScrollViewer>
 
-        <ScrollViewer Name="TransmuxPanel"
-                      VerticalScrollBarVisibility="Auto"
-                      IsVisible="False">
-          <StackPanel Spacing="0">
+        <ScrollViewer Name="TransmuxPanel" VerticalScrollBarVisibility="Auto" IsVisible="False">
+          <StackPanel>
             <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
               <Image Width="42" Height="42" Source="{StaticResource Icon.TransmuxLogo}" />
               <StackPanel Spacing="2" VerticalAlignment="Center">
-                <TextBlock Text="Transmux"
-                           FontSize="20"
-                           FontWeight="SemiBold"
-                           Foreground="#F7F5F3" />
-                <TextBlock Text="Video format conversion"
-                           FontSize="12"
-                           Foreground="#9D9B98" />
+                <TextBlock Classes="h1" Text="Transmux" />
+                <TextBlock Classes="lede" Text="Video format conversion" />
               </StackPanel>
             </StackPanel>
 
             <TextBlock Text="Lumyn stays focused on playback. For converting video and audio files, use Transmux."
-                       FontSize="13"
-                       Foreground="#DEDAD5"
+                       Foreground="{StaticResource Lumyn.Text}"
                        TextWrapping="Wrap"
                        Margin="0,0,0,18" />
 
             <StackPanel Spacing="8">
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
-                <TextBlock Text="Convert MP4, WebM, MKV, AVI, MOV, MP3, AAC, FLAC, OGG, WAV, and Opus."
-                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              <Border Classes="card">
+                <TextBlock Text="Convert MP4, WebM, MKV, AVI, MOV, MP3, AAC, FLAC, OGG, WAV, and Opus." FontSize="12" Foreground="{StaticResource Lumyn.Text}" TextWrapping="Wrap" />
               </Border>
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
-                <TextBlock Text="Use fast stream copy when possible, or full re-encode when you need a compatible output."
-                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              <Border Classes="card">
+                <TextBlock Text="Use fast stream copy when possible, or full re-encode when you need a compatible output." FontSize="12" Foreground="{StaticResource Lumyn.Text}" TextWrapping="Wrap" />
               </Border>
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
-                <TextBlock Text="Include subtitles, extract them to SRT or ASS, or strip subtitle tracks from the output."
-                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              <Border Classes="card">
+                <TextBlock Text="Include subtitles, extract them to SRT or ASS, or strip subtitle tracks from the output." FontSize="12" Foreground="{StaticResource Lumyn.Text}" TextWrapping="Wrap" />
               </Border>
-              <Border Background="#181818" BorderBrush="#2F2F2F" BorderThickness="1" CornerRadius="6" Padding="12,10">
-                <TextBlock Text="Inspect media streams and follow live conversion progress with speed and ETA."
-                           FontSize="12" Foreground="#D0CBC7" TextWrapping="Wrap" />
+              <Border Classes="card">
+                <TextBlock Text="Inspect media streams and follow live conversion progress with speed and ETA." FontSize="12" Foreground="{StaticResource Lumyn.Text}" TextWrapping="Wrap" />
               </Border>
             </StackPanel>
 
@@ -412,16 +266,12 @@
       </Grid>
     </Grid>
 
-    <Border Grid.Row="1"
-            BorderBrush="#333333"
-            BorderThickness="0,1,0,0"
-            Padding="18,10,18,14">
+    <Border Grid.Row="1" Classes="footer">
       <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
         <Button Grid.Column="0" Name="ResetButton"
+                Classes="danger"
                 Content="Reset video"
-                Foreground="#FF9999"
                 Click="ResetButton_Click" />
-        <Border Grid.Column="1" />
         <Button Grid.Column="2" Name="CancelButton"
                 Content="Cancel"
                 Click="CancelButton_Click" />

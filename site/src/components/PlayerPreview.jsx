@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { asset } from "../lib/assets.js";
+import Icon from "./Icon.jsx";
 
 const SUBTITLES = [
   "Clean playback, readable subtitles, no clutter.",
@@ -21,45 +22,13 @@ function fmt(s) {
   return h > 0 ? `${h}:${pad(m)}:${pad(ss)}` : `${pad(m)}:${pad(ss)}`;
 }
 
-const PlayIcon = () => (
-  <svg className="play-tri" viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M8 5v14l11-7z" fill="currentColor" />
-  </svg>
-);
-const PauseIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor" />
-    <rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor" />
-  </svg>
-);
-const stroke = { fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
-const RewindIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}>
-    <path d="M11 6L5 12l6 6M19 6l-6 6 6 6" />
-  </svg>
-);
-const ForwardIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}>
-    <path d="M13 6l6 6-6 6M5 6l6 6-6 6" />
-  </svg>
-);
-const LoopIcon = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true" {...stroke}>
-    <path d="M17 2l4 4-4 4" />
-    <path d="M3 12V9a4 4 0 014-4h14" />
-    <path d="M7 22l-4-4 4-4" />
-    <path d="M21 12v3a4 4 0 01-4 4H3" />
-  </svg>
-);
-
 function Equalizer({ active }) {
-  const bars = [0, 1, 2, 3, 4];
   return (
     <div className="eq" aria-hidden="true">
-      {bars.map((i) => (
+      {[0, 1, 2, 3, 4].map((i) => (
         <motion.span
           key={i}
-          animate={active ? { scaleY: [0.3, 1, 0.45, 0.85, 0.35] } : { scaleY: 0.22 }}
+          animate={active ? { scaleY: [0.3, 1, 0.45, 0.85, 0.35] } : { scaleY: 0.2 }}
           transition={
             active
               ? { duration: 0.85 + i * 0.13, repeat: Infinity, repeatType: "mirror", ease: "easeInOut" }
@@ -71,6 +40,7 @@ function Equalizer({ active }) {
   );
 }
 
+// A small, working stand-in for the player: play/pause, seek, ±10s and loop.
 export default function PlayerPreview() {
   const reduced = useReducedMotion();
   const [playing, setPlaying] = useState(true);
@@ -78,112 +48,124 @@ export default function PlayerPreview() {
   const [subIndex, setSubIndex] = useState(0);
   const [subVisible, setSubVisible] = useState(true);
   const [loop, setLoop] = useState(true);
-  const [hover, setHover] = useState(null); // 0..1 ratio while hovering the seek bar
+  const [hover, setHover] = useState(null); // 0..1 while hovering the seek bar
   const trackRef = useRef(null);
 
-  // Time advances only while playing
   useEffect(() => {
     if (!playing) return;
     const id = setInterval(() => {
-      setPos((p) => (p + 1 >= DURATION ? (loop ? 0 : DURATION) : p + 1));
+      setPos((p) => {
+        if (p + 1 < DURATION) return p + 1;
+        if (loop) return 0;
+        setPlaying(false);
+        return DURATION;
+      });
     }, 1000);
     return () => clearInterval(id);
   }, [playing, loop]);
 
-  // Subtitle rotates only while playing
   useEffect(() => {
     if (!playing) return;
+    let swap;
     const id = setInterval(() => {
       setSubVisible(false);
-      setTimeout(() => {
+      swap = setTimeout(() => {
         setSubIndex((i) => (i + 1) % SUBTITLES.length);
         setSubVisible(true);
       }, 420);
     }, 4200);
-    return () => clearInterval(id);
+    return () => {
+      clearInterval(id);
+      clearTimeout(swap);
+      setSubVisible(true);
+    };
   }, [playing]);
 
   const pct = (pos / DURATION) * 100;
   const active = playing && !reduced;
+  const toggle = () => {
+    if (!playing && pos >= DURATION) setPos(0);
+    setPlaying((p) => !p);
+  };
 
   const ratioFromEvent = (e) => {
     const r = trackRef.current.getBoundingClientRect();
     return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
   };
-  const seek = (e) => setPos(ratioFromEvent(e) * DURATION);
 
   return (
-    <div className="player-preview" aria-label="Lumyn player preview">
-      <div className="window-bar">
-        <div className="mark">
-          <img src={asset("lumyn.svg")} alt="" />
-        </div>
+    <div className="player" role="group" aria-label="Lumyn player preview">
+      <div className="player-bar">
+        <img src={asset("lumyn.svg")} alt="" />
         <span>sample-video.mkv — Lumyn</span>
-        <div className="window-buttons" aria-hidden="true">
-          <i></i>
-          <i></i>
-          <i></i>
+        <div className="player-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
         </div>
       </div>
 
       <div className="screen">
         <Equalizer active={active} />
-
         <motion.button
           type="button"
           className="play-ring"
-          onClick={() => setPlaying((p) => !p)}
+          onClick={toggle}
           aria-label={playing ? "Pause" : "Play"}
-          style={{ animationPlayState: active ? "running" : "paused" }}
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.92 }}
+          whileTap={{ scale: 0.94 }}
         >
           <AnimatePresence mode="wait" initial={false}>
             <motion.span
               key={playing ? "pause" : "play"}
               style={{ display: "grid", placeItems: "center" }}
-              initial={{ opacity: 0, scale: 0.6 }}
+              initial={{ opacity: 0, scale: 0.7 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.6 }}
-              transition={{ duration: 0.18 }}
+              exit={{ opacity: 0, scale: 0.7 }}
+              transition={{ duration: 0.15 }}
             >
-              {playing ? <PauseIcon /> : <PlayIcon />}
+              <Icon name={playing ? "pause" : "play"} className={playing ? "" : "ic-play"} />
             </motion.span>
           </AnimatePresence>
         </motion.button>
-
-        <div
-          className="subtitle"
-          style={{ opacity: subVisible ? 1 : 0, transition: "opacity 0.4s ease" }}
-        >
+        <div className="subtitle" style={{ opacity: subVisible ? 1 : 0 }}>
           {SUBTITLES[subIndex]}
         </div>
       </div>
 
-      <div className="controls">
+      <div className="player-controls">
         <div
-          className="timeline seekable"
+          className="seek"
           ref={trackRef}
-          onClick={seek}
+          role="slider"
+          tabIndex={0}
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={DURATION}
+          aria-valuenow={Math.floor(pos)}
+          aria-valuetext={fmt(pos)}
+          onClick={(e) => setPos(ratioFromEvent(e) * DURATION)}
+          onKeyDown={(e) => {
+            const step = e.key === "ArrowRight" ? 10 : e.key === "ArrowLeft" ? -10 : 0;
+            if (!step) return;
+            e.preventDefault();
+            setPos((p) => Math.min(DURATION, Math.max(0, p + step)));
+          }}
           onMouseMove={(e) => setHover(ratioFromEvent(e))}
           onMouseLeave={() => setHover(null)}
         >
-          <motion.span
-            className="seek-fill"
-            style={{ width: `${pct}%` }}
-            animate={{ width: `${pct}%` }}
-            transition={{ ease: "linear", duration: active ? 0.9 : 0.2 }}
-          />
-          <span className="seek-knob" style={{ left: `${pct}%` }} />
+          <div className="seek-track">
+            <span className="seek-fill" style={{ width: `${pct}%` }} />
+            <span className="seek-knob" style={{ left: `${pct}%` }} />
+          </div>
           <AnimatePresence>
             {hover !== null && (
               <motion.div
                 className="seek-thumb"
                 style={{ left: `${hover * 100}%` }}
-                initial={{ opacity: 0, y: 6 }}
+                initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 6 }}
-                transition={{ duration: 0.15 }}
+                exit={{ opacity: 0, y: 4 }}
+                transition={{ duration: 0.12 }}
               >
                 <div className="thumb-img" />
                 <div className="thumb-time">{fmt(hover * DURATION)}</div>
@@ -195,39 +177,39 @@ export default function PlayerPreview() {
         <div className="control-row">
           <span>{fmt(pos)}</span>
           <div className="control-icons">
-            <motion.button
+            <button
+              type="button"
               className="ctrl-btn"
               aria-label="Back 10 seconds"
               onClick={() => setPos((p) => Math.max(0, p - 10))}
-              whileTap={{ scale: 0.85 }}
             >
-              <RewindIcon />
-            </motion.button>
-            <motion.button
-              className="ctrl-btn"
+              <Icon name="rewind" />
+            </button>
+            <button
+              type="button"
+              className="ctrl-btn primary"
               aria-label={playing ? "Pause" : "Play"}
-              onClick={() => setPlaying((p) => !p)}
-              whileTap={{ scale: 0.85 }}
+              onClick={toggle}
             >
-              {playing ? <PauseIcon /> : <PlayIcon />}
-            </motion.button>
-            <motion.button
+              <Icon name={playing ? "pause" : "play"} />
+            </button>
+            <button
+              type="button"
               className="ctrl-btn"
               aria-label="Forward 10 seconds"
               onClick={() => setPos((p) => Math.min(DURATION, p + 10))}
-              whileTap={{ scale: 0.85 }}
             >
-              <ForwardIcon />
-            </motion.button>
-            <motion.button
+              <Icon name="forward" />
+            </button>
+            <button
+              type="button"
               className={`ctrl-btn${loop ? " active" : ""}`}
-              aria-label="Toggle loop"
+              aria-label="Loop"
               aria-pressed={loop}
               onClick={() => setLoop((l) => !l)}
-              whileTap={{ scale: 0.85 }}
             >
-              <LoopIcon />
-            </motion.button>
+              <Icon name="loop" />
+            </button>
           </div>
           <span>{fmt(DURATION)}</span>
         </div>

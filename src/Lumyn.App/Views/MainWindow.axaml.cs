@@ -617,7 +617,7 @@ public partial class MainWindow : Window
             foreach (var track in tracks)
             {
                 var t = track;
-                audioMenuItem.Items.Add(new MenuItem { Header = t.IsSelected ? $"✓ {t.Name}" : t.Name }
+                audioMenuItem.Items.Add(new MenuItem { Header = t.Name, ToggleType = MenuItemToggleType.Radio, IsChecked = t.IsSelected }
                     .Also(mi => mi.Click += (_, _) => ViewModel.SetAudioTrackCommand.Execute(t.Id)));
             }
         }
@@ -632,7 +632,7 @@ public partial class MainWindow : Window
             foreach (var track in tracks)
             {
                 var t = track;
-                subMenuItem.Items.Add(new MenuItem { Header = t.IsSelected ? $"✓ {t.Name}" : t.Name }
+                subMenuItem.Items.Add(new MenuItem { Header = t.Name, ToggleType = MenuItemToggleType.Radio, IsChecked = t.IsSelected }
                     .Also(mi => mi.Click += (_, _) => ViewModel.SetSubtitleTrackCommand.Execute(t.Id)));
             }
         }
@@ -640,7 +640,7 @@ public partial class MainWindow : Window
         // Always-on-top checkmark
         var aotItem = cm.Items.OfType<MenuItem>().FirstOrDefault(m => m.Name == "AlwaysOnTopMenuItem");
         if (aotItem is not null)
-            aotItem.Header = ViewModel.IsAlwaysOnTop ? "✓ Always on Top" : "Always on Top";
+            aotItem.IsChecked = ViewModel.IsAlwaysOnTop;
 
     }
 
@@ -973,7 +973,6 @@ public partial class MainWindow : Window
 
     // ── Playlist drag-to-reorder ──────────────────────────────────────────────
 
-    private const string PlaylistDragFormat = "lumyn/playlist-index";
     private int _playlistDragFromIndex = -1;
 
     private async void PlaylistDragHandle_PointerPressed(object? sender, PointerPressedEventArgs e)

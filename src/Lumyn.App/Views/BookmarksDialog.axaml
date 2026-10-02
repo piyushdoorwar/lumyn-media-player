@@ -8,55 +8,41 @@
     MaxHeight="520"
     CanResize="False"
     WindowStartupLocation="CenterOwner"
-    SizeToContent="Height"
-    Background="#1A1A1A">
+    SizeToContent="Height">
   <StackPanel Margin="16,14,16,16" Spacing="10">
 
     <!-- Header row: file name + Add button -->
     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-      <TextBlock Grid.Column="0" Name="FileNameText"
-                 FontSize="12" Foreground="#6A6560"
+      <TextBlock Grid.Column="0" Name="FileNameText" Classes="faint"
                  TextTrimming="CharacterEllipsis"
                  VerticalAlignment="Center"
                  Margin="0,0,10,0" />
       <Button Grid.Column="1"
               Name="AddButton"
+              Classes="soft"
               Content="+ Bookmark"
               Click="AddButton_Click"
-              Background="#2A3A2E" Foreground="#3A9B4B"
-              BorderBrush="#3A5A40" BorderThickness="1"
-              Padding="10,6" CornerRadius="4"
-              FontSize="12"
-              VerticalAlignment="Center"
-              VerticalContentAlignment="Center" />
+              VerticalAlignment="Center" />
     </Grid>
 
-    <Border Height="1" Background="#2A2A2A" />
+    <Border Classes="divider" />
 
     <ScrollViewer MaxHeight="420"
                   VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="10">
-        <TextBlock Text="Bookmarks"
-                   FontSize="12"
-                   FontWeight="SemiBold"
-                   Foreground="#C8C3C2" />
+        <TextBlock Classes="h2" Text="Bookmarks" />
 
-        <TextBlock Name="EmptyBookmarksText"
+        <TextBlock Name="EmptyBookmarksText" Classes="faint"
                    Text="No bookmarks yet. Press B while playing to add one."
-                   FontSize="12" Foreground="#4A4948"
                    HorizontalAlignment="Center"
                    TextWrapping="Wrap"
                    Margin="0,8" />
 
         <ItemsControl Name="BookmarksList" />
 
-        <Border Name="ChaptersDivider" Height="1" Background="#2A2A2A" Margin="0,4,0,0" />
+        <Border Name="ChaptersDivider" Classes="divider" Margin="0,4,0,0" />
 
-        <TextBlock Name="ChaptersHeader"
-                   Text="Chapters"
-                   FontSize="12"
-                   FontWeight="SemiBold"
-                   Foreground="#C8C3C2" />
+        <TextBlock Name="ChaptersHeader" Classes="h2" Text="Chapters" />
 
         <ItemsControl Name="ChaptersList" />
       </StackPanel>

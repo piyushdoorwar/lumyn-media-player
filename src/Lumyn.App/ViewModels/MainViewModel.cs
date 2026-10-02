@@ -5,7 +5,6 @@ using System.Windows.Input;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Lumyn.App.Models;
-using Lumyn.Core.Models;
 using Lumyn.Core.Services;
 
 namespace Lumyn.App.ViewModels;

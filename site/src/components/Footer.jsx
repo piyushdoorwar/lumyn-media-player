@@ -1,64 +1,46 @@
 import { asset, BASE, GITHUB_URL, SUPPORT_EMAIL } from "../lib/assets.js";
+import Icon from "./Icon.jsx";
 
-// variant: "home" | "releases" | "policy"
-export default function Footer({ variant = "home", onSupport }) {
-  if (variant === "policy") {
-    return (
-      <footer>
-        <span>
-          &copy; {new Date().getFullYear()} Piyush Doorwar. Lumyn Media Player.
-        </span>
-        <div className="footer-links">
-          <a className="icon-link" href={BASE}>
-            <img src={asset("lumyn.svg")} alt="" />
-            <span>Home</span>
-          </a>
-          <a className="icon-link" href={`${BASE}releases/`}>
-            <img src={asset("releases.svg")} alt="" />
-            <span>Releases</span>
-          </a>
-          <a className="icon-link" href={`${BASE}policy/`} aria-current="page">
-            <img src={asset("policy.svg")} alt="" />
-            <span>Policy</span>
-          </a>
-          <a className="icon-link" href={GITHUB_URL} rel="noreferrer">
-            <img src={asset("github.svg")} alt="" />
-            <span>GitHub</span>
-          </a>
-          <a className="icon-link" href={`mailto:${SUPPORT_EMAIL}`}>
-            <img src={asset("mail.svg")} alt="" />
-            <span>Contact</span>
-          </a>
-        </div>
-      </footer>
-    );
-  }
-
-  const releasesCurrent = variant === "releases";
+// onSupport opens the support dialog; without it the link falls back to email.
+export default function Footer({ onSupport }) {
   return (
-    <footer>
-      <span>Lumyn Media Player</span>
-      <div className="footer-links">
-        <a
-          className="icon-link"
-          href={`${BASE}releases/`}
-          {...(releasesCurrent ? { "aria-current": "page" } : {})}
-        >
-          <img src={asset("releases.svg")} alt="" />
-          <span>{releasesCurrent ? "Releases" : "All releases"}</span>
-        </a>
-        <a className="icon-link" href={`${BASE}policy/`}>
-          <img src={asset("policy.svg")} alt="" />
-          <span>Policy</span>
-        </a>
-        <a className="github-link" href={GITHUB_URL} rel="noreferrer">
-          <img src={asset("github.svg")} alt="" />
-          <span>GitHub</span>
-        </a>
-        <button className="footer-support-link icon-link" onClick={onSupport}>
-          <img src={asset("support.svg")} alt="" />
-          <span>Support</span>
-        </button>
+    <footer className="footer">
+      <div className="wrap">
+        <div>
+          <a className="brand" href={BASE}>
+            <img src={asset("lumyn.svg")} alt="" />
+            <span>Lumyn</span>
+          </a>
+          <p>
+            A quiet desktop media player for Windows and Ubuntu. &copy; {new Date().getFullYear()}{" "}
+            Piyush Doorwar.
+          </p>
+        </div>
+        <div className="footer-links">
+          <a href={`${BASE}releases/`}>
+            <Icon name="tag" />
+            Releases
+          </a>
+          <a href={`${BASE}policy/`}>
+            <Icon name="shield" />
+            Privacy
+          </a>
+          <a href={GITHUB_URL} rel="noreferrer">
+            <Icon name="github" />
+            GitHub
+          </a>
+          {onSupport ? (
+            <button type="button" onClick={onSupport}>
+              <Icon name="lifebuoy" />
+              Support
+            </button>
+          ) : (
+            <a href={`mailto:${SUPPORT_EMAIL}`}>
+              <Icon name="mail" />
+              Contact
+            </a>
+          )}
+        </div>
       </div>
     </footer>
   );

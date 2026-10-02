@@ -1,11 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { asset, SUPPORT_EMAIL } from "../lib/assets.js";
+import { SUPPORT_EMAIL } from "../lib/assets.js";
+import Icon from "./Icon.jsx";
 
 export default function SupportModal({ open, onClose }) {
+  const closeRef = useRef(null);
+
   useEffect(() => {
     if (!open) return;
+    const previous = document.activeElement;
     document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
     const onKey = (e) => {
       if (e.key === "Escape") onClose();
     };
@@ -13,6 +18,7 @@ export default function SupportModal({ open, onClose }) {
     return () => {
       document.body.style.overflow = "";
       document.removeEventListener("keydown", onKey);
+      previous?.focus?.();
     };
   }, [open, onClose]);
 
@@ -21,49 +27,43 @@ export default function SupportModal({ open, onClose }) {
       {open && (
         <motion.div
           className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="supportModalTitle"
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose();
           }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.18 }}
         >
           <motion.div
-            className="modal-box"
-            initial={{ opacity: 0, y: 24, scale: 0.97 }}
+            className="modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-title"
+            initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+            exit={{ opacity: 0, y: 8, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="modal-header">
-              <p className="eyebrow" style={{ margin: 0 }}>
-                Support and issues
-              </p>
+            <div className="modal-head">
+              <p className="eyebrow">Support</p>
               <button
-                className="modal-close"
+                ref={closeRef}
+                type="button"
+                className="icon-btn"
                 aria-label="Close support dialog"
                 onClick={onClose}
               >
-                ✕
+                <Icon name="close" />
               </button>
             </div>
-            <h2 id="supportModalTitle" className="modal-title">
-              Need help with Lumyn?
-            </h2>
-            <p className="modal-body">
-              Found a bug, hit a playback issue, or want to share feedback? Send an
-              email and include your OS, Lumyn version, and a short note about what
-              happened.
+            <h2 id="support-title">Need help with Lumyn?</h2>
+            <p>
+              Found a bug, hit a playback issue, or want to share feedback? Send an email with your
+              OS, Lumyn version, and a short note about what happened.
             </p>
-            <a
-              className="button secondary large email-link"
-              href={`mailto:${SUPPORT_EMAIL}`}
-            >
-              <img src={asset("mail.svg")} alt="" />
+            <a className="btn btn-secondary" href={`mailto:${SUPPORT_EMAIL}`}>
+              <Icon name="mail" />
               <span>{SUPPORT_EMAIL}</span>
             </a>
           </motion.div>

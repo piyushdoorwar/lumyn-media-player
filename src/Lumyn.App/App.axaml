@@ -1,17 +1,27 @@
 <Application
     x:Class="Lumyn.App.App"
     xmlns="https://github.com/avaloniaui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Application.Styles>
-    <FluentTheme />
-    <StyleInclude Source="avares://Lumyn/Assets/Styles/Lumyn.axaml" />
-  </Application.Styles>
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    RequestedThemeVariant="Dark">
+  <!-- Resources first: Lumyn.axaml styles resolve these tokens via StaticResource. -->
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://Lumyn/Assets/Styles/Theme.axaml" />
         <ResourceInclude Source="avares://Lumyn/Assets/Icons/LumynLogo.axaml" />
         <ResourceInclude Source="avares://Lumyn/Assets/Icons/MediaIcons.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>
+  <Application.Styles>
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark"
+                               Accent="#3A9B4B"
+                               RegionColor="#161616"
+                               AltHigh="#111111" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
+    <StyleInclude Source="avares://Lumyn/Assets/Styles/Lumyn.axaml" />
+  </Application.Styles>
 </Application>

@@ -1,0 +1,123 @@
+<ResourceDictionary
+    xmlns="https://github.com/avaloniaui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!--
+    Lumyn design tokens. Flat and crisp: surfaces ramp Bg → Surface (cards,
+    sidebar, top bar) → Surface2 (inputs, hover) → Surface3 (pressed, neutral
+    badges); Line borders cards and controls, LineSoft divides rows inside a card.
+    Elevation (shadows) is reserved for floating layers: menus, popups, toasts.
+    Code-behind reads the same keys through Lumyn.App.Palette.
+  -->
+
+  <!-- Surfaces -->
+  <SolidColorBrush x:Key="Lumyn.Bg" Color="#111111" />
+  <SolidColorBrush x:Key="Lumyn.Surface" Color="#161616" />
+  <SolidColorBrush x:Key="Lumyn.Surface2" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="Lumyn.Surface3" Color="#242424" />
+  <SolidColorBrush x:Key="Lumyn.Overlay" Color="#F2161616" />
+
+  <!-- Lines -->
+  <SolidColorBrush x:Key="Lumyn.Line" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="Lumyn.LineSoft" Color="#202020" />
+  <SolidColorBrush x:Key="Lumyn.LineStrong" Color="#3A3A3A" />
+
+  <!-- Text -->
+  <SolidColorBrush x:Key="Lumyn.Ink" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="Lumyn.Text" Color="#DEDAD5" />
+  <SolidColorBrush x:Key="Lumyn.Muted" Color="#9D9B98" />
+  <SolidColorBrush x:Key="Lumyn.Faint" Color="#6A6560" />
+
+  <!-- Accent (Lumyn green) -->
+  <SolidColorBrush x:Key="Lumyn.Accent" Color="#3A9B4B" />
+  <SolidColorBrush x:Key="Lumyn.AccentHover" Color="#43AD56" />
+  <SolidColorBrush x:Key="Lumyn.AccentPressed" Color="#2F7D3D" />
+  <SolidColorBrush x:Key="Lumyn.AccentBright" Color="#49B35C" />
+  <SolidColorBrush x:Key="Lumyn.AccentText" Color="#9FD4AC" />
+  <SolidColorBrush x:Key="Lumyn.AccentSoft" Color="#243A9B4B" />
+  <SolidColorBrush x:Key="Lumyn.AccentSofter" Color="#123A9B4B" />
+  <SolidColorBrush x:Key="Lumyn.AccentLine" Color="#663A9B4B" />
+
+  <!-- Status -->
+  <SolidColorBrush x:Key="Lumyn.Danger" Color="#E5534B" />
+  <SolidColorBrush x:Key="Lumyn.DangerSoft" Color="#1FE5534B" />
+  <SolidColorBrush x:Key="Lumyn.DangerLine" Color="#66E5534B" />
+  <SolidColorBrush x:Key="Lumyn.ErrorBanner" Color="#E6B23A33" />
+
+  <!-- Radii: Sm = buttons, inputs, badges · Md = cards, rows · Lg = dialogs, menus -->
+  <CornerRadius x:Key="Lumyn.RadiusSm">6</CornerRadius>
+  <CornerRadius x:Key="Lumyn.Radius">8</CornerRadius>
+  <CornerRadius x:Key="Lumyn.RadiusLg">10</CornerRadius>
+
+  <FontFamily x:Key="Lumyn.Font">fonts:Lumyn#DM Sans, Ubuntu, Segoe UI, sans-serif</FontFamily>
+  <FontFamily x:Key="Lumyn.Mono">Cascadia Mono, JetBrains Mono, Ubuntu Mono, DejaVu Sans Mono, Consolas, monospace</FontFamily>
+
+  <!-- Fluent control resources, re-pointed at the tokens above so stock
+       controls (TextBox, ComboBox, ToggleSwitch, menus) match without templates. -->
+  <SolidColorBrush x:Key="ButtonBackground" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#242424" />
+  <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#161616" />
+  <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="#161616" />
+  <SolidColorBrush x:Key="ButtonForeground" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#DEDAD5" />
+  <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="#6A6560" />
+  <SolidColorBrush x:Key="ButtonBorderBrush" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="ButtonBorderBrushDisabled" Color="#202020" />
+
+  <SolidColorBrush x:Key="TextControlBackground" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="#161616" />
+  <SolidColorBrush x:Key="TextControlForeground" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="TextControlForegroundFocused" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="TextControlBorderBrush" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="#3A9B4B" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="#6A6560" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="#6A6560" />
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="#6A6560" />
+  <SolidColorBrush x:Key="TextControlSelectionHighlightColor" Color="#663A9B4B" />
+  <Thickness x:Key="TextControlBorderThemeThicknessFocused">1</Thickness>
+
+  <SolidColorBrush x:Key="ComboBoxBackground" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundPointerOver" Color="#242424" />
+  <SolidColorBrush x:Key="ComboBoxBackgroundPressed" Color="#161616" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrush" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushPointerOver" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="ComboBoxBorderBrushPressed" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="ComboBoxForeground" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBackground" Color="#161616" />
+  <SolidColorBrush x:Key="ComboBoxDropDownBorderBrush" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="ComboBoxItemBackgroundPointerOver" Color="#242424" />
+  <SolidColorBrush x:Key="ComboBoxItemBackgroundSelected" Color="#243A9B4B" />
+  <SolidColorBrush x:Key="ComboBoxItemBackgroundSelectedPointerOver" Color="#363A9B4B" />
+
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBackground" Color="#161616" />
+  <SolidColorBrush x:Key="MenuFlyoutPresenterBorderBrush" Color="#2A2A2A" />
+  <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPointerOver" Color="#242424" />
+  <SolidColorBrush x:Key="MenuFlyoutItemBackgroundPressed" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForeground" Color="#DEDAD5" />
+  <SolidColorBrush x:Key="MenuFlyoutItemForegroundPointerOver" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForeground" Color="#6A6560" />
+  <SolidColorBrush x:Key="MenuFlyoutItemKeyboardAcceleratorTextForegroundPointerOver" Color="#9D9B98" />
+  <SolidColorBrush x:Key="MenuFlyoutSeparatorBackground" Color="#2A2A2A" />
+
+  <SolidColorBrush x:Key="ToolTipBackground" Color="#242424" />
+  <SolidColorBrush x:Key="ToolTipForeground" Color="#F7F5F3" />
+  <SolidColorBrush x:Key="ToolTipBorderBrush" Color="#3A3A3A" />
+
+  <SolidColorBrush x:Key="ToggleSwitchFillOff" Color="#1C1C1C" />
+  <SolidColorBrush x:Key="ToggleSwitchFillOffPointerOver" Color="#242424" />
+  <SolidColorBrush x:Key="ToggleSwitchStrokeOff" Color="#3A3A3A" />
+  <SolidColorBrush x:Key="ToggleSwitchStrokeOffPointerOver" Color="#6A6560" />
+  <SolidColorBrush x:Key="ToggleSwitchKnobFillOff" Color="#9D9B98" />
+  <SolidColorBrush x:Key="ToggleSwitchKnobFillOffPointerOver" Color="#DEDAD5" />
+  <SolidColorBrush x:Key="ToggleSwitchFillOn" Color="#3A9B4B" />
+  <SolidColorBrush x:Key="ToggleSwitchFillOnPointerOver" Color="#43AD56" />
+  <SolidColorBrush x:Key="ToggleSwitchFillOnPressed" Color="#2F7D3D" />
+  <SolidColorBrush x:Key="ToggleSwitchKnobFillOn" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="ToggleSwitchKnobFillOnPointerOver" Color="#FFFFFF" />
+</ResourceDictionary>

@@ -1,11 +1,20 @@
 import { motion } from "framer-motion";
-import { asset, BASE, GITHUB_URL, SUPPORT_EMAIL } from "../lib/assets.js";
+import { GITHUB_URL, SUPPORT_EMAIL } from "../lib/assets.js";
+import { fadeUp, heroContainer, heroItem } from "../motion/motion.js";
+import TopBar from "../components/TopBar.jsx";
 import Footer from "../components/Footer.jsx";
+import Icon from "../components/Icon.jsx";
 
-const reveal = {
-  hidden: { opacity: 0, y: 18 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] } },
-};
+const LAST_UPDATED = "May 2, 2026";
+
+function Callout({ tone, children }) {
+  return (
+    <p className={`callout${tone ? ` ${tone}` : ""}`}>
+      <Icon name={tone ? "alert" : "shield"} />
+      <span>{children}</span>
+    </p>
+  );
+}
 
 const SECTIONS = [
   {
@@ -29,9 +38,9 @@ const SECTIONS = [
           <strong>not</strong> collect your media files, watch history, subtitles,
           playlists, screenshots, settings, or playback activity from the app.
         </p>
-        <span className="callout">
+        <Callout>
           No app accounts. No developer backend. No hidden app telemetry.
-        </span>
+        </Callout>
       </>
     ),
   },
@@ -96,9 +105,9 @@ const SECTIONS = [
           Downloaded subtitles are saved to a temporary Lumyn subtitle folder on your device.
           The Developer does not proxy, store, or monitor subtitle searches or downloads.
         </p>
-        <span className="callout warn">
+        <Callout tone="warn">
           Online subtitle search sends your search query to third-party subtitle services.
-        </span>
+        </Callout>
       </>
     ),
   },
@@ -240,11 +249,11 @@ const SECTIONS = [
             without explicit written permission.
           </li>
         </ul>
-        <span className="callout restrict">
+        <Callout tone="restrict">
           Commercial use, redistribution, and modification for distribution are not permitted
           without explicit written permission from the copyright holder.
-        </span>
-        <p style={{ marginTop: 10 }}>
+        </Callout>
+        <p>
           Full license:{" "}
           <a href={`${GITHUB_URL}/blob/main/LICENSE`} target="_blank" rel="noopener noreferrer">
             github.com/piyushdoorwar/lumyn-media-player
@@ -335,85 +344,52 @@ const SECTIONS = [
 export default function PolicyPage() {
   return (
     <>
-      <header className="topbar">
-        <a className="brand" href={BASE}>
-          <img src={asset("lumyn.svg")} alt="" />
-          <span>Lumyn</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a className="topbar-link icon-link" href={`${BASE}#features`}>
-            <img src={asset("features.svg")} alt="" />
-            <span>Features</span>
-          </a>
-          <a className="topbar-link icon-link" href={`${BASE}#download`}>
-            <img src={asset("download.svg")} alt="" />
-            <span>Download</span>
-          </a>
-          <a className="topbar-link icon-link" href={`${BASE}releases/`}>
-            <img src={asset("releases.svg")} alt="" />
-            <span>Releases</span>
-          </a>
-          <a className="topbar-link icon-link" href="./" aria-current="page">
-            <img src={asset("policy.svg")} alt="" />
-            <span>Policy</span>
-          </a>
-          <a className="topbar-link icon-link" href={GITHUB_URL} rel="noreferrer">
-            <img src={asset("github.svg")} alt="" />
-            <span>GitHub</span>
-          </a>
-        </nav>
-      </header>
+      <TopBar current="policy" />
 
-      <main>
-        <div className="page-inner">
-          <motion.div
-            className="page-hero"
-            variants={reveal}
-            initial="hidden"
-            animate="show"
-          >
-            <p className="eyebrow">Lumyn Media Player</p>
-            <h1 className="page-title">Privacy Policy</h1>
-            <p className="page-lede">
-              Lumyn is built as a local-first desktop media player. The app does not have
-              developer-run accounts, a backend service, advertising, or hidden telemetry.
-              Some optional features contact third-party services when you use them.
-            </p>
-            <div className="meta-row">
-              <span className="meta-pill">
-                <span className="dot"></span>Last updated: May 2, 2026
-              </span>
-              <span className="meta-pill">
-                <span className="dot"></span>App telemetry: None
-              </span>
-              <span className="meta-pill">
-                <span className="dot warn"></span>Third-party services: Optional
-              </span>
-            </div>
-          </motion.div>
+      <main id="main">
+        <motion.header className="page-head" variants={heroContainer} initial="hidden" animate="show">
+          <div className="wrap">
+            <motion.p className="eyebrow" variants={heroItem}>
+              Lumyn Media Player
+            </motion.p>
+            <motion.h1 variants={heroItem}>Privacy Policy</motion.h1>
+            <motion.p className="lede" variants={heroItem}>
+              Lumyn is a local-first desktop media player. The app has no developer-run accounts,
+              backend service, advertising or hidden telemetry. Some optional features contact
+              third-party services when you use them.
+            </motion.p>
+            <motion.div className="meta" variants={heroItem}>
+              <span className="badge">Last updated {LAST_UPDATED}</span>
+              <span className="badge">App telemetry: none</span>
+              <span className="badge warn">Third-party services: optional</span>
+            </motion.div>
+          </div>
+        </motion.header>
 
-          <div>
+        <div className="wrap">
+          <div className="prose">
             {SECTIONS.map((s) => (
-              <motion.div
-                className="policy-section"
+              <motion.section
+                className="prose-card"
                 key={s.num}
-                variants={reveal}
+                aria-labelledby={`policy-${s.num}`}
+                variants={fadeUp}
                 initial="hidden"
                 whileInView="show"
-                viewport={{ once: true, amount: 0.2 }}
+                viewport={{ once: true, amount: 0.15 }}
               >
-                <p className="section-num">{s.num}</p>
-                <div className="section-body">
-                  <h2>{s.title}</h2>
-                  {s.body}
-                </div>
-              </motion.div>
+                <h2 id={`policy-${s.num}`}>
+                  <span>{s.num}</span>
+                  {s.title}
+                </h2>
+                {s.body}
+              </motion.section>
             ))}
           </div>
         </div>
       </main>
 
-      <Footer variant="policy" />
+      <Footer />
     </>
   );
 }

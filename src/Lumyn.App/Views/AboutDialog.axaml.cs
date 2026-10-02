@@ -1,4 +1,3 @@
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -97,8 +96,7 @@ public partial class AboutDialog : Window
                 {
                     if (statusText is not null)
                     {
-                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
-                            Avalonia.Media.Color.Parse("#6A6560"));
+                        statusText.Foreground = Palette.Muted;
                         statusText.Text = "No releases published yet.";
                     }
                     ResetCheckUpdatesButton(btn, btnText);
@@ -112,8 +110,7 @@ public partial class AboutDialog : Window
                 {
                     if (statusText is not null)
                     {
-                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
-                            Avalonia.Media.Color.Parse("#B05050"));
+                        statusText.Foreground = Palette.Danger;
                         statusText.Text = "GitHub rate limit reached. Try again later.";
                     }
                     ResetCheckUpdatesButton(btn, btnText);
@@ -127,8 +124,7 @@ public partial class AboutDialog : Window
                 {
                     if (statusText is not null)
                     {
-                        statusText.Foreground = new Avalonia.Media.SolidColorBrush(
-                            Avalonia.Media.Color.Parse("#B05050"));
+                        statusText.Foreground = Palette.Danger;
                         statusText.Text = $"GitHub returned {(int)response.StatusCode}. Try again later.";
                     }
                     ResetCheckUpdatesButton(btn, btnText);
@@ -149,9 +145,7 @@ public partial class AboutDialog : Window
             {
                 if (statusText is not null)
                 {
-                    statusText.Foreground = isNewer
-                        ? new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#3A9B4B"))
-                        : new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse("#6A6560"));
+                    statusText.Foreground = isNewer ? Palette.AccentBright : Palette.Muted;
                     statusText.Text = isNewer
                         ? $"v{latestVersion} is available!"
                         : "You're up to date.";
@@ -165,8 +159,7 @@ public partial class AboutDialog : Window
             {
                 if (statusText is not null)
                 {
-                    statusText.Foreground = new Avalonia.Media.SolidColorBrush(
-                        Avalonia.Media.Color.Parse("#B05050"));
+                    statusText.Foreground = Palette.Danger;
                     statusText.Text = "Could not reach GitHub. Check your connection.";
                 }
                 ResetCheckUpdatesButton(btn, btnText);
@@ -176,7 +169,7 @@ public partial class AboutDialog : Window
 
     private static void ResetCheckUpdatesButton(Button? btn, TextBlock? btnText)
     {
-        if (btnText is not null) btnText.Text = "Check for Updates";
+        if (btnText is not null) btnText.Text = "Check for updates";
         if (btn is not null) btn.IsEnabled = true;
     }
 

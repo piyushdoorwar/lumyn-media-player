@@ -45,8 +45,9 @@ Design philosophy: quiet, distraction-free interface. No bloat. Let the media pl
 |---|---|
 | Language | C# (latest, nullable enabled, implicit usings) |
 | Runtime | .NET 10.0 |
-| UI Framework | Avalonia UI 11.3.14 |
-| UI Theme | Fluent (Windows 11 style, dark) |
+| UI Framework | Avalonia UI 12.0.4 |
+| UI Theme | Fluent (forced dark) re-skinned by Lumyn design tokens (`Theme.axaml`) |
+| Typography | DM Sans (bundled, SIL OFL 1.1) in the app and on the site |
 | Media Engine | mpv / libmpv (P/Invoke native bindings) |
 | Rendering | OpenGL via mpv render context |
 | Packaging | dpkg (Linux .deb), Snapcraft (Linux snap), Inno Setup / MSIX (Windows) |
@@ -76,8 +77,11 @@ lumyn-media-player/
 │   │   ├── Program.cs               # Entry point
 │   │   ├── App.axaml / App.axaml.cs # Application bootstrap, styles, resources
 │   │   ├── Assets/
+│   │   │   ├── Fonts/               # DM Sans 400–700 TTF + OFL.txt
 │   │   │   ├── Icons/               # SVG icons + lumyn.ico
-│   │   │   └── Styles/Lumyn.axaml   # Custom styling (dark theme overrides)
+│   │   │   └── Styles/
+│   │   │       ├── Theme.axaml      # Design tokens (brushes, radii, fonts) + Fluent resource overrides
+│   │   │       └── Lumyn.axaml      # Shared control styles and style classes
 │   │   ├── Controls/
 │   │   │   ├── MpvVideoSurface.cs   # OpenGL video surface (Avalonia control)
 │   │   │   ├── VideoSurface.cs      # Video surface wrapper
@@ -95,12 +99,9 @@ lumyn-media-player/
 │   │   └── Views/
 │   │       ├── MainWindow.axaml / .axaml.cs   # Main player window (739 lines)
 │   │       ├── JumpToTimeDialog.axaml / .axaml.cs
-│   │       ├── KeyboardShortcutsDialog.axaml / .axaml.cs
 │   │       ├── AboutDialog.axaml / .axaml.cs
 │   │       ├── SettingsDialog.axaml / .axaml.cs
-│   │       ├── SubtitleSearchDialog.axaml / .axaml.cs
 │   │       ├── SubtitleSettingsDialog.axaml / .axaml.cs
-│   │       ├── VideoAdjustmentsDialog.axaml / .axaml.cs
 │   │       ├── CastDialog.axaml / .axaml.cs
 │   │       └── BookmarksDialog.axaml / .axaml.cs
 │   │
@@ -148,10 +149,9 @@ lumyn-media-player/
 ### NuGet Dependencies (`Directory.Packages.props`)
 
 ```
-Avalonia             11.3.14
-Avalonia.Desktop     11.3.14
-Avalonia.Themes.Fluent  11.3.14
-Avalonia.Fonts.Inter    11.3.14
+Avalonia             12.0.4
+Avalonia.Desktop     12.0.4
+Avalonia.Themes.Fluent  12.0.4
 ```
 
 `Lumyn.Core` NuGet dependencies:
@@ -347,17 +347,30 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 - Inhibition released on pause, stop, end-of-file, or app close
 
 ### UI & Platform
-- Clean dark theme (#111111 bg, #DEDAD5 text)
+- Clean dark theme — see **Design system** below
 - Always-on-top toggle
 - Drag-to-move via title bar
-- Keyboard shortcuts (full list in KeyboardShortcutsDialog)
+- Keyboard shortcuts (full list in Settings → Shortcuts, rows built by `Views/ShortcutRows.cs`)
 - OSD toast: top-left, translucent (`#99` opacity), subtle border, small bare icon — intentionally unobtrusive so it doesn't pull attention from the video. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap instead of overflowing the pill.
 - Scrollbar: 6px wide/tall, green-tinted thumb (`#3A9B4B`), opacity-based hover (0.35 → 0.75 → 1.0), no arrow buttons, applied globally via `Lumyn.axaml`.
 - Queue is shown only in the audio two-pane view (no separate video/sidebar queue)
 - Ubuntu GNOME "Open With" integration (`.desktop` entry + MIME types)
 - Windows file associations through Inno Setup registry entries (`packaging/windows/lumyn.iss`) and MSIX declarations (`packaging/windows/AppxManifest.xml`); `scripts/build-windows.ps1` also contains a portable `Register-FileAssociations.ps1` generator helper.
 - Command-line startup file support: `App.axaml.cs` accepts normal file paths and `file://` URIs from `desktop.Args`, then calls `OpenFileWhenReadyAsync()`.
-- Chromecast/cast icon uses the Font Awesome style filled cast silhouette in `MediaIcons.axaml` and `site/assets/ic-cast.svg`; app cast accents should use Lumyn green (`#49B35C` / `#3A9B4B`), not blue.
+- Chromecast/cast icon uses the Font Awesome style filled cast silhouette in `MediaIcons.axaml` (the site uses its own stroke `cast` icon in `site/src/components/Icon.jsx`); app cast accents should use Lumyn green (`#49B35C` / `#3A9B4B`), not blue.
+
+### Design system (app)
+
+Flat, crisp and dense: an admin-console feel in Lumyn's charcoal + green.
+
+- **Tokens** live in `Assets/Styles/Theme.axaml` (merged into `Application.Resources`). Surfaces ramp `Lumyn.Bg #111111` → `Lumyn.Surface #161616` (dialogs, sidebar, top bar) → `Lumyn.Surface2 #1C1C1C` (cards, inputs) → `Lumyn.Surface3 #242424` (hover, key caps). `Lumyn.Line` borders cards and controls, `Lumyn.LineSoft` divides rows. Text: `Ink` / `Text` / `Muted` / `Faint`. Accent: `Accent #3A9B4B`, `AccentHover`, `AccentPressed`, `AccentBright #49B35C`, `AccentText`, tints `AccentSoft` / `AccentSofter` / `AccentLine`. Status: `Danger`, `ErrorBanner`.
+- **Radii**: `Lumyn.RadiusSm` 6 (buttons, inputs, badges), `Lumyn.Radius` 8 (cards, rows), `Lumyn.RadiusLg` 10 (dialogs, menus, popups). No gradients or glossy shadows on surfaces — elevation is reserved for floating layers (context menus, OSD toast, cast pill, seek thumbnail).
+- **Fluent re-skin**: `Theme.axaml` also overrides Fluent's own keys (`ButtonBackground*`, `TextControl*`, `ComboBox*`, `MenuFlyout*`, `ToolTip*`, `ToggleSwitch*`), so stock controls match without custom templates. `App.axaml` sets `RequestedThemeVariant="Dark"`; without it Fluent follows the OS theme and draws light inputs and menus inside dark windows.
+- **Style classes** (`Assets/Styles/Lumyn.axaml`): TextBlock `h1` / `h2` / `lede` / `label` / `title` / `hint` / `faint` / `value`; Border `card` / `divider` / `footer` / `kbd` / `badge`; Button default (flat secondary), `accent` (primary), `danger` (red outline), `soft` (tinted green), `ghost`, `nav`, `chip`, `option`, `link`, plus player chrome `ctrl` / `icon` / `play-primary` / `dim` / `wchrome` / `downloadIcon`. Selection state on `nav` / `chip` / `option` is the `selected` class (`Classes.Set("selected", …)`), never hand-set brushes.
+- Fluent paints Button state backgrounds on the template's presenter, so state styles target `Button.x:pointerover /template/ ContentPresenter#PART_ContentPresenter`; a setter on `Button.Background` alone is overridden on hover/press.
+- Labels are sentence case ("Color correction"), never uppercase tracked micro-labels. Icons are `PathIcon`s from `MediaIcons.axaml`, never emoji or Unicode glyphs.
+- **Code-behind** that builds UI uses the classes above, or `Lumyn.App.Palette` (resolves the same resource keys) — no `Color.Parse` hex. Custom-drawn controls (`SeekBar`, `VolumeSlider`, `MiniProgressBar`, `AudioBars`, `FlowWatermark`) keep literal colours tuned to the accent.
+- **Font**: DM Sans TTFs in `Assets/Fonts/` are registered as the `fonts:Lumyn` collection in `Program.cs` and set as `FontManagerOptions.DefaultFamilyName`, so popups and menus get it too. The files were converted from the latin woff2 subset with names normalised to one `DM Sans` family; glyphs outside it (e.g. non-Latin file names) fall back to system fonts.
 
 ---
 
@@ -429,7 +442,7 @@ Updated under lock in the mpv event loop thread. `StateChanged` event dispatches
 - **Default size**: 980×620; **Minimum**: 640×380
 - **Decorations**: `BorderOnly` (custom title bar)
 - **Background**: `#111111`; **Foreground**: `#DEDAD5`
-- **Theme**: Fluent dark + custom `Lumyn.axaml` overrides
+- **Theme**: Fluent dark re-skinned by `Theme.axaml` tokens + `Lumyn.axaml` classes (see §6 Design system)
 
 ```
 ┌─────────────────────────────────────────────┐  ← TopBar (38px, collapsible in fullscreen)
@@ -466,12 +479,10 @@ In audio mode with 2+ tracks the centre area becomes a 70/30 split: cover + info
 
 | Dialog | Purpose |
 |---|---|
+| `SettingsDialog` | Watch modes, playback/resume, video adjustments, audio clarity, interface toggles, shortcuts (F1 / `?`), Transmux |
 | `JumpToTimeDialog` | Skip to specific timestamp |
-| `KeyboardShortcutsDialog` | Help overlay for all hotkeys |
 | `AboutDialog` | Version + credits |
-| `SubtitleSearchDialog` | Online subtitle search |
-| `SubtitleSettingsDialog` | Font, size, color, delay |
-| `VideoAdjustmentsDialog` | Brightness/contrast/saturation/rotation/zoom/aspect |
+| `SubtitleSettingsDialog` | Font, size, color, delay, online subtitle search |
 | `CastDialog` | Chromecast device selection |
 | `BookmarksDialog` | Markers dialog: manage user bookmarks and jump to embedded chapters |
 
@@ -624,44 +635,47 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 ## 13. Website / Site
 
 - Located at `/site/` in the repo
-- **React + Vite + Framer Motion** app (migrated from the original vanilla HTML/CSS/JS). Keeps Lumyn's dark-green identity; motion is rebuilt in Framer Motion.
-- Deployed automatically to GitHub Pages via `static.yml` on every push to `main` (now with a **build step** — see §11)
+- **React + Vite + Framer Motion** multi-page app in Lumyn's charcoal + green.
+- Deployed automatically to GitHub Pages via `static.yml` on every push to `main` (with a **build step** — see §11)
 - URL: `https://piyushdoorwar.github.io/lumyn-media-player/`
 - Contains: landing page, releases page, privacy policy page
-- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center / Snapcraft first and `.deb` second, and Windows shows Microsoft Store + standalone `.exe`.
+- Landing page download section uses OS tabs that default from the visitor's system: Linux shows Ubuntu App Center first and `.deb` second (snap + PPA commands under "Install from the terminal"), and Windows shows Microsoft Store + the standalone `.exe` (PowerShell command once the installer URL is known).
 
 ### Architecture (Vite multi-page app, rooted in `site/`)
 
 - **MPA, not SPA**: three HTML entries map 1:1 to existing URLs (`/`, `/releases/`, `/policy/`) so GitHub Pages serves native directories with **no SPA 404 fallback**. Inputs declared in `site/vite.config.js` (`base: '/lumyn-media-player/'`).
-- **`site/public/`** holds files copied verbatim into `dist/` root: `assets/`, `image-guard.js` (still a classic script referenced from each HTML head, MutationObserver covers React-rendered imgs), `lumyn-cast.css` (unused by the site but kept at its public URL for the external Cast receiver), `releases.json` (manifest), `.nojekyll`.
-- **`site/src/`**: `entries/{landing,releases,policy}.jsx` (one `createRoot` per HTML entry, each wrapped in `<MotionConfig reducedMotion="user">`), `pages/{LandingPage,ReleasesPage,PolicyPage}.jsx`, `components/` (TopBar, Footer, SupportModal, ScrollProgress, PlayerPreview, Marquee, BentoGrid, DownloadSection, CopyButton), `motion/motion.js` (variants + `useTilt`), `styles/global.css` (ported from the old `styles.css`) and `styles/policy.css` (the policy page's old inline CSS; the policy entry imports only this).
-- **Paths**: assets referenced from React via `asset(file)` (`src/lib/assets.js`) using `import.meta.env.BASE_URL`; runtime fetches use `` fetch(`${BASE}releases.json`) `` so they resolve under the Pages subpath from any page. HTML files use Vite's `%BASE_URL%` token for favicon + the public `image-guard.js`.
+- **`site/public/`** holds files copied verbatim into `dist/` root: `assets/` (logo, feature `preview-*.svg` mockups, social image, Cast receiver images), `lumyn-cast.css` (unused by the site but kept at its public URL for the external Cast receiver — keep `lumyn-cast-*.png` too), `releases.json` (manifest, empty locally), `robots.txt`, `sitemap.xml`, `.nojekyll`.
+- **`site/src/`**: `entries/{landing,releases,policy}.jsx` (one `createRoot` per HTML entry, each wrapped in `<MotionConfig reducedMotion="user">`, each importing `styles/global.css` and `lib/imageGuard.js`), `pages/{LandingPage,ReleasesPage,PolicyPage}.jsx`, `components/` (TopBar, Footer, SupportModal, PlayerPreview, Showcase, DownloadSection, CopyButton, Icon), `lib/assets.js` (base-path helpers, URLs), `lib/releases.js` (`fetchReleases`, `linuxAsset`, `windowsAsset` shared by the download section and releases page), `motion/motion.js` (variants), `fonts/` (DM Sans woff2 + OFL), `styles/global.css` (the only stylesheet, shared by all pages).
+- **Paths**: images referenced from React via `asset(file)` (`src/lib/assets.js`) using `import.meta.env.BASE_URL`; runtime fetches go through `fetchReleases()` so they resolve under the Pages subpath from any page. HTML files use Vite's `%BASE_URL%` token for the favicon. Don't add classic `<script src="%BASE_URL%…">` tags — Vite can't bundle them and the dev server double-prefixes the base path (404); import a module from the entry instead (as `lib/imageGuard.js` is).
 - **SEO**: every HTML entry has a unique title/description, canonical URL, robots directive, Open Graph/Twitter card metadata, and JSON-LD appropriate to the page. The landing page describes Lumyn as a `SoftwareApplication`; releases and policy pages include page + breadcrumb data. `site/public/sitemap.xml` lists all canonical routes and `site/public/robots.txt` advertises the sitemap. Because this is currently a GitHub Pages **project site**, the deployed robots file lives below `/lumyn-media-player/`; crawlers only treat `/robots.txt` at the hostname root as authoritative. The existing hostname-root robots file allows all crawling but advertises only the user-site sitemap, so submit the Lumyn sitemap in Search Console and optionally add it to the user-site root robots file (or use a custom domain).
 - Local dev: `cd site && npm install && npm run dev`; build `npm run build` → `site/dist`; `npm run preview` serves under the base path.
 
+### Design system (site)
+
+Same visual language as the app: flat, crisp, dark.
+
+- **Tokens** on `:root` in `global.css`: `--bg #111111` → `--surface #161616` (cards, panels) → `--surface-2 #131313` (tinted sections, footer) → `--surface-3 #1c1c1c` (hover, selected tab); `--border` / `--border-strong` are translucent white hairlines; accent `--accent #3a9b4b`, `--accent-bright #49b35c` (links, icons, primary button), `--accent-hover`, tints `--accent-soft` / `--accent-softer` / `--accent-line`; `--accent-ink` is the near-black text on green buttons (white on `#49b35c` fails contrast). Radii `--radius-sm` 6 / `--radius` 8 / `--radius-lg` 10. Shadows are small; `--shadow-lg` only on the player mock, popovers and the modal.
+- **Primitives**: `.btn` + `.btn-primary` / `.btn-secondary` / `.btn-sm`, `.eyebrow`, `.pill`, `.badge` (+`.warn`), `.card`, `.section` (+`.tint`), `.section-head`, `.tabs` / `.tab` (segmented control, roving tabindex + arrow keys), `.panel`, `.cmd` (code block with `CopyButton`), `.switch`, `.prose-card`, `.callout` (+`.warn` / `.restrict`).
+- **Icons**: `components/Icon.jsx` — one inline set, 24×24, 2px round strokes on `currentColor`; brand marks (Windows, Ubuntu, Snapcraft) and play/pause are filled. No `<img>` icons and no emoji. Add new glyphs to that map rather than new SVG files.
+- **Type**: DM Sans bundled via `@font-face` (no font CDN); `--mono` is a system monospace stack.
+- **Layout**: content sits in `.wrap` (max 1240px, fluid gutter). The top bar collapses to a menu toggle ≤820px (Escape closes it); hero, showcase and download grids go single-column ≤960px.
+
 ### Motion (Framer Motion)
 
-`useReducedMotion`/`<MotionConfig reducedMotion="user">` gate all of it (transforms suppressed, content still fades in visible). Ambient CSS loops (`float-glow`, `ring-glow`, `screen-glow`, `border-shimmer`, marquee) remain in `global.css`; orchestrated motion is Framer.
+`<MotionConfig reducedMotion="user">` gates transforms; the CSS `prefers-reduced-motion` block kills transitions.
 
-- **Hero cascade** — `heroContainer`/`heroItem`/`heroTitle` variants with `staggerChildren`.
-- **Pointer 3D tilt** — `useTilt` (`useMotionValue` + `useSpring`) on the `.preview-tilt-inner` (rotateX/rotateY), origin from the preview's rect, handlers on the hero. `.preview-tilt` holds `perspective` (disabled under 900px).
-- **Interactive hero player** (`PlayerPreview.jsx`) — a faux but *live* player: a working **play/pause** ring (icon morphs play↔pause via `AnimatePresence`; CSS `ring-glow` is paused via `animationPlayState` when not playing), time + progress that advance only while `playing` and loop when the **loop** toggle is on, a continuous **`Equalizer`** (5 `motion.span` bars, `scaleY` keyframes with per-bar duration, flatten when paused/reduced-motion), a **scrubbable seek bar** (`.timeline.seekable` — click to seek, `.seek-knob` at the fill end, and a hover **`.seek-thumb`** bubble showing the timestamp — nods to the seek-preview feature), and functional **rewind −10s / play-pause / forward +10s / loop** `.ctrl-btn`s (`whileTap`). All gated by `useReducedMotion`.
-- **Scroll progress bar** — `ScrollProgress` uses `useScroll().scrollYProgress` → `scaleX`.
-- **Bento feature grid** — `BentoGrid` is the UI/UX-Pro-Max **Bento Box Grid** showcase (replaced the old vertical feature timeline). `.bento` is a flex column of `.bento-row`s (each a 2-col grid, `align-items: stretch` so both columns share height); rows reveal via `whileInView`, tiles lift on `whileHover={{ y: -4 }}` (CSS owns border/shadow hover, Framer owns the transform to avoid inline-transform conflicts). **Every row is the same shape:** a big screenshot tile beside a `.bento-stack` of two split tiles, with the big tile alternating sides (`side: "left" | "right"`). Two tile types:
-  - **`.bento-big`** — big tile (`min-height: 540px`): title + description in `.bento-head`, then the feature's `preview-*.svg` in `.bento-frame`. The image uses **`width: 100%; height: auto`** so the SVG scales *up* to fill the cell width (plain `max-width` only caps and leaves the ~320px mockup small in a wide cell). Green image border, **no frame backdrop**, subtle green corner glow on the card.
-  - **`.bento-card.split`** — small tile, `flex-direction: row`: `.bento-text` (title + description) on the left 50%, `.bento-shot` screenshot on the right 50%. Same green image border. Its image keeps `max-width/height` (the column is narrower than the mockup, so the cap already fills it).
-  - Collapses to one column ≤760px. Earlier failed iterations (don't reintroduce): screenshots as full-bleed `cover` backgrounds with overlaid text (collided with the mockups' own labels); short/wide tiles that cropped the contained image to its header; and `width:auto` images that stayed tiny in wide cells.
-  - Now-unused leftovers safe to prune: `.bento-row.trio`, `.bento-big.compact`, `.bento-icon` CSS and the `compact` prop on `Big` (from the dropped trio-row variant).
+- **Hero cascade** — `heroContainer` / `heroItem` with `staggerChildren`.
+- **Reveal** — sections and lists use `fadeUp` / `listContainer` + `listItem` with the shared `inView` props (`whileInView`, once).
+- **Interactive hero player** (`PlayerPreview.jsx`) — a small working stand-in: play/pause (icon swaps via `AnimatePresence`), time advancing while playing (stops at the end unless loop is on), an `Equalizer` of 5 `motion.span` bars, a clickable/keyboard-operable seek bar (`role="slider"`, ←/→ = 10s) with a hover thumbnail bubble, and rewind / play / forward / loop buttons.
+- **Feature showcase** (`Showcase.jsx`) — three rows, each a large card with a `preview-*.svg` mockup beside a stack of two smaller cards (text left, mockup right); rows alternate sides (`flip`) and collapse to one column ≤960px. Below it, a `.features` grid lists the smaller features with icons.
 - **Releases list** — `AnimatePresence` keyed on `os-stable-page`, staggered `listItem`s.
-
-> The hero also has a `.hero-trust` chip strip (Windows & Ubuntu / Powered by mpv / No telemetry / Source available). The old `FeatureTimeline` component is gone; some now-unused `.feature-timeline`/`.timeline-fill`/`.feature-*` rules linger in `global.css` and are safe to prune.
 
 ### Releases page (`/site/src/pages/ReleasesPage.jsx`)
 
-- Fetches the static `releases.json` manifest (generated during deploy), renders a paginated list. Mirrors the old `releases.js` behaviour exactly.
-- **OS tabs** — All / Linux / Windows (filters by asset type); arrow-key nav.
-- **Stable only toggle** — checked by default; hides pre-releases (shown with `badge-pre` when off).
-- React state: `currentOS`, `stableOnly` (default `true`), `currentPage` (reset to 1 on any filter change), `status` (`loading`/`error`/`ready`). `PER_PAGE = 10`. Asset matching: `_amd64.deb` (linux), `win-x64..._setup.exe` (windows, with `.exe`/`.zip` fallbacks).
+- Fetches the static `releases.json` manifest (generated during deploy) via `fetchReleases()`, renders a paginated list of `.release` rows.
+- **OS tabs** — All / Linux / Windows (filters by asset type); roving tabindex + arrow-key nav that moves focus.
+- **Stable only switch** — on by default; hides pre-releases (shown with a `.badge.warn` "Pre-release" when off). "Latest" marks the newest stable release in the current filter.
+- React state: `os`, `stableOnly` (default `true`), `page` (reset to 1 on any filter change; Newer/Older scroll back to the list head), `status` (`loading`/`error`/`ready`). `PER_PAGE = 10`. Asset matching lives in `lib/releases.js`: `_amd64.deb` (linux), `win-x64..._setup.exe` (windows, with `.exe`/`.zip` fallbacks). The landing download section only offers the `_setup.exe`.
 
 ---
 
@@ -704,7 +718,7 @@ dotnet test Lumyn.sln
 - **Unsafe code**: Allowed in both projects for mpv P/Invoke and OpenGL interop.
 - **Platform detection**: Runtime OS check for library name variants (`.dll` / `.so.2`).
 - **Settings path**: `Environment.GetFolderPath(SpecialFolder.ApplicationData)` + `Lumyn/settings.json`.
-- **Avalonia resources**: Icons and styles defined in `App.axaml` as `Application.Resources`. Referenced in XAML as `StaticResource`.
+- **Avalonia resources**: Theme tokens, icons and logo are merged into `Application.Resources` in `App.axaml`; control styles are a `StyleInclude` of `Lumyn.axaml`. Referenced in XAML as `StaticResource`. New colours go into `Theme.axaml` as tokens, not inline hex.
 - **Custom controls**: Placed in `Lumyn.App/Controls/`. Inherit from Avalonia primitives (e.g., `Control`, `Slider`).
 - **Tiny progress visuals**: For very small progress indicators, prefer a custom-rendered `Control` (like `MiniProgressBar`) over styling Avalonia `ProgressBar`; template layout can make tiny fills appear full or empty incorrectly.
 - **Seek/timeline hit targets**: `SeekBar` intentionally has a larger invisible hit area than its visible track. Preserve that ergonomic leeway when adjusting bottom controls.

@@ -45,11 +45,6 @@ public partial class SubtitleSettingsDialog : Window
     private CancellationTokenSource?       _cts;
     private SubtitleSearchResult?          _selectedResult;
 
-    // ── Selected button styling ───────────────────────────────────────────────
-    private static readonly IBrush SelectedBg     = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush NormalBg       = new SolidColorBrush(Color.Parse("#3D3846"));
-    private static readonly IBrush NormalBorder   = new SolidColorBrush(Color.Parse("#5E5968"));
-
     public SubtitleSettingsDialog() : this(new SubtitleSettings(null,
         SubtitleFontSize.Medium, SubtitleFont.SansSerif, SubtitleColor.White, 0)) { }
 
@@ -397,18 +392,12 @@ public partial class SubtitleSettingsDialog : Window
             SubtitleColor.Yellow => new SolidColorBrush(Color.Parse("#FFE600")),
             SubtitleColor.Grey   => new SolidColorBrush(Color.Parse("#BBBBBB")),
             SubtitleColor.Black  => new SolidColorBrush(Color.Parse("#111111")),
-            _                    => new SolidColorBrush(Color.Parse("#F7F5F3"))
+            _                    => Brushes.White // matches the player overlay (MainViewModel)
         };
     }
 
-    private void MarkSelected(string name, bool selected)
-    {
-        var btn = this.FindControl<Button>(name);
-        if (btn is null) return;
-        btn.Background  = selected ? SelectedBg   : NormalBg;
-        btn.BorderBrush = selected ? SelectedBg   : NormalBorder;
-        btn.Foreground  = new SolidColorBrush(Colors.White);
-    }
+    private void MarkSelected(string name, bool selected) =>
+        this.FindControl<Button>(name)?.Classes.Set("selected", selected);
 
     private void SetSearchStatus(string text, bool loading)
     {

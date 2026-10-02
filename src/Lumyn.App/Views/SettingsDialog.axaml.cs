@@ -43,19 +43,6 @@ public partial class SettingsDialog : Window
         new("1:1 (square)",     VideoAspect.Square),
     ];
 
-    private static readonly IBrush SelectedBg = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush SelectedBdr = new SolidColorBrush(Color.Parse("#48B35A"));
-    private static readonly IBrush NormalBg = new SolidColorBrush(Color.Parse("#3D3846"));
-    private static readonly IBrush NormalBorder = new SolidColorBrush(Color.Parse("#5E5968"));
-    private static readonly IBrush NavSelectedBg = new SolidColorBrush(Color.Parse("#263D2B"));
-    private static readonly IBrush NavNormalBg = new SolidColorBrush(Color.Parse("#252525"));
-    private static readonly IBrush NavSelectedBorder = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush NavNormalBorder = new SolidColorBrush(Color.Parse("#353535"));
-    private static readonly IBrush ModeSelectedBg = new SolidColorBrush(Color.Parse("#202C22"));
-    private static readonly IBrush ModeNormalBg = new SolidColorBrush(Color.Parse("#181818"));
-    private static readonly IBrush ModeSelectedBorder = new SolidColorBrush(Color.Parse("#3A9B4B"));
-    private static readonly IBrush ModeNormalBorder = new SolidColorBrush(Color.Parse("#2F2F2F"));
-
     private static readonly WatchModeChoice[] WatchModes =
     [
         new(
@@ -161,67 +148,8 @@ public partial class SettingsDialog : Window
         new("ShowScreenshot", "Screenshot", "Icon.Screenshot", "Bottom bar screenshot button")
     ];
 
-    private static readonly (string Key, string Action)[] Playback =
-    [
-        ("Space", "Play / Pause"),
-        ("S", "Open subtitles dialog"),
-        (".", "Step one frame forward"),
-        (",", "Step one frame back"),
-        ("Page Up", "Previous chapter"),
-        ("Page Down", "Next chapter"),
-        ("L", "Toggle loop"),
-        ("R", "A-B repeat: set A → set B → clear"),
-    ];
-
-    private static readonly (string Key, string Action)[] Seeking =
-    [
-        ("Left", "Seek back (step)"),
-        ("Right", "Seek forward (step)"),
-        ("Ctrl + Left", "Seek back 30 s"),
-        ("Ctrl + Right", "Seek forward 30 s"),
-        ("click badge", "Cycle seek step: 5s / 10s / 30s"),
-    ];
-
-    private static readonly (string Key, string Action)[] Volume =
-    [
-        ("Up", "Volume up 5 %"),
-        ("Down", "Volume down 5 %"),
-        ("M", "Toggle mute"),
-    ];
-
-    private static readonly (string Key, string Action)[] Speed =
-    [
-        ("[", "Speed down"),
-        ("]", "Speed up"),
-        ("\\", "Reset speed to 1x"),
-    ];
-
-    private static readonly (string Key, string Action)[] Tracks =
-    [
-        ("A", "Cycle audio track"),
-        ("V", "Cycle subtitle track"),
-        ("N", "Next track in folder"),
-        ("P", "Previous track in folder"),
-    ];
-
-    private static readonly (string Key, string Action)[] WindowShortcuts =
-    [
-        ("F", "Toggle fullscreen"),
-        ("Escape", "Exit fullscreen"),
-        ("T", "Toggle always on top"),
-    ];
-
-    private static readonly (string Key, string Action)[] FileAndDialogs =
-    [
-        ("O", "Open file"),
-        ("B", "Open markers"),
-        ("Ctrl + G", "Jump to time"),
-        ("Alt + I", "Take screenshot"),
-    ];
-
     private readonly Action<VideoAdjustments>? _preview;
     private bool _suppressCallbacks;
-    private SettingsSection _section;
     private int _brightness;
     private int _contrast;
     private int _saturation;
@@ -397,7 +325,6 @@ public partial class SettingsDialog : Window
 
     private void ShowSection(SettingsSection section)
     {
-        _section = section;
         var isWatchModes = section == SettingsSection.WatchModes;
         var isPlayback = section == SettingsSection.Playback;
         var isVideo = section == SettingsSection.Video;
@@ -411,13 +338,13 @@ public partial class SettingsDialog : Window
         SetVisible("InterfacePanel", isInterface);
         SetVisible("ShortcutsPanel", section == SettingsSection.Shortcuts);
         SetVisible("TransmuxPanel", isTransmux);
-        MarkNavSelected("WatchModesNavButton", isWatchModes);
-        MarkNavSelected("PlaybackNavButton", isPlayback);
-        MarkNavSelected("VideoNavButton", isVideo);
-        MarkNavSelected("AudioClarityNavButton", isAudioClarity);
-        MarkNavSelected("InterfaceNavButton", isInterface);
-        MarkNavSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
-        MarkNavSelected("TransmuxNavButton", isTransmux);
+        MarkSelected("WatchModesNavButton", isWatchModes);
+        MarkSelected("PlaybackNavButton", isPlayback);
+        MarkSelected("VideoNavButton", isVideo);
+        MarkSelected("AudioClarityNavButton", isAudioClarity);
+        MarkSelected("InterfaceNavButton", isInterface);
+        MarkSelected("ShortcutsNavButton", section == SettingsSection.Shortcuts);
+        MarkSelected("TransmuxNavButton", isTransmux);
     }
 
     private void PopulateWatchModes()
@@ -430,13 +357,6 @@ public partial class SettingsDialog : Window
             var button = new Button
             {
                 Tag = mode.Mode,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12, 10),
-                Background = ModeNormalBg,
-                BorderBrush = ModeNormalBorder,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
                 Content = new Grid
                 {
                     RowDefinitions =
@@ -451,6 +371,7 @@ public partial class SettingsDialog : Window
                     }
                 }
             };
+            button.Classes.Add("option");
             button.Click += WatchModeButton_Click;
             list.Children.Add(button);
         }
@@ -466,13 +387,6 @@ public partial class SettingsDialog : Window
             var button = new Button
             {
                 Tag = mode.Mode,
-                HorizontalAlignment = HorizontalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Padding = new Thickness(12, 10),
-                Background = ModeNormalBg,
-                BorderBrush = ModeNormalBorder,
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
                 Content = new Grid
                 {
                     RowDefinitions =
@@ -487,6 +401,7 @@ public partial class SettingsDialog : Window
                     }
                 }
             };
+            button.Classes.Add("option");
             button.Click += AudioClarityButton_Click;
             list.Children.Add(button);
         }
@@ -500,11 +415,10 @@ public partial class SettingsDialog : Window
         {
             Text = mode.Name,
             FontSize = 14,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = Brushes.White,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 0, 8)
         };
+        text.Classes.Add("title");
         Grid.SetRow(text, 0);
         return text;
     }
@@ -557,30 +471,20 @@ public partial class SettingsDialog : Window
                 new ColumnDefinition(GridLength.Auto),
                 new ColumnDefinition(GridLength.Star),
                 new ColumnDefinition(GridLength.Auto)
-            },
-            Background = ModeNormalBg,
-            Margin = new Thickness(0),
+            }
         };
 
-        var border = new Border
-        {
-            Background = ModeNormalBg,
-            BorderBrush = ModeNormalBorder,
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(12, 10),
-            Child = grid
-        };
+        var border = new Border { Child = grid };
+        border.Classes.Add("card");
 
-        if (Application.Current?.Resources.TryGetResource(option.IconKey, Avalonia.Styling.ThemeVariant.Default, out var icon) == true &&
-            icon is StreamGeometry geometry)
+        if (Palette.Icon(option.IconKey) is { } geometry)
         {
             var path = new PathIcon
             {
                 Data = geometry,
                 Width = 16,
                 Height = 16,
-                Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+                Foreground = Palette.Muted,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 10, 0)
             };
@@ -588,20 +492,11 @@ public partial class SettingsDialog : Window
             grid.Children.Add(path);
         }
 
-        var text = new StackPanel { Spacing = 2 };
-        text.Children.Add(new TextBlock
-        {
-            Text = option.Name,
-            FontSize = 13,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = Brushes.White
-        });
-        text.Children.Add(new TextBlock
-        {
-            Text = option.Description,
-            FontSize = 11,
-            Foreground = new SolidColorBrush(Color.Parse("#8E8A86"))
-        });
+        var name = new TextBlock { Text = option.Name };
+        name.Classes.Add("title");
+        var description = new TextBlock { Text = option.Description };
+        description.Classes.Add("hint");
+        var text = new StackPanel { Spacing = 2, Children = { name, description } };
         Grid.SetColumn(text, 1);
         grid.Children.Add(text);
 
@@ -630,11 +525,10 @@ public partial class SettingsDialog : Window
         {
             Text = mode.Name,
             FontSize = 14,
-            FontWeight = FontWeight.SemiBold,
-            Foreground = Brushes.White,
             VerticalAlignment = VerticalAlignment.Center,
             Margin = new Thickness(0, 0, 0, 8)
         };
+        text.Classes.Add("title");
         Grid.SetRow(text, 0);
         return text;
     }
@@ -671,15 +565,14 @@ public partial class SettingsDialog : Window
             HorizontalAlignment = HorizontalAlignment.Left
         };
 
-        if (Application.Current?.Resources.TryGetResource(effect.IconKey, Avalonia.Styling.ThemeVariant.Default, out var icon) == true &&
-            icon is StreamGeometry geometry)
+        if (Palette.Icon(effect.IconKey) is { } geometry)
         {
             panel.Children.Add(new PathIcon
             {
                 Data = geometry,
                 Width = 13,
                 Height = 13,
-                Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+                Foreground = Palette.Muted,
                 VerticalAlignment = VerticalAlignment.Center
             });
         }
@@ -689,7 +582,7 @@ public partial class SettingsDialog : Window
             Text = effect.Text,
             FontSize = 12,
             FontWeight = FontWeight.SemiBold,
-            Foreground = new SolidColorBrush(Color.Parse("#BDB9B3")),
+            Foreground = Palette.Text,
             VerticalAlignment = VerticalAlignment.Center
         });
 
@@ -734,9 +627,7 @@ public partial class SettingsDialog : Window
 
         foreach (var button in list.Children.OfType<Button>())
         {
-            var selected = button.Tag is WatchMode mode && _selectedWatchMode == mode;
-            button.Background = selected ? ModeSelectedBg : ModeNormalBg;
-            button.BorderBrush = selected ? ModeSelectedBorder : ModeNormalBorder;
+            button.Classes.Set("selected", button.Tag is WatchMode mode && _selectedWatchMode == mode);
         }
     }
 
@@ -747,9 +638,7 @@ public partial class SettingsDialog : Window
 
         foreach (var button in list.Children.OfType<Button>())
         {
-            var selected = button.Tag is AudioClarityMode mode && _selectedAudioClarityMode == mode;
-            button.Background = selected ? ModeSelectedBg : ModeNormalBg;
-            button.BorderBrush = selected ? ModeSelectedBorder : ModeNormalBorder;
+            button.Classes.Set("selected", button.Tag is AudioClarityMode mode && _selectedAudioClarityMode == mode);
         }
     }
 
@@ -802,75 +691,8 @@ public partial class SettingsDialog : Window
 
     private void PopulateShortcuts()
     {
-        PopulateGroup("PlaybackGroup", Playback);
-        PopulateGroup("SeekingGroup", Seeking);
-        PopulateGroup("VolumeGroup", Volume);
-        PopulateGroup("SpeedGroup", Speed);
-        PopulateGroup("TracksGroup", Tracks);
-        PopulateGroup("WindowGroup", WindowShortcuts);
-        PopulateGroup("FileGroup", FileAndDialogs);
-    }
-
-    private void PopulateGroup(string gridName, (string Key, string Action)[] rows)
-    {
-        var grid = this.FindControl<Grid>(gridName);
-        if (grid is null) return;
-
-        for (var i = 0; i < rows.Length; i++)
-            grid.RowDefinitions.Add(new RowDefinition(new GridLength(43)));
-
-        grid.ColumnDefinitions.Add(new ColumnDefinition(new GridLength(178)));
-        grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Star));
-
-        for (var i = 0; i < rows.Length; i++)
-        {
-            var (key, action) = rows[i];
-            var rowBg = new Border
-            {
-                Background = new SolidColorBrush(Color.Parse(i % 2 == 0 ? "#161616" : "#1A1A1A")),
-                CornerRadius = new CornerRadius(4),
-                Margin = new Thickness(0, 1),
-            };
-            Grid.SetRow(rowBg, i);
-            Grid.SetColumnSpan(rowBg, 2);
-            grid.Children.Add(rowBg);
-
-            var keyBorder = new Border
-            {
-                Background = new SolidColorBrush(Color.Parse("#2D2D2D")),
-                BorderBrush = new SolidColorBrush(Color.Parse("#4D4658")),
-                BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(4),
-                Padding = new Thickness(10, 3),
-                Margin = new Thickness(10, 6),
-                MinHeight = 28,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                VerticalAlignment = VerticalAlignment.Center,
-                Child = new TextBlock
-                {
-                    Text = key,
-                    FontSize = 12,
-                    FontWeight = FontWeight.SemiBold,
-                    Foreground = new SolidColorBrush(Color.Parse("#E8E4E0")),
-                    FontFamily = new FontFamily("Courier New,Liberation Mono,monospace"),
-                }
-            };
-            Grid.SetRow(keyBorder, i);
-            Grid.SetColumn(keyBorder, 0);
-            grid.Children.Add(keyBorder);
-
-            var actionText = new TextBlock
-            {
-                Text = action,
-                FontSize = 13,
-                Foreground = new SolidColorBrush(Color.Parse("#DEDAD5")),
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(10, 0, 10, 0),
-            };
-            Grid.SetRow(actionText, i);
-            Grid.SetColumn(actionText, 1);
-            grid.Children.Add(actionText);
-        }
+        if (this.FindControl<StackPanel>("ShortcutsList") is { } list)
+            ShortcutRows.Populate(list);
     }
 
     private void RefreshAll()
@@ -905,28 +727,14 @@ public partial class SettingsDialog : Window
 
     private void RefreshRotationButtons()
     {
-        MarkRotSelected("Rot0Btn", _rotation == 0);
-        MarkRotSelected("Rot90Btn", _rotation == 90);
-        MarkRotSelected("Rot180Btn", _rotation == 180);
-        MarkRotSelected("Rot270Btn", _rotation == 270);
+        MarkSelected("Rot0Btn", _rotation == 0);
+        MarkSelected("Rot90Btn", _rotation == 90);
+        MarkSelected("Rot180Btn", _rotation == 180);
+        MarkSelected("Rot270Btn", _rotation == 270);
     }
 
-    private void MarkRotSelected(string name, bool selected)
-    {
-        var btn = this.FindControl<Button>(name);
-        if (btn is null) return;
-        btn.Background = selected ? SelectedBg : NormalBg;
-        btn.BorderBrush = selected ? SelectedBdr : NormalBorder;
-        btn.Foreground = Brushes.White;
-    }
-
-    private void MarkNavSelected(string name, bool selected)
-    {
-        var btn = this.FindControl<Button>(name);
-        if (btn is null) return;
-        btn.Background = selected ? NavSelectedBg : NavNormalBg;
-        btn.BorderBrush = selected ? NavSelectedBorder : NavNormalBorder;
-    }
+    private void MarkSelected(string name, bool selected) =>
+        this.FindControl<Button>(name)?.Classes.Set("selected", selected);
 
     private void SetVisible(string name, bool visible)
     {

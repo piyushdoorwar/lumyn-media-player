@@ -10,8 +10,7 @@
     MinWidth="500"
     MinHeight="420"
     CanResize="True"
-    WindowStartupLocation="CenterOwner"
-    Background="#1A1A1A">
+    WindowStartupLocation="CenterOwner">
 
   <Grid RowDefinitions="*,Auto">
 
@@ -27,30 +26,25 @@
                       Spacing="6"
                       Margin="0,0,0,12"
                       IsVisible="False">
-            <TextBlock Text="Embedded subtitles"
-                       Foreground="#DEDAD5"
-                       FontSize="12"
-                       FontWeight="SemiBold" />
+            <TextBlock Classes="h2" Text="Embedded subtitles" />
             <ListBox Name="EmbeddedTracksList"
                      MaxHeight="96"
-                     Background="#161616"
-                     BorderBrush="#333333"
+                     Background="{StaticResource Lumyn.Surface2}"
+                     BorderBrush="{StaticResource Lumyn.Line}"
                      BorderThickness="1"
-                     CornerRadius="4">
+                     CornerRadius="{StaticResource Lumyn.Radius}">
               <ListBox.ItemTemplate>
                 <DataTemplate x:DataType="viewModels:TrackInfo">
                   <Grid ColumnDefinitions="*,Auto" Margin="6,5">
                     <TextBlock Grid.Column="0"
                                Text="{Binding Name}"
-                               Foreground="#F7F5F3"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="1"
-                               Text="selected"
-                               IsVisible="{Binding IsSelected}"
-                               Foreground="#3A9B4B"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               Margin="12,0,0,0" />
+                    <Border Grid.Column="1" Classes="badge"
+                            IsVisible="{Binding IsSelected}"
+                            VerticalAlignment="Center"
+                            Margin="12,0,0,0">
+                      <TextBlock Text="Selected" />
+                    </Border>
                   </Grid>
                 </DataTemplate>
               </ListBox.ItemTemplate>
@@ -62,9 +56,7 @@
             <TextBox Grid.Column="0"
                      Name="FilePathBox"
                      IsReadOnly="True"
-                     PlaceholderText="No subtitle file loaded"
-                     Background="#2D2D2D" Foreground="#F7F5F3"
-                     BorderBrush="#4D4658" />
+                     PlaceholderText="No subtitle file loaded" />
             <Button Grid.Column="2"
                     Name="BrowseButton"
                     Content="Browse…"
@@ -73,27 +65,22 @@
 
           <!-- Divider -->
           <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" Margin="0,0,0,10">
-            <Border Grid.Column="0" Height="1" Background="#3D3846" VerticalAlignment="Center" />
-            <TextBlock Grid.Column="1" Text="or search online"
-                       Foreground="#807C79" FontSize="11" Margin="12,0"
-                       VerticalAlignment="Center" />
-            <Border Grid.Column="2" Height="1" Background="#3D3846" VerticalAlignment="Center" />
+            <Border Grid.Column="0" Classes="divider" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="or search online" Classes="hint"
+                       Margin="12,0" VerticalAlignment="Center" />
+            <Border Grid.Column="2" Classes="divider" VerticalAlignment="Center" />
           </Grid>
 
           <!-- Search query + language + button -->
           <Grid Grid.Row="3" ColumnDefinitions="*,8,Auto,8,Auto" Margin="0,0,0,8">
             <TextBox Grid.Column="0"
                      Name="SearchBox"
-                     PlaceholderText="Movie or show name…"
-                     Background="#2D2D2D" Foreground="#F7F5F3"
-                     BorderBrush="#4D4658" />
+                     PlaceholderText="Movie or show name…" />
             <ComboBox Grid.Column="2"
                       Name="LanguageBox"
                       MinWidth="130"
                       MaxDropDownHeight="220"
-                      Focusable="True"
-                      Background="#2D2D2D" Foreground="#F7F5F3"
-                      BorderBrush="#4D4658" />
+                      Focusable="True" />
             <Button Grid.Column="4"
                     Name="SearchButton"
                     Content="Search"
@@ -109,51 +96,53 @@
                          IsIndeterminate="True"
                          IsVisible="False"
                          Width="100" Height="3"
+                         Foreground="{StaticResource Lumyn.Accent}"
                          VerticalAlignment="Center"
                          Margin="0,0,10,0" />
             <TextBlock Grid.Column="1"
                        Name="StatusText"
+                       Classes="hint"
                        Text="Enter a title and press Search."
-                       Foreground="#807C79" FontSize="12"
                        VerticalAlignment="Center" />
           </Grid>
 
           <!-- Results -->
           <ListBox Grid.Row="5"
                    Name="ResultsList"
-                   Background="#161616"
-                   BorderBrush="#333333"
+                   Background="{StaticResource Lumyn.Surface2}"
+                   BorderBrush="{StaticResource Lumyn.Line}"
                    BorderThickness="1"
-                   CornerRadius="4"
+                   CornerRadius="{StaticResource Lumyn.Radius}"
                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                    DoubleTapped="ResultsList_DoubleTapped">
             <ListBox.ItemTemplate>
               <DataTemplate x:DataType="models:SubtitleSearchResult">
                 <Grid ColumnDefinitions="*,10,Auto,8,Auto" Margin="4,6">
                   <StackPanel Grid.Column="0" Spacing="3">
-                    <TextBlock Text="{Binding Title}"
-                               FontWeight="SemiBold" Foreground="#F7F5F3"
+                    <TextBlock Text="{Binding Title}" Classes="title"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock Text="{Binding FileName}"
-                               FontSize="11" Foreground="#9D9B98"
+                               FontSize="11" Foreground="{StaticResource Lumyn.Muted}"
                                TextTrimming="CharacterEllipsis" />
                     <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,2,0,0">
-                      <Border Background="#2D2D2D" CornerRadius="3" Padding="5,2">
-                        <TextBlock Text="{Binding Language}" FontSize="10" Foreground="#DEDAD5" />
+                      <Border Classes="badge">
+                        <TextBlock Text="{Binding Language}" />
                       </Border>
-                      <Border Background="#2D2D2D" CornerRadius="3" Padding="5,2">
-                        <TextBlock Text="{Binding Format}" FontSize="10" Foreground="#DEDAD5" />
+                      <Border Background="{StaticResource Lumyn.Surface3}"
+                              CornerRadius="{StaticResource Lumyn.RadiusSm}" Padding="6,2">
+                        <TextBlock Text="{Binding Format}" FontSize="10.5" Foreground="{StaticResource Lumyn.Text}" />
                       </Border>
-                      <Border Background="#2D2D2D" CornerRadius="3" Padding="5,2">
-                        <TextBlock Text="{Binding Source}" FontSize="10" Foreground="#807C79" />
+                      <Border BorderBrush="{StaticResource Lumyn.Line}" BorderThickness="1"
+                              CornerRadius="{StaticResource Lumyn.RadiusSm}" Padding="6,1">
+                        <TextBlock Text="{Binding Source}" FontSize="10.5" Foreground="{StaticResource Lumyn.Muted}" />
                       </Border>
                     </StackPanel>
                   </StackPanel>
                   <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="1">
                     <TextBlock Text="{Binding Downloads, StringFormat='{}{0:N0}'}"
-                               FontSize="12" Foreground="#807C79"
+                               FontSize="12" Foreground="{StaticResource Lumyn.Muted}"
                                HorizontalAlignment="Right" />
-                    <TextBlock Text="downloads" FontSize="9" Foreground="#50504D"
+                    <TextBlock Text="downloads" FontSize="10" Foreground="{StaticResource Lumyn.Faint}"
                                HorizontalAlignment="Right" />
                   </StackPanel>
                   <Button Grid.Column="4"
@@ -164,12 +153,12 @@
                     <Viewbox Width="22" Height="22">
                       <Canvas Width="24" Height="24">
                         <Path Data="{StaticResource Icon.DownloadTray}"
-                              Stroke="#DEDAD5"
+                              Stroke="{StaticResource Lumyn.Text}"
                               StrokeThickness="1.5"
                               StrokeLineCap="Round"
                               StrokeJoin="Round" />
                         <Path Data="{StaticResource Icon.DownloadArrow}"
-                              Stroke="#DEDAD5"
+                              Stroke="{StaticResource Lumyn.Text}"
                               StrokeThickness="1.5"
                               StrokeLineCap="Round"
                               StrokeJoin="Round" />
@@ -200,17 +189,17 @@
           <!-- Live preview -->
           <Border Grid.Row="0"
                   MinHeight="132"
-                  Background="#101010"
-                  BorderBrush="#2A2A2A"
+                  Background="{StaticResource Lumyn.Bg}"
+                  BorderBrush="{StaticResource Lumyn.Line}"
                   BorderThickness="1"
-                  CornerRadius="6"
+                  CornerRadius="{StaticResource Lumyn.Radius}"
                   ClipToBounds="True">
             <Grid RowDefinitions="*,Auto" Margin="16,14">
               <Border Grid.Row="0"
                       Width="190"
                       Height="70"
-                      Background="#181818"
-                      CornerRadius="4"
+                      Background="{StaticResource Lumyn.Surface2}"
+                      CornerRadius="{StaticResource Lumyn.RadiusSm}"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"
                       Opacity="0.9" />
@@ -228,10 +217,9 @@
                 </TextBlock.Effect>
               </TextBlock>
               <TextBlock Grid.Row="1"
-                         Text="PREVIEW"
-                         FontSize="10"
-                         FontWeight="SemiBold"
-                         Foreground="#55514E"
+                         Text="Preview"
+                         Classes="faint"
+                         FontSize="11"
                          HorizontalAlignment="Center"
                          Margin="0,8,0,0" />
             </Grid>
@@ -240,42 +228,30 @@
           <!-- Controls -->
           <StackPanel Grid.Row="2" Spacing="10">
 
-            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+            <Border Classes="card">
               <Grid ColumnDefinitions="120,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="Text size"
-                             FontSize="13"
-                             FontWeight="SemiBold"
-                             Foreground="#DEDAD5" />
-                  <TextBlock Text="Subtitle scale"
-                             FontSize="10"
-                             Foreground="#6A6560" />
+                  <TextBlock Classes="title" Text="Text size" />
+                  <TextBlock Classes="hint" Text="Subtitle scale" />
                 </StackPanel>
                 <Grid Grid.Column="1" ColumnDefinitions="*,8,*,8,*">
-                  <Button Grid.Column="0" Name="SizeSmallBtn" Content="Small"
+                  <Button Grid.Column="0" Name="SizeSmallBtn" Classes="chip" HorizontalAlignment="Stretch" Content="Small"
                           Click="SizeButton_Click" Tag="Small" />
-                  <Button Grid.Column="2" Name="SizeMediumBtn" Content="Medium"
+                  <Button Grid.Column="2" Name="SizeMediumBtn" Classes="chip" HorizontalAlignment="Stretch" Content="Medium"
                           Click="SizeButton_Click" Tag="Medium" />
-                  <Button Grid.Column="4" Name="SizeLargeBtn" Content="Large"
+                  <Button Grid.Column="4" Name="SizeLargeBtn" Classes="chip" HorizontalAlignment="Stretch" Content="Large"
                           Click="SizeButton_Click" Tag="Large" />
                 </Grid>
               </Grid>
             </Border>
 
-            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+            <Border Classes="card">
               <Grid ColumnDefinitions="120,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="Font"
-                             FontSize="13"
-                             FontWeight="SemiBold"
-                             Foreground="#DEDAD5" />
-                  <TextBlock Text="Typeface"
-                             FontSize="10"
-                             Foreground="#6A6560" />
+                  <TextBlock Classes="title" Text="Font" />
+                  <TextBlock Classes="hint" Text="Typeface" />
                 </StackPanel>
                 <ComboBox Grid.Column="1" Name="FontCombo"
-                          Background="#2D2D2D" Foreground="#F7F5F3"
-                          BorderBrush="#4D4658"
                           MaxDropDownHeight="220"
                           Focusable="True"
                           HorizontalAlignment="Stretch"
@@ -283,20 +259,13 @@
               </Grid>
             </Border>
 
-            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+            <Border Classes="card">
               <Grid ColumnDefinitions="120,*">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="Colour"
-                             FontSize="13"
-                             FontWeight="SemiBold"
-                             Foreground="#DEDAD5" />
-                  <TextBlock Text="Foreground"
-                             FontSize="10"
-                             Foreground="#6A6560" />
+                  <TextBlock Classes="title" Text="Colour" />
+                  <TextBlock Classes="hint" Text="Foreground" />
                 </StackPanel>
                 <ComboBox Grid.Column="1" Name="ColorCombo"
-                          Background="#2D2D2D" Foreground="#F7F5F3"
-                          BorderBrush="#4D4658"
                           MaxDropDownHeight="220"
                           Focusable="True"
                           HorizontalAlignment="Stretch"
@@ -304,27 +273,24 @@
               </Grid>
             </Border>
 
-            <Border Background="#161616" CornerRadius="5" Padding="12,10">
+            <Border Classes="card">
               <Grid ColumnDefinitions="120,Auto,8,*,8,Auto">
                 <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
-                  <TextBlock Text="Sync delay"
-                             FontSize="13"
-                             FontWeight="SemiBold"
-                             Foreground="#DEDAD5" />
-                  <TextBlock Text="Earlier / later"
-                             FontSize="10"
-                             Foreground="#6A6560" />
+                  <TextBlock Classes="title" Text="Sync delay" />
+                  <TextBlock Classes="hint" Text="Earlier / later" />
                 </StackPanel>
                 <Button Grid.Column="1" Name="DelayMinusBtn" Content="&#8722;"
                         Width="36" Height="34" Click="DelayMinus_Click" FontSize="18"
                         Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
                 <Border Grid.Column="3"
-                        Background="#2D2D2D" CornerRadius="5"
-                        BorderBrush="#4D4658" BorderThickness="1"
+                        Background="{StaticResource Lumyn.Surface}"
+                        CornerRadius="{StaticResource Lumyn.RadiusSm}"
+                        BorderBrush="{StaticResource Lumyn.Line}" BorderThickness="1"
                         Padding="8,6">
                   <TextBlock Name="DelayLabel" Text="0 ms"
                              HorizontalAlignment="Center"
-                             Foreground="#F7F5F3" FontSize="13" FontWeight="SemiBold" />
+                             FontFamily="{StaticResource Lumyn.Mono}"
+                             FontSize="13" FontWeight="SemiBold" />
                 </Border>
                 <Button Grid.Column="5" Name="DelayPlusBtn" Content="+"
                         Width="36" Height="34" Click="DelayPlus_Click" FontSize="18"
@@ -340,11 +306,10 @@
     </TabControl>
 
     <!-- Bottom action bar -->
-    <Border Grid.Row="1" BorderBrush="#333333" BorderThickness="0,1,0,0">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                  Spacing="8" Margin="16,10">
+    <Border Grid.Row="1" Classes="footer" Margin="0,12,0,0">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
         <Button Name="DisableButton" Content="Disable subtitles"
-                Foreground="#FF7777" Click="DisableButton_Click" />
+                Classes="danger" Click="DisableButton_Click" />
         <Button Name="CancelButton" Content="Cancel" Click="CancelButton_Click" />
         <Button Name="ApplyButton"  Content="Apply"  Classes="accent" Click="ApplyButton_Click" />
       </StackPanel>

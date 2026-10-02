@@ -10,7 +10,7 @@
     Height="620"
     MinWidth="640"
     MinHeight="380"
-    Background="#111111"
+    Background="{StaticResource Lumyn.Bg}"
     Topmost="{Binding IsAlwaysOnTop}"
     CanResize="True"
     WindowDecorations="BorderOnly"
@@ -20,14 +20,16 @@
     All layers stacked in a Panel. mpv renders video into an OpenGL surface
     at the bottom; Avalonia controls remain normal overlays above it.
   -->
-  <Border Name="RootBorder" Background="#111111" BorderThickness="2">
+  <Border Name="RootBorder" Background="{StaticResource Lumyn.Bg}" BorderThickness="2">
   <Grid RowDefinitions="Auto,*">
 
     <!-- ── Top bar (own row – no mpv surface behind it) ─────────────────── -->
     <Border
         Name="TopBar"
         Grid.Row="0"
-        Background="#141414"
+        Background="{StaticResource Lumyn.Surface}"
+        BorderBrush="{StaticResource Lumyn.Line}"
+        BorderThickness="0,0,0,1"
         IsHitTestVisible="True"
         MinHeight="38">
       <Grid ColumnDefinitions="Auto,*,Auto">
@@ -54,7 +56,7 @@
           <TextBlock Text="{Binding Title}"
                      VerticalAlignment="Center"
                      HorizontalAlignment="Center"
-                     FontSize="12" Foreground="#DEDAD5"
+                     FontSize="12" Foreground="{StaticResource Lumyn.Text}"
                      TextTrimming="CharacterEllipsis"
                      IsHitTestVisible="False" />
         </Border>
@@ -76,7 +78,7 @@
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.AlwaysOnTop}" />
           </Button>
           <!-- Divider -->
-          <Border Width="1" Margin="4,9" Background="#383838" />
+          <Border Width="1" Margin="4,9" Background="{StaticResource Lumyn.LineStrong}" />
           <!-- Window chrome -->
           <Button Classes="wchrome" Name="MinimizeButton"
                   Click="MinimizeButton_Click">
@@ -97,8 +99,8 @@
     </Border>
 
     <!-- ── Video area (mpv + overlays + bottom bar) ──────────────────────── -->
-    <Grid Name="Root" Grid.Row="1" Background="#111111" DragDrop.AllowDrop="True">
-    <Panel Name="VideoPanel" Background="#111111" DragDrop.AllowDrop="True">
+    <Grid Name="Root" Grid.Row="1" Background="{StaticResource Lumyn.Bg}" DragDrop.AllowDrop="True">
+    <Panel Name="VideoPanel" Background="{StaticResource Lumyn.Bg}" DragDrop.AllowDrop="True">
 
     <!-- ── Video frame (mpv OpenGL render API) ──────────────────────────── -->
     <controls:MpvVideoSurface Name="VideoSurface"
@@ -135,7 +137,7 @@
     <!-- ── Audio-only mode panel ─────────────────────────────────────────── -->
     <Grid Name="AudioModePanel"
           IsVisible="{Binding IsAudioMode}"
-          Background="#111111"
+          Background="{StaticResource Lumyn.Bg}"
           HorizontalAlignment="Stretch"
           VerticalAlignment="Stretch">
 
@@ -151,7 +153,7 @@
             <BlurEffect Radius="110" />
           </Image.Effect>
         </Image>
-        <Border Background="#111111" Opacity="0.6" />
+        <Border Background="{StaticResource Lumyn.Bg}" Opacity="0.6" />
       </Panel>
 
       <!-- YouTube-Music two-pane: hero on the left (~60%), queue on the right (~40%).
@@ -169,10 +171,10 @@
                     Spacing="18" Margin="24,0">
 
           <Border Width="216" Height="216"
-                  CornerRadius="16"
+                  CornerRadius="{StaticResource Lumyn.RadiusLg}"
                   ClipToBounds="True"
-                  Background="#1E1E1E"
-                  BorderBrush="#303030"
+                  Background="{StaticResource Lumyn.Surface2}"
+                  BorderBrush="{StaticResource Lumyn.Line}"
                   BorderThickness="1"
                   HorizontalAlignment="Center">
             <Panel>
@@ -181,7 +183,7 @@
                      IsVisible="{Binding HasCoverArt}" />
               <PathIcon Width="72" Height="72"
                         Data="{StaticResource Icon.MusicNote}"
-                        Foreground="#353535"
+                        Foreground="{StaticResource Lumyn.LineStrong}"
                         IsVisible="{Binding !HasCoverArt}"
                         HorizontalAlignment="Center"
                         VerticalAlignment="Center" />
@@ -191,14 +193,13 @@
           <StackPanel Spacing="4" HorizontalAlignment="Center">
             <TextBlock Text="{Binding TrackTitle}"
                        FontSize="22" FontWeight="SemiBold"
-                       Foreground="#F2EFEC"
                        HorizontalAlignment="Center" TextAlignment="Center"
                        TextTrimming="CharacterEllipsis" MaxWidth="360"
                        IsVisible="{Binding TrackTitle,
                            Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             <TextBlock Text="{Binding TrackArtistAlbum}"
                        FontSize="14"
-                       Foreground="#7A7675"
+                       Foreground="{StaticResource Lumyn.Faint}"
                        HorizontalAlignment="Center" TextAlignment="Center"
                        TextTrimming="CharacterEllipsis" MaxWidth="360"
                        IsVisible="{Binding TrackArtistAlbum,
@@ -215,19 +216,18 @@
         <!-- RIGHT: the queue ("Up next"), only when there are 2+ tracks -->
         <Border Grid.Column="1"
                 IsVisible="{Binding HasPlaylist}"
-                Background="#0A0A0A"
-                BorderBrush="#1E1E1E"
+                Background="{StaticResource Lumyn.Bg}"
+                BorderBrush="{StaticResource Lumyn.Line}"
                 BorderThickness="1,0,0,0">
           <Grid RowDefinitions="48,*">
 
             <!-- Header -->
             <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="18,0,16,0">
-              <TextBlock Grid.Column="0" Text="Up next"
-                         VerticalAlignment="Center"
-                         FontSize="13" FontWeight="SemiBold" Foreground="#C8C3C2" />
+              <TextBlock Grid.Column="0" Text="Up next" Classes="h2"
+                         VerticalAlignment="Center" />
               <TextBlock Grid.Column="1" Text="{Binding PlaylistPositionLabel}"
                          VerticalAlignment="Center"
-                         FontSize="11" Foreground="#5A5755" />
+                         FontSize="11" Foreground="{StaticResource Lumyn.Faint}" />
             </Grid>
 
             <!-- Queue rows -->
@@ -238,19 +238,19 @@
 
                 <ItemsControl.Styles>
                   <Style Selector="Border.aq-row:pointerover">
-                    <Setter Property="Background" Value="#0BFFFFFF" />
+                    <Setter Property="Background" Value="{StaticResource Lumyn.Surface2}" />
                   </Style>
                   <Style Selector="Border.aq-row.active">
-                    <Setter Property="Background" Value="#1649B35C" />
+                    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSofter}" />
                   </Style>
                   <Style Selector="Border.aq-row:pointerover PathIcon.drag-icon">
-                    <Setter Property="Foreground" Value="#4A4846" />
+                    <Setter Property="Foreground" Value="{StaticResource Lumyn.Faint}" />
                   </Style>
                   <Style Selector="Border.aq-row:pointerover Button.remove-btn">
                     <Setter Property="Opacity" Value="0.8" />
                   </Style>
                   <Style Selector="TextBlock.aq-title.active">
-                    <Setter Property="Foreground" Value="#9FD4AC" />
+                    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentText}" />
                   </Style>
                 </ItemsControl.Styles>
 
@@ -259,7 +259,7 @@
                     <Border Classes="aq-row"
                             Classes.active="{Binding IsCurrent}"
                             Background="Transparent"
-                            CornerRadius="6"
+                            CornerRadius="{StaticResource Lumyn.Radius}"
                             Padding="4,4" Margin="6,1">
                       <Grid ColumnDefinitions="18,44,*,Auto,28">
 
@@ -271,22 +271,22 @@
                           <PathIcon Classes="drag-icon"
                                     Width="9" Height="9"
                                     Data="{StaticResource Icon.DragHandle}"
-                                    Foreground="#2A2826"
+                                    Foreground="{StaticResource Lumyn.LineStrong}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center" />
                         </Border>
 
                         <!-- Cover thumbnail -->
                         <Border Grid.Column="1" Width="38" Height="38"
-                                CornerRadius="5" ClipToBounds="True"
-                                Background="#1A1A1A" VerticalAlignment="Center">
+                                CornerRadius="{StaticResource Lumyn.RadiusSm}" ClipToBounds="True"
+                                Background="{StaticResource Lumyn.Surface2}" VerticalAlignment="Center">
                           <Panel>
                             <Image Source="{Binding CoverBitmap}"
                                    Stretch="UniformToFill"
                                    IsVisible="{Binding HasCover}" />
                             <PathIcon Width="15" Height="15"
                                       Data="{StaticResource Icon.MusicNote}"
-                                      Foreground="#333333"
+                                      Foreground="{StaticResource Lumyn.LineStrong}"
                                       IsVisible="{Binding !HasCover}"
                                       HorizontalAlignment="Center"
                                       VerticalAlignment="Center" />
@@ -305,10 +305,10 @@
                             <TextBlock Classes="aq-title"
                                        Classes.active="{Binding IsCurrent}"
                                        Text="{Binding TitleLabel}"
-                                       FontSize="13" Foreground="#B7B2AE"
+                                       FontSize="13" Foreground="{StaticResource Lumyn.Text}"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding ArtistLabel}"
-                                       FontSize="11" Foreground="#6A6560"
+                                       FontSize="11" Foreground="{StaticResource Lumyn.Faint}"
                                        TextTrimming="CharacterEllipsis"
                                        IsVisible="{Binding HasArtist}" />
                           </StackPanel>
@@ -319,7 +319,7 @@
                                    Text="{Binding DurationLabel}"
                                    VerticalAlignment="Center"
                                    Margin="6,0"
-                                   FontSize="11" Foreground="#5A5755" />
+                                   FontSize="11" Foreground="{StaticResource Lumyn.Faint}" />
 
                         <!-- Remove (dim at rest, brighter on row hover) -->
                         <Button Grid.Column="4" Classes="ctrl remove-btn"
@@ -329,13 +329,17 @@
                                 Opacity="0.0">
                           <PathIcon Width="9" Height="9"
                                     Data="{StaticResource Icon.WindowClose}"
-                                    Foreground="#6A6560" />
+                                    Foreground="{StaticResource Lumyn.Faint}" />
                         </Button>
 
                         <!-- Right-click context menu -->
                         <Grid.ContextMenu>
                           <ContextMenu>
-                            <MenuItem Header="▶  Play" Click="PlaylistCtx_Play" />
+                            <MenuItem Header="Play" Click="PlaylistCtx_Play">
+                              <MenuItem.Icon>
+                                <PathIcon Width="12" Height="12" Data="{StaticResource Icon.Play}" />
+                              </MenuItem.Icon>
+                            </MenuItem>
                             <Separator />
                             <MenuItem Header="Remove from queue" Click="PlaylistCtx_Remove" />
                             <Separator />
@@ -358,7 +362,7 @@
     <!-- ── Start / Empty screen ───────────────────────────────────────────── -->
     <Grid IsVisible="{Binding !HasMedia}"
           IsHitTestVisible="{Binding !HasMedia}"
-          Background="#111111">
+          Background="{StaticResource Lumyn.Bg}">
 
       <!-- No recent files: simple logo placeholder -->
       <StackPanel
@@ -368,9 +372,9 @@
           IsVisible="{Binding !HasRecentFiles}">
         <Image Width="120" Height="120" Opacity="0.85" Source="{StaticResource Icon.LumynLogo}" />
         <TextBlock Text="Lumyn" FontSize="28" FontWeight="SemiBold"
-                   Foreground="#F7F5F3" HorizontalAlignment="Center" />
+                   HorizontalAlignment="Center" />
         <TextBlock Text="Drop a file here, press O to open, or right-click"
-                   FontSize="13" Foreground="#807C79" HorizontalAlignment="Center" />
+                   FontSize="13" Foreground="{StaticResource Lumyn.Muted}" HorizontalAlignment="Center" />
       </StackPanel>
 
       <!-- Has recent files: recently played grid -->
@@ -385,9 +389,9 @@
         <!-- Heading -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10" Margin="0,0,0,18">
           <Image Width="22" Height="22" Source="{StaticResource Icon.LumynMark}" Opacity="0.7" />
-          <TextBlock Text="Recently Played"
+          <TextBlock Text="Recently played"
                      FontSize="16" FontWeight="SemiBold"
-                     Foreground="#E0DCD8" VerticalAlignment="Center" />
+                     VerticalAlignment="Center" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
@@ -402,9 +406,9 @@
                   <Button Click="RecentItem_Click"
                           Tag="{Binding FilePath}"
                           Width="200" Height="120" Margin="0" Padding="0"
-                          Background="#1A1A1A"
-                          BorderBrush="#2A2A2A" BorderThickness="1"
-                          CornerRadius="6"
+                          Background="{StaticResource Lumyn.Surface2}"
+                          BorderBrush="{StaticResource Lumyn.Line}" BorderThickness="1"
+                          CornerRadius="{StaticResource Lumyn.Radius}"
                           HorizontalContentAlignment="Stretch"
                           VerticalContentAlignment="Stretch"
                           ClipToBounds="True">
@@ -425,22 +429,21 @@
                       <!-- Progress % badge top-left -->
                       <Border HorizontalAlignment="Left" VerticalAlignment="Top"
                               Margin="6,6,0,0" Padding="4,2"
-                              Background="#CC000000" CornerRadius="3"
+                              Background="#CC000000" CornerRadius="{StaticResource Lumyn.RadiusSm}"
                               IsVisible="{Binding HasResume}">
                         <TextBlock Text="{Binding ProgressLabel}"
                                    FontSize="9" FontWeight="SemiBold"
-                                   Foreground="#3A9B4B" />
+                                   Foreground="{StaticResource Lumyn.AccentBright}" />
                       </Border>
                       <!-- Text at bottom -->
                       <StackPanel VerticalAlignment="Bottom" Margin="10,0,28,8" Spacing="2">
                         <TextBlock Text="{Binding DisplayName}"
                                    FontSize="11" FontWeight="SemiBold"
-                                   Foreground="#F0ECE8"
                                    TextTrimming="CharacterEllipsis"
                                    MaxLines="2" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding ResumeLabel}"
                                    FontSize="10" FontWeight="SemiBold"
-                                   Foreground="#3A9B4B"
+                                   Foreground="{StaticResource Lumyn.AccentBright}"
                                    IsVisible="{Binding HasResume}" />
                       </StackPanel>
                       <!-- Progress bar pinned to bottom edge -->
@@ -462,7 +465,7 @@
                           Margin="0,4,4,0" Opacity="0.5">
                     <PathIcon Width="7" Height="7"
                               Data="{StaticResource Icon.WindowClose}"
-                              Foreground="#AAAAAA" />
+                              Foreground="{StaticResource Lumyn.Text}" />
                   </Button>
 
                 </Panel>
@@ -477,14 +480,20 @@
 
     <!-- ── Error banner ──────────────────────────────────────────────────── -->
     <Border
+        HorizontalAlignment="Center"
         VerticalAlignment="Top"
-        Margin="0,48,0,0"
+        Margin="16,48,16,0"
+        MaxWidth="560"
+        Padding="12,8"
+        CornerRadius="{StaticResource Lumyn.RadiusSm}"
+        Background="{StaticResource Lumyn.ErrorBanner}"
         IsVisible="{Binding HasError}"
-        Padding="16,8"
-        Background="#CC77216F"
         IsHitTestVisible="False">
-      <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFFFFF"
-                 TextWrapping="Wrap" HorizontalAlignment="Center" />
+      <Border.Effect>
+        <DropShadowEffect BlurRadius="8" OffsetX="0" OffsetY="3" Color="#000000" Opacity="0.25" />
+      </Border.Effect>
+      <TextBlock Text="{Binding ErrorMessage}" FontSize="12"
+                 TextWrapping="Wrap" TextAlignment="Center" />
     </Border>
 
     <!-- ── OSD toast ────────────────────────────────────────────────────── -->
@@ -494,9 +503,9 @@
         Margin="16,52,16,0"
         Padding="10,7,14,7"
         MaxWidth="480"
-        CornerRadius="6"
-        Background="#99101214"
-        BorderBrush="#1AFFFFFF"
+        CornerRadius="{StaticResource Lumyn.RadiusLg}"
+        Background="{StaticResource Lumyn.Overlay}"
+        BorderBrush="{StaticResource Lumyn.Line}"
         BorderThickness="1"
         IsVisible="{Binding HasOsd}"
         IsHitTestVisible="False">
@@ -507,13 +516,13 @@
         <PathIcon Grid.Column="0"
                   Width="11" Height="11"
                   Data="{StaticResource Icon.Info}"
-                  Foreground="#5A9B6A"
+                  Foreground="{StaticResource Lumyn.AccentBright}"
                   VerticalAlignment="Center" />
         <TextBlock Grid.Column="1"
                    Text="{Binding OsdMessage}"
                    Margin="8,0,0,0"
                    FontSize="12"
-                   Foreground="#C8C4C0"
+                   Foreground="{StaticResource Lumyn.Text}"
                    TextWrapping="Wrap"
                    TextTrimming="CharacterEllipsis"
                    MaxLines="2"
@@ -527,15 +536,15 @@
         VerticalAlignment="Bottom"
         Margin="14,0,14,88"
         Padding="10,7"
-        CornerRadius="6"
-        Background="#E51B1B1B"
-        BorderBrush="#443A9B4B"
+        CornerRadius="{StaticResource Lumyn.RadiusLg}"
+        Background="{StaticResource Lumyn.Overlay}"
+        BorderBrush="{StaticResource Lumyn.Line}"
         BorderThickness="1"
         IsVisible="{Binding IsCasting}"
         HorizontalAlignment="Center">
       <StackPanel Orientation="Horizontal" Spacing="8">
-        <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="#49B35C" />
-        <TextBlock Text="{Binding CastStatusText}" Foreground="#F4F0EC" FontSize="12"
+        <PathIcon Width="15" Height="15" Data="{StaticResource Icon.Cast}" Foreground="{StaticResource Lumyn.AccentBright}" />
+        <TextBlock Text="{Binding CastStatusText}" FontSize="12"
                    VerticalAlignment="Center" />
         <Button Classes="ctrl" Command="{Binding ToggleCastPlaybackCommand}">
           <Panel>
@@ -575,7 +584,7 @@
                      VerticalAlignment="Center"
                      HorizontalAlignment="Left"
                      FontSize="12"
-                     Foreground="#C8C3C2"
+                     Foreground="{StaticResource Lumyn.Text}"
                      MinWidth="50" />
 
           <controls:SeekBar
@@ -595,7 +604,7 @@
                      HorizontalAlignment="Right"
                      TextAlignment="Right"
                      FontSize="12"
-                     Foreground="#C8C3C2"
+                     Foreground="{StaticResource Lumyn.Text}"
                      Cursor="Hand"
                      PointerPressed="DurationText_OnPointerPressed"
                      MinWidth="50" />
@@ -701,9 +710,9 @@
             <Button Classes="ctrl"
                     Command="{Binding ResetSpeedCommand}"
                     IsVisible="{Binding !IsNormalSpeed}">
-              <Border Background="#2A2A2A" CornerRadius="4" Padding="6,2">
+              <Border Background="{StaticResource Lumyn.Surface3}" CornerRadius="{StaticResource Lumyn.RadiusSm}" Padding="6,2">
                 <TextBlock Text="{Binding SpeedLabel}" FontSize="11"
-                           Foreground="#E8E4E0" FontWeight="Medium"
+                           Foreground="{StaticResource Lumyn.Text}" FontWeight="Medium"
                            VerticalAlignment="Center" />
               </Border>
             </Button>
@@ -753,18 +762,18 @@
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
             Width="164"
-            CornerRadius="5"
-            Background="#F0111111"
-            BorderBrush="#22FFFFFF"
+            CornerRadius="{StaticResource Lumyn.Radius}"
+            Background="{StaticResource Lumyn.Overlay}"
+            BorderBrush="{StaticResource Lumyn.Line}"
             BorderThickness="1">
       <Border.Effect>
         <DropShadowEffect BlurRadius="14" OffsetX="0" OffsetY="-4" Color="Black" Opacity="0.6" />
       </Border.Effect>
       <StackPanel Margin="4,4,4,5">
         <Border Width="156" Height="88"
-                CornerRadius="3"
+                CornerRadius="{StaticResource Lumyn.RadiusSm}"
                 ClipToBounds="True"
-                Background="#0E0E0E">
+                Background="{StaticResource Lumyn.Bg}">
           <Image Name="SeekThumbnailImage"
                  Width="156" Height="88"
                  Stretch="Uniform" />
@@ -772,7 +781,7 @@
         <TextBlock Name="SeekThumbnailTimeText"
                    FontSize="11"
                    FontWeight="SemiBold"
-                   Foreground="#C8C3C2"
+                   Foreground="{StaticResource Lumyn.Text}"
                    HorizontalAlignment="Center"
                    Margin="0,4,0,0" />
       </StackPanel>
@@ -783,24 +792,24 @@
       <ContextMenu Name="RootContextMenu" Opening="RootContextMenu_Opening">
 
         <!-- Recent files (populated in code-behind) -->
-        <MenuItem Name="RecentFilesMenuItem" Header="Open Recent" />
+        <MenuItem Name="RecentFilesMenuItem" Header="Open recent" />
         <Separator />
 
-        <MenuItem Header="Open Folder..." Click="OpenFolder_Click" />
-        <MenuItem Header="Add to Queue..." Click="AddToQueue_Click" />
+        <MenuItem Header="Open folder…" Click="OpenFolder_Click" />
+        <MenuItem Header="Add to queue…" Click="AddToQueue_Click" />
         <Separator />
 
-        <MenuItem Header="Jump to Time..." Click="JumpToTime_Click" InputGesture="Ctrl+G" />
-        <MenuItem Header="Load Subtitle..." Click="LoadSubtitle_Click" InputGesture="S" />
-        <MenuItem Header="Video Adjustments..." Click="VideoAdjustments_Click" />
-        <MenuItem Header="Cast..." Click="Cast_Click" />
-        <MenuItem Header="Keyboard Shortcuts" Click="KeyboardShortcuts_Click" />
+        <MenuItem Header="Jump to time…" Click="JumpToTime_Click" InputGesture="Ctrl+G" />
+        <MenuItem Header="Load subtitle…" Click="LoadSubtitle_Click" InputGesture="S" />
+        <MenuItem Header="Video adjustments…" Click="VideoAdjustments_Click" />
+        <MenuItem Header="Cast…" Click="Cast_Click" />
+        <MenuItem Header="Keyboard shortcuts" Click="KeyboardShortcuts_Click" />
         <MenuItem Header="Screenshot" Command="{Binding TakeScreenshotCommand}" InputGesture="Alt+I" />
         <MenuItem Header="Markers…" Click="Bookmarks_Click" InputGesture="B" />
         <Separator />
 
         <!-- Speed sub-menu -->
-        <MenuItem Header="Playback Speed">
+        <MenuItem Header="Playback speed">
           <MenuItem Header="0.25×" Click="Speed_Click" Tag="0.25" />
           <MenuItem Header="0.50×" Click="Speed_Click" Tag="0.5" />
           <MenuItem Header="0.75×" Click="Speed_Click" Tag="0.75" />
@@ -812,14 +821,14 @@
         </MenuItem>
 
         <!-- Audio tracks (populated in code-behind) -->
-        <MenuItem Name="AudioTrackMenuItem" Header="Audio Track" />
+        <MenuItem Name="AudioTrackMenuItem" Header="Audio track" />
 
         <!-- Subtitle tracks (populated in code-behind) -->
-        <MenuItem Name="SubtitleTrackMenuItem" Header="Subtitle Track" />
+        <MenuItem Name="SubtitleTrackMenuItem" Header="Subtitle track" />
         <Separator />
 
-        <!-- Always on top (header updated in code-behind) -->
-        <MenuItem Name="AlwaysOnTopMenuItem" Header="Always on Top" Click="AlwaysOnTop_Click" />
+        <!-- Always on top (check state updated in code-behind) -->
+        <MenuItem Name="AlwaysOnTopMenuItem" Header="Always on top" ToggleType="CheckBox" Click="AlwaysOnTop_Click" />
         <Separator />
         <MenuItem Header="About Lumyn…" Click="About_Click" />
 

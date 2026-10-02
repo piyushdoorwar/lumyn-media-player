@@ -234,7 +234,11 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         StepFrameCommand       = new RelayCommand(_ => _playback.StepFrame());
         StepFrameBackCommand   = new RelayCommand(_ => _playback.StepFrameBack());
         TakeScreenshotCommand  = new RelayCommand(_ => TakeScreenshot());
-        ToggleAlwaysOnTopCommand = new RelayCommand(_ => IsAlwaysOnTop = !IsAlwaysOnTop);
+        ToggleAlwaysOnTopCommand = new RelayCommand(_ =>
+        {
+            IsAlwaysOnTop = !IsAlwaysOnTop;
+            ShowOsd(IsAlwaysOnTop ? "Always on top: On" : "Always on top: Off");
+        });
         SetAudioTrackCommand   = new RelayCommand(p => SetAudioTrack(p));
         SetSubtitleTrackCommand = new RelayCommand(p => SetSubtitleTrack(p));
         CycleAudioTrackCommand = new RelayCommand(_ => CycleAudioTrack());
@@ -701,10 +705,18 @@ public sealed class MainViewModel : INotifyPropertyChanged, IDisposable
         private set => SetField(ref _abLoopEndValue, value);
     }
 
+    public string AlwaysOnTopHint => IsAlwaysOnTop
+        ? "Always on top: On (T) — click to unpin"
+        : "Always on top: Off (T) — keep Lumyn above other windows";
+
     public bool IsAlwaysOnTop
     {
         get => _isAlwaysOnTop;
-        set => SetField(ref _isAlwaysOnTop, value);
+        set
+        {
+            if (SetField(ref _isAlwaysOnTop, value))
+                OnPropertyChanged(nameof(AlwaysOnTopHint));
+        }
     }
 
     public bool IsCasting

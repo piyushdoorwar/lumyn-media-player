@@ -298,6 +298,14 @@
     <Setter Property="Background" Value="#24FFFFFF" />
   </Style>
 
+  <!-- Make the pinned state visible without relying only on opacity. -->
+  <Style Selector="Button.pin.selected /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="Background" Value="{StaticResource Lumyn.AccentSoft}" />
+  </Style>
+  <Style Selector="Button.pin.selected PathIcon">
+    <Setter Property="Foreground" Value="{StaticResource Lumyn.AccentBright}" />
+  </Style>
+
   <!-- Top bar: slightly smaller hit targets -->
   <Style Selector="Button.icon">
     <Setter Property="Width" Value="34" />

@@ -348,7 +348,7 @@ Pattern: **MVVM + Service Layer**, single process, single window.
 
 ### UI & Platform
 - Clean dark theme — see **Design system** below
-- Always-on-top toggle
+- Always-on-top toggle (pin button or `T`): binds to window `Topmost`, with a green active icon/background, state-aware tooltip, and on/off OSD feedback.
 - Drag-to-move via title bar
 - Keyboard shortcuts (full list in Settings → Shortcuts, rows built by `Views/ShortcutRows.cs`)
 - OSD toast: top-left, translucent (`#99` opacity), subtle border, small bare icon — intentionally unobtrusive so it doesn't pull attention from the video. Uses `Grid ColumnDefinitions="Auto,*"` so long messages wrap instead of overflowing the pill.

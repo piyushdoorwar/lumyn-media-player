@@ -71,8 +71,11 @@
                   Click="SettingsButton_Click">
             <PathIcon Width="14" Height="14" Data="{StaticResource Icon.Settings}" />
           </Button>
-          <Button Classes="icon ctrl" Name="AlwaysOnTopButton"
+          <Button Classes="icon ctrl pin" Name="AlwaysOnTopButton"
                   Classes.dim="{Binding !IsAlwaysOnTop}"
+                  Classes.selected="{Binding IsAlwaysOnTop}"
+                  ToolTip.Tip="{Binding AlwaysOnTopHint}"
+                  AutomationProperties.Name="Always on top"
                   IsVisible="{Binding ShowPinButton}"
                   Command="{Binding ToggleAlwaysOnTopCommand}">
             <PathIcon Width="13" Height="13" Data="{StaticResource Icon.AlwaysOnTop}" />

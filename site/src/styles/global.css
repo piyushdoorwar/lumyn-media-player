@@ -413,6 +413,13 @@ img { max-width: 100%; display: block; user-select: none; -webkit-user-drag: non
 .icon-btn:hover { color: var(--ink); border-color: var(--border-strong); }
 .icon-btn .ic { width: 16px; height: 16px; }
 
+/* ── Not found ───────────────────────────────────────────── */
+.notfound { min-height: calc(100vh - var(--topbar-h) - 160px); display: grid; place-items: center; text-align: center; padding: 64px 0; }
+.notfound .code404 { font: 700 clamp(72px, 14vw, 128px)/1 var(--mono); color: var(--accent-bright); letter-spacing: -0.04em; font-variant-ligatures: none; }
+.notfound h1 { margin-top: 12px; font-size: clamp(24px, 4vw, 32px); letter-spacing: -0.02em; }
+.notfound p { margin-top: 10px; color: var(--muted); }
+.notfound .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 24px; }
+
 /* ── Releases ────────────────────────────────────────────── */
 .page-head { padding: clamp(40px, 6vw, 72px) 0 28px; }
 .page-head h1 { margin-top: 12px; font-size: clamp(32px, 4.6vw, 48px); letter-spacing: -0.03em; }

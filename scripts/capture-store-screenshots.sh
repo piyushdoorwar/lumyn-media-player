@@ -235,7 +235,7 @@ video_visible() {
   local yavg
   yavg=$(ffmpeg -v error -f x11grab -draw_mouse 0 -video_size "${W}x${H}" -i "$DISPLAY" \
     -vf "crop=240:240:$((W / 2 - 120)):$((H / 3)),signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-" \
-    -frames:v 1 -f null - 2>/dev/null | grep -o 'YAVG=[0-9]*' | cut -d= -f2)
+    -frames:v 1 -f null - 2>/dev/null | grep -o 'YAVG=[0-9]*' | head -1 | cut -d= -f2)
   [[ "${yavg:-0}" -gt 22 ]]
 }
 

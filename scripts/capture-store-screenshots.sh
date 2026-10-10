@@ -312,6 +312,7 @@ move 1240 "$SEEK_Y" 1.2
 shoot 03-seek-preview
 
 log "Scene: markers"
+move 960 300 0.6               # off the seek bar so its preview closes
 key space
 key b
 sleep 1

@@ -6,7 +6,7 @@ import Footer from "../components/Footer.jsx";
 import Icon from "../components/Icon.jsx";
 
 // GitHub Pages serves this page at any missing path, so every link uses BASE
-// (root-absolute, "/lumyn-media-player/" in production).
+// (root-absolute, "/" on the lumyn.piyushdoorwar.com subdomain).
 export default function NotFoundPage() {
   return (
     <>

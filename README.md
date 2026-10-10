@@ -2,7 +2,7 @@
 
 Lumyn is a clean desktop media player for local audio and video files. It keeps the interface quiet, gives you fast playback controls, and includes practical subtitle support.
 
-Website: https://piyushdoorwar.github.io/lumyn-media-player/
+Website: https://lumyn.piyushdoorwar.com/
 
 ## Features
 

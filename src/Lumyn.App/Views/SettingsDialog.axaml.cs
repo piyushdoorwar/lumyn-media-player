@@ -244,7 +244,7 @@ public partial class SettingsDialog : Window
     private void TransmuxNavButton_Click(object? sender, RoutedEventArgs e) => ShowSection(SettingsSection.Transmux);
 
     private void OpenTransmuxWebsite_Click(object? sender, RoutedEventArgs e)
-        => OpenUrl("https://piyushdoorwar.github.io/transmux/");
+        => OpenUrl("https://piyushdoorwar.com/transmux/");
 
     private void BrightnessSlider_Changed(object? sender, RangeBaseValueChangedEventArgs e)
     {

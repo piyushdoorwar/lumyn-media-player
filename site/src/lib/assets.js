@@ -1,5 +1,5 @@
 // All static files live in public/ and are served under Vite's base path.
-export const BASE = import.meta.env.BASE_URL; // "/lumyn-media-player/" in prod, "/" in dev
+export const BASE = import.meta.env.BASE_URL; // "/" (site is served from the root of its own subdomain)
 
 export const asset = (file) => `${BASE}assets/${file}`;
 

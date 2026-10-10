@@ -201,7 +201,7 @@ public partial class AboutDialog : Window
         => OpenUrl("https://github.com/piyushdoorwar/lumyn-media-player");
 
     private void Releases_Click(object? sender, RoutedEventArgs e)
-        => OpenUrl("https://piyushdoorwar.github.io/lumyn-media-player/releases/");
+        => OpenUrl("https://lumyn.piyushdoorwar.com/releases/");
 
     private static void OpenUrl(string url)
     {

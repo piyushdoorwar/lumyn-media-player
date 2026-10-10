@@ -73,6 +73,11 @@ public sealed class PlaybackService : IDisposable
             SetOption("hwdec", "auto-safe");
             SetOption("osd-level", "0");
 
+            // scripts/capture-store-screenshots.sh: play silently but in real time
+            // (ALSA's null device has no clock, so playback would race ahead).
+            if (Environment.GetEnvironmentVariable("LUMYN_CAPTURE_MODE") == "1")
+                SetOption("ao", "null");
+
             var init = MpvNative.mpv_initialize(_mpv);
             if (init < 0)
             {

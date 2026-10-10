@@ -31,6 +31,19 @@ internal static class Program
             .LogToTrace()
             // Disable IBus IME — Ubuntu 26.04 IBus dropped several methods that
             // Avalonia still calls, causing cascading DBus errors in every dialog.
-            .With(new X11PlatformOptions { EnableIme = false });
+            .With(CreateX11Options());
+    }
+
+    private static X11PlatformOptions CreateX11Options()
+    {
+        var options = new X11PlatformOptions { EnableIme = false };
+
+        // scripts/capture-store-screenshots.sh runs under Xvfb, where the only
+        // OpenGL is Mesa's llvmpipe. Avalonia rejects it by default, which
+        // would leave the mpv video surface black.
+        if (Environment.GetEnvironmentVariable("LUMYN_CAPTURE_MODE") == "1")
+            options.GlxRendererBlacklist = [];
+
+        return options;
     }
 }

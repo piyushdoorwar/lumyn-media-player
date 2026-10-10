@@ -2,9 +2,11 @@
 # Capture Microsoft Store and Snap Store screenshots of the current Lumyn UI.
 #
 # Runs a Release build of the app on a private 1920x1080 Xvfb display with an
-# isolated config directory, generated (copyright-free) sample media and a
-# silent ALSA device, drives it with xdotool, and writes PNGs to
-# docs/store-screenshots/. Nothing touches your real settings, desktop or speakers.
+# isolated config directory and generated (copyright-free) sample media, drives
+# it with xdotool, and writes PNGs to
+# docs/store-screenshots/. LUMYN_CAPTURE_MODE=1 makes the app accept Xvfb's
+# software OpenGL and play through mpv's silent (but real-time) null audio
+# output, so nothing touches your real settings, desktop or speakers.
 #
 # Requirements: dotnet, ffmpeg, python3, Xvfb, xdotool  (sudo apt install xvfb xdotool)
 #
@@ -22,6 +24,7 @@ APP="$ROOT/src/Lumyn.App/bin/Release/net10.0/Lumyn"
 FONT="$ROOT/src/Lumyn.App/Assets/Fonts/DMSans-600.ttf"
 W=1920
 H=1080
+SCALE=1.5   # render the UI at 150% so it stays legible when the stores shrink it
 KEEP_WORK=0
 [[ "${1:-}" == "--keep-work" ]] && KEEP_WORK=1
 
@@ -151,16 +154,15 @@ XVFB_PID=$!
 sleep 1
 export DISPLAY=":$DISPLAY_NUM"
 
-# Silent audio: no PipeWire/Pulse, ALSA default is the null device. Playback
-# (and the equalizer's level metering) still runs, but nothing is heard.
-printf 'pcm.!default { type null }\nctl.!default { type hw card 0 }\n' > "$WORK/asound.conf"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 seed_settings() { # config-dir, then JSON overrides as python dict literal
   mkdir -p "$1/Lumyn"
-  python3 - "$1/Lumyn/settings.json" "$VIDEOS" "$MUSIC" "$W" "$H" <<'EOF'
+  python3 - "$1/Lumyn/settings.json" "$VIDEOS" "$MUSIC" "$W" "$H" "$SCALE" <<'EOF'
 import hashlib, json, os, sys
-out, videos, music, w, h = sys.argv[1], sys.argv[2], sys.argv[3], int(sys.argv[4]), int(sys.argv[5])
+out, videos, music = sys.argv[1], sys.argv[2], sys.argv[3]
+scale = float(sys.argv[6])
+w, h = int(sys.argv[4]) / scale, int(sys.argv[5]) / scale   # logical (DIP) size
 key = lambda p: hashlib.sha256(os.path.abspath(p).encode()).hexdigest()
 v = lambda n: os.path.join(videos, n)
 m = lambda n: os.path.join(music, n)
@@ -199,7 +201,7 @@ start_app() { # scene-name [file]
   seed_settings "$cfg"
   env -u WAYLAND_DISPLAY \
     XDG_CONFIG_HOME="$cfg" \
-    PULSE_SERVER=unix:/nonexistent PIPEWIRE_REMOTE=lumyn-none ALSA_CONFIG_PATH="$WORK/asound.conf" \
+    LUMYN_CAPTURE_MODE=1 AVALONIA_GLOBAL_SCALE_FACTOR="$SCALE" \
     DBUS_SESSION_BUS_ADDRESS=unix:path=/nonexistent \
     "$APP" "${@:2}" >"$WORK/$1.log" 2>&1 &
   APP_PID=$!

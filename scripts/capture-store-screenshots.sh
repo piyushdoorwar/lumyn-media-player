@@ -228,6 +228,30 @@ stop_app() {
   APP_PID=""
 }
 
+# Under Xvfb, Avalonia's software OpenGL setup intermittently comes up without
+# a working video surface (the frame stays black). Detect that from the middle
+# of the screen and relaunch until the video is actually visible.
+video_visible() {
+  local yavg
+  yavg=$(ffmpeg -v error -f x11grab -draw_mouse 0 -video_size "${W}x${H}" -i "$DISPLAY" \
+    -vf "crop=240:240:$((W / 2 - 120)):$((H / 3)),signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-" \
+    -frames:v 1 -f null - 2>/dev/null | grep -o 'YAVG=[0-9]*' | cut -d= -f2)
+  [[ "${yavg:-0}" -gt 22 ]]
+}
+
+start_video_app() { # scene-name file
+  local attempt
+  for attempt in $(seq 1 10); do
+    start_app "$@"
+    sleep 2
+    if video_visible; then return 0; fi
+    echo "    video surface black, relaunching (attempt $attempt)"
+    stop_app
+  done
+  echo "Video never rendered after 10 attempts" >&2
+  exit 1
+}
+
 key()   { xdotool key --clearmodifiers "$@"; sleep 0.4; }
 move()  { xdotool mousemove "$1" "$2"; sleep "${3:-0.4}"; }
 click() { xdotool mousemove "$1" "$2" click 1; sleep "${3:-0.8}"; }
@@ -257,8 +281,8 @@ shoot 01-home
 stop_app
 
 log "Scene: video playback with subtitles"
-start_app video "$NL"
-sleep 4
+start_video_app video "$NL"
+sleep 2
 # Subtitles only draw while playing, and the controls hide 3 s after the last
 # pointer move, so wake them and capture straight away.
 move 960 520 0.2
@@ -286,8 +310,8 @@ shoot 05-audio-queue
 stop_app
 
 log "Scene: settings"
-start_app settings "$NL"
-sleep 3
+start_video_app settings "$NL"
+sleep 1
 key space
 click $SETTINGS_BTN 1.5
 shoot 06-settings

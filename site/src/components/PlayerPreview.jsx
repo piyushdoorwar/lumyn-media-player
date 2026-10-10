@@ -175,7 +175,7 @@ export default function PlayerPreview() {
         </div>
 
         <div className="control-row">
-          <span>{fmt(pos)}</span>
+          <span className="time">{fmt(pos)}</span>
           <div className="control-icons">
             <button
               type="button"
@@ -201,6 +201,8 @@ export default function PlayerPreview() {
             >
               <Icon name="forward" />
             </button>
+          </div>
+          <div className="control-end">
             <button
               type="button"
               className={`ctrl-btn${loop ? " active" : ""}`}
@@ -210,8 +212,8 @@ export default function PlayerPreview() {
             >
               <Icon name="loop" />
             </button>
+            <span className="time">{fmt(DURATION)}</span>
           </div>
-          <span>{fmt(DURATION)}</span>
         </div>
       </div>
     </div>

@@ -654,14 +654,14 @@ All jobs install .NET 10.0 SDK and cache NuGet packages via `actions/cache@v4` (
 
 ### Design system (site)
 
-Same visual language as the app: flat, crisp, dark.
+Same visual language as the app: flat, crisp. Charcoal by default; a light token set follows the OS (`@media (prefers-color-scheme: light)`, no toggle), like the sibling product sites. Every HTML entry has a `theme-color` meta per scheme.
 
-- **Tokens** on `:root` in `global.css`: `--bg #111111` → `--surface #161616` (cards, panels) → `--surface-2 #131313` (tinted sections, footer) → `--surface-3 #1c1c1c` (hover, selected tab); `--border` / `--border-strong` are translucent white hairlines; accent `--accent #3a9b4b`, `--accent-bright #49b35c` (links, icons, primary button), `--accent-hover`, tints `--accent-soft` / `--accent-softer` / `--accent-line`; `--accent-ink` is the near-black text on green buttons (white on `#49b35c` fails contrast). Radii `--radius-sm` 6 / `--radius` 8 / `--radius-lg` 10. Shadows are small; `--shadow-lg` only on the player mock, popovers and the modal.
+- **Tokens** on `:root` in `global.css`: `--bg #111111` → `--surface #161616` (cards, panels) → `--surface-2 #131313` (tinted sections, footer) → `--surface-3 #1c1c1c` (hover, selected tab); `--border` / `--border-strong` are translucent white hairlines; accent `--accent #3a9b4b`, `--accent-bright #49b35c` (links, icons, primary button), `--accent-hover`, tints `--accent-soft` / `--accent-softer` / `--accent-line`; `--accent-ink` is the near-black text on green buttons (white on `#49b35c` fails contrast). Light mode swaps surfaces to near-white, darkens the accent (`--accent-bright #287737`, `--accent-ink #fff`) for contrast, and uses `--topbar-bg` for the translucent top bar. The hero `.player` mock re-declares the charcoal tokens locally so it always looks like the (always-dark) app. Radii `--radius-sm` 6 / `--radius` 8 / `--radius-lg` 10. Shadows are small; `--shadow-lg` only on the player mock, popovers and the modal.
 - **Primitives**: `.btn` + `.btn-primary` / `.btn-secondary` / `.btn-sm`, `.eyebrow`, `.pill`, `.badge` (+`.warn`), `.card`, `.section` (+`.tint`), `.section-head`, `.tabs` / `.tab` (segmented control, roving tabindex + arrow keys), `.panel`, `.cmd` (code block with `CopyButton`), `.switch`, `.prose-card`, `.callout` (+`.warn` / `.restrict`).
 - **Support dialog** traps Tab/Shift+Tab, makes background siblings inert while open, closes on Escape, and restores focus and scrolling when closed.
 - **Icons**: `components/Icon.jsx` — one inline set, 24×24, 2px round strokes on `currentColor`; brand marks (Windows, Ubuntu, Snapcraft) and play/pause are filled. No `<img>` icons and no emoji. Add new glyphs to that map rather than new SVG files.
 - **Type**: DM Sans bundled via `@font-face` (no font CDN); `--mono` is a system monospace stack.
-- **Layout**: content sits in `.wrap` (max 1240px, fluid gutter). The top bar collapses to a menu toggle ≤820px (Escape closes it); hero, showcase and download grids go single-column ≤960px.
+- **Layout**: content sits in `.wrap` (max 1260px — matches the other product sites — fluid gutter). The top bar collapses to a menu toggle ≤820px (Escape closes it); hero, showcase and download grids go single-column ≤960px.
 
 ### Motion (Framer Motion)
 
@@ -669,7 +669,7 @@ Same visual language as the app: flat, crisp, dark.
 
 - **Hero cascade** — `heroContainer` / `heroItem` with `staggerChildren`.
 - **Reveal** — sections and lists use `fadeUp` / `listContainer` + `listItem` with the shared `inView` props (`whileInView`, once).
-- **Interactive hero player** (`PlayerPreview.jsx`) — a small working stand-in: play/pause (icon swaps via `AnimatePresence`), time advancing while playing (stops at the end unless loop is on), an `Equalizer` of 5 `motion.span` bars, a clickable/keyboard-operable seek bar (`role="slider"`, ←/→ = 10s) with a hover thumbnail bubble, and rewind / play / forward / loop buttons.
+- **Interactive hero player** (`PlayerPreview.jsx`) — a small working stand-in: play/pause (icon swaps via `AnimatePresence`), time advancing while playing (stops at the end unless loop is on), an `Equalizer` of 5 `motion.span` bars, a transport row laid out as a `1fr auto 1fr` grid with explicit columns so the play button stays on the bar's centre line (loop sits beside the end time), a clickable/keyboard-operable seek bar (`role="slider"`, ←/→ = 10s) with a hover thumbnail bubble, and rewind / play / forward / loop buttons.
 - **Feature showcase** (`Showcase.jsx`) — three rows, each a large card with a `preview-*.svg` mockup beside a stack of two smaller cards (text left, mockup right); rows alternate sides (`flip`) and collapse to one column ≤960px. Below it, a `.features` grid lists the smaller features with icons.
 - **Releases list** — `AnimatePresence` keyed on `os-stable-page`, staggered `listItem`s.
 

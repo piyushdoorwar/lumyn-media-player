@@ -228,15 +228,29 @@ stop_app() {
   APP_PID=""
 }
 
-# Under Xvfb, Avalonia's software OpenGL setup intermittently comes up without
-# a working video surface (the frame stays black). Detect that from the middle
-# of the screen and relaunch until the video is actually visible.
-video_visible() {
-  local yavg
-  yavg=$(ffmpeg -v error -f x11grab -draw_mouse 0 -video_size "${W}x${H}" -i "$DISPLAY" \
-    -vf "crop=240:240:$((W / 2 - 120)):$((H / 3)),signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-" \
-    -frames:v 1 -f null - 2>/dev/null | grep -o 'YAVG=[0-9]*' | head -1 | cut -d= -f2)
-  [[ "${yavg:-0}" -gt 22 ]]
+# Under Xvfb, Avalonia's software OpenGL path is unreliable: on some launches
+# the video surface stays black, on others it is covered in a grid of artefacts
+# (mpv on its own renders cleanly there). Video frames are checked on two tall
+# strips of plain video at the sides, clear of dialogs, the seek preview and
+# subtitles: at least one must be brighter than black, and both must be nearly
+# edge-free, since the sample footage is a smooth gradient.
+CHECK_STRIPS=("480:700:100:120" "480:700:1380:120")
+
+frame_ok() { # [png]  (default: grab the screen)
+  local png="${1:-$WORK/check.png}" strip luma edges bright=0
+  [[ -n "${1:-}" ]] || ffmpeg -v error -y -f x11grab -draw_mouse 0 -video_size "${W}x${H}" -i "$DISPLAY" -frames:v 1 -update 1 "$png"
+  for strip in "${CHECK_STRIPS[@]}"; do
+    luma=$(strip_mean "$png" "$strip" "")
+    edges=$(strip_mean "$png" "$strip" "edgedetect=low=0.03:high=0.1,")
+    [[ "$edges" -ge 1 ]] && return 1
+    [[ "$luma" -gt 20 ]] && bright=1
+  done
+  [[ $bright -eq 1 ]]
+}
+
+strip_mean() { # png crop extra-filters -> integer mean luma
+  ffmpeg -v error -i "$1" -vf "crop=$2,${3}signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-" \
+    -frames:v 1 -f null - 2>/dev/null | grep -o 'YAVG=[0-9]*' | head -1 | cut -d= -f2
 }
 
 start_video_app() { # scene-name file
@@ -244,11 +258,11 @@ start_video_app() { # scene-name file
   for attempt in $(seq 1 10); do
     start_app "$@"
     sleep 2
-    if video_visible; then return 0; fi
-    echo "    video surface black, relaunching (attempt $attempt)"
+    if frame_ok; then return 0; fi
+    echo "    video surface black or garbled, relaunching (attempt $attempt)"
     stop_app
   done
-  echo "Video never rendered after 10 attempts" >&2
+  echo "Video never rendered cleanly after 10 attempts" >&2
   exit 1
 }
 
@@ -280,6 +294,7 @@ move 1700 700
 shoot 01-home
 stop_app
 
+video_scenes() {
 log "Scene: video playback with subtitles"
 start_video_app video "$NL"
 sleep 2
@@ -303,6 +318,18 @@ sleep 1
 shoot 04-markers
 key Escape
 stop_app
+}
+
+for attempt in $(seq 1 6); do
+  video_scenes
+  bad=""
+  for shot in 02-video-subtitles 03-seek-preview 04-markers; do
+    frame_ok "$RAW/$shot.png" || bad="$bad $shot"
+  done
+  [[ -z "$bad" ]] && break
+  echo "    garbled video in:$bad, redoing the video scenes"
+  [[ $attempt -eq 6 ]] && { echo "Video scenes never came out clean" >&2; exit 1; }
+done
 
 log "Scene: audio queue"
 start_app audio "$TRACK"

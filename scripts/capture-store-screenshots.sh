@@ -219,7 +219,17 @@ start_app() { # scene-name [file]
     sleep 0.25
   done
   sleep 2
-  xdotool search --onlyvisible --pid "$APP_PID" | head -1 | xargs -r xdotool windowfocus --sync 2>/dev/null || true
+  local win
+  win=$(xdotool search --onlyvisible --pid "$APP_PID" | head -1)
+  [[ -n "$win" ]] || return 0
+  # With no window manager, Avalonia pads the X window with a frame margin on
+  # every side (14 px at 150%). Shift it so the app content fills the frame.
+  local width height
+  eval "$(xdotool getwindowgeometry --shell "$win" | grep -E '^(WIDTH|HEIGHT)=')"
+  width=$WIDTH height=$HEIGHT
+  xdotool windowmove "$win" $(( -(width - W) / 2 )) $(( -(height - H) / 2 ))
+  xdotool windowfocus --sync "$win" 2>/dev/null || true
+  sleep 0.5
 }
 
 stop_app() {

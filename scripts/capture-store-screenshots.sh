@@ -291,6 +291,8 @@ shoot 02-video-subtitles
 
 log "Scene: seek-bar preview"
 sleep 4                        # let the thumbnail extractor fill in frames
+move 1100 700 0.3              # wake the controls first
+move 1200 "$SEEK_Y" 0.3
 move 1240 "$SEEK_Y" 1.2
 shoot 03-seek-preview
 
@@ -309,10 +311,11 @@ move 1900 1060
 shoot 05-audio-queue
 stop_app
 
+# Over the home screen: a paused video behind a dialog comes out garbled with
+# Xvfb's software OpenGL.
 log "Scene: settings"
-start_video_app settings "$NL"
-sleep 1
-key space
+start_app settings
+sleep 2
 click $SETTINGS_BTN 1.5
 shoot 06-settings
 click $SHORTCUTS_NAV 1

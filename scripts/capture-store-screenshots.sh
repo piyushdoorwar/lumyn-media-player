@@ -246,6 +246,7 @@ TRACK="$MUSIC/02 Open Road.mp3"
 # Screen positions at 1920x1080 / 150% (re-measure here if the chrome moves).
 SEEK_Y=966              # seek bar centre line
 SETTINGS_BTN="1637 31"  # gear in the top bar
+SHORTCUTS_NAV="503 479" # "Shortcuts" in the settings dialog's sidebar
 
 # ── Scenes ────────────────────────────────────────────────────────────────────
 log "Scene: home (recently played)"
@@ -290,9 +291,7 @@ sleep 3
 key space
 click $SETTINGS_BTN 1.5
 shoot 06-settings
-key Escape
-key F1
-sleep 1
+click $SHORTCUTS_NAV 1
 shoot 07-shortcuts
 stop_app
 

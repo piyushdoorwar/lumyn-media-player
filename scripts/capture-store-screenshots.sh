@@ -19,7 +19,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${OUT_DIR:-$ROOT/docs/store-screenshots}"
 MEDIA_DIR="$ROOT/artifacts/screenshot-media"   # cached between runs (gitignored)
-MEDIA_STAMP="v1"                              # bump to regenerate the sample media
+MEDIA_STAMP="v2"                              # bump after adding sample media
 APP="$ROOT/src/Lumyn.App/bin/Release/net10.0/Lumyn"
 FONT="$ROOT/src/Lumyn.App/Assets/Fonts/DMSans-600.ttf"
 W=1920
@@ -58,6 +58,7 @@ MUSIC="$MEDIA_DIR/Music/Lumyn Sessions"
 
 make_video() { # name seconds palette seed [chapters-file]
   local out="$VIDEOS/$1" secs="$2" palette="$3" seed="$4" chapters="${5:-}"
+  [[ -f "$out" ]] && return
   local meta=() map=()
   if [[ -n "$chapters" ]]; then meta=(-i "$chapters"); map=(-map_metadata 1 -map_chapters 1); fi
   ffmpeg -v error -y \
@@ -72,6 +73,7 @@ make_video() { # name seconds palette seed [chapters-file]
 make_track() { # file title root-hz seconds palette seed
   local file="$1" title="$2" f="$3" secs="$4" palette="$5" seed="$6"
   local base="$MUSIC/${file%.*}"
+  [[ -f "$base.mp3" ]] && return
   # A soft major-seventh pad with a pulse, so the equalizer has something to react to.
   local expr="0.22*sin(2*PI*${f}*t)*(0.55+0.45*abs(sin(PI*1.9*t)))+0.16*sin(2*PI*${f}*1.26*t)+0.13*sin(2*PI*${f}*1.5*t)*(0.6+0.4*sin(2*PI*0.27*t))+0.09*sin(2*PI*${f}*1.89*t)+0.2*sin(2*PI*${f}/4*t)*pow(abs(sin(PI*1.9*t)),6)"
   ffmpeg -v error -y -f lavfi -i "aevalsrc='${expr}':s=44100:d=${secs}" \
@@ -85,7 +87,6 @@ make_track() { # file title root-hz seconds palette seed
 
 if [[ "$(cat "$MEDIA_DIR/.stamp" 2>/dev/null)" != "$MEDIA_STAMP" ]]; then
   log "Generating sample media (first run only)"
-  rm -rf "$MEDIA_DIR"
   mkdir -p "$VIDEOS" "$MUSIC"
 
   cat > "$WORK/chapters.txt" <<'EOF'
@@ -120,6 +121,9 @@ EOF
   make_video "Golden Hour.mp4"     90  "c0=0x2a0f3d:c1=0xd9773b:c2=0x0d2440:c3=0xf2c14e:n=4" 3
   make_video "Deep Blue.mkv"       90  "c0=0x03142b:c1=0x1d5c8c:c2=0x0a0f1f:c3=0x58b7d6:n=4" 11
   make_video "Ember.mp4"           90  "c0=0x1a0606:c1=0xa8321f:c2=0x2b0a1c:c3=0xf08a4b:n=4" 5
+  make_video "Glacier.mkv"         90  "c0=0x0a1a24:c1=0x9fd8e8:c2=0x16324a:c3=0xe6f4f7:n=4" 13
+  make_video "Midnight Run.mp4"    90  "c0=0x0d0b1f:c1=0x5b3fa8:c2=0x120a2e:c3=0xc06bd9:n=4" 17
+  make_video "Fern Valley.mp4"     90  "c0=0x0c1f0a:c1=0x6b9b2e:c2=0x1d2b0e:c3=0xd6e58a:n=4" 19
 
   # Back-to-back cues so a subtitle is on screen whenever the video is paused.
   python3 - "$VIDEOS/Northern Lights.srt" <<'EOF'
@@ -174,6 +178,10 @@ recent = [
     (v("Deep Blue.mkv"), 22, 90),
     (m("01 Morning Light.mp3"), None, None),
     (v("Ember.mp4"), 76, 90),
+    (v("Glacier.mkv"), 40, 90),
+    (m("04 Afterglow.mp3"), None, None),
+    (v("Midnight Run.mp4"), 12, 90),
+    (v("Fern Valley.mp4"), 55, 90),
 ]
 nl = v("Northern Lights.mp4")
 settings = {

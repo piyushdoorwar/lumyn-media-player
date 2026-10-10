@@ -42,10 +42,7 @@ internal static class Program
         // OpenGL is Mesa's llvmpipe. Avalonia rejects it by default, which
         // would leave the mpv video surface black.
         if (Environment.GetEnvironmentVariable("LUMYN_CAPTURE_MODE") == "1")
-        {
             options.GlxRendererBlacklist = [];
-            options.RenderingMode = [X11RenderingMode.Egl, X11RenderingMode.Glx, X11RenderingMode.Software];
-        }
 
         return options;
     }

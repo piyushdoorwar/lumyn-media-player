@@ -156,7 +156,7 @@ export DISPLAY=":$DISPLAY_NUM"
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
-seed_settings() { # config-dir, then JSON overrides as python dict literal
+seed_settings() { # config-dir
   mkdir -p "$1/Lumyn"
   python3 - "$1/Lumyn/settings.json" "$VIDEOS" "$MUSIC" "$W" "$H" "$SCALE" <<'EOF'
 import hashlib, json, os, sys
@@ -225,7 +225,7 @@ move()  { xdotool mousemove "$1" "$2"; sleep "${3:-0.4}"; }
 click() { xdotool mousemove "$1" "$2" click 1; sleep "${3:-0.8}"; }
 
 shoot() { # file-name
-  ffmpeg -v error -y -f x11grab -video_size "${W}x${H}" -i "$DISPLAY" -frames:v 1 -update 1 "$RAW/$1.png"
+  ffmpeg -v error -y -f x11grab -draw_mouse 0 -video_size "${W}x${H}" -i "$DISPLAY" -frames:v 1 -update 1 "$RAW/$1.png"
   echo "    captured $1.png"
 }
 
@@ -235,9 +235,9 @@ mkdir -p "$RAW"
 NL="$VIDEOS/Northern Lights.mp4"
 TRACK="$MUSIC/02 Open Road.mp3"
 
-# Layout probes, measured at 1920x1080 (re-measure here if the chrome moves).
-SEEK_Y=968            # seek bar centre line
-SETTINGS_BTN="1786 19" # gear in the top bar
+# Screen positions at 1920x1080 / 150% (re-measure here if the chrome moves).
+SEEK_Y=966              # seek bar centre line
+SETTINGS_BTN="1637 31"  # gear in the top bar
 
 # ── Scenes ────────────────────────────────────────────────────────────────────
 log "Scene: home (recently played)"
@@ -250,8 +250,10 @@ stop_app
 log "Scene: video playback with subtitles"
 start_app video "$NL"
 sleep 4
-key space                      # pause, which keeps the controls up
-move 960 520
+# Subtitles only draw while playing, and the controls hide 3 s after the last
+# pointer move, so wake them and capture straight away.
+move 960 520 0.2
+move 980 540 0.6
 shoot 02-video-subtitles
 
 log "Scene: seek-bar preview"
@@ -260,7 +262,7 @@ move 1240 "$SEEK_Y" 1.2
 shoot 03-seek-preview
 
 log "Scene: markers"
-move 960 520
+key space
 key b
 sleep 1
 shoot 04-markers

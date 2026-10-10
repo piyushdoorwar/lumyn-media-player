@@ -70,7 +70,10 @@ lumyn-media-player/
 ├── docs/
 │   └── release/
 │       ├── ppa.md                   # Ubuntu PPA setup and required GitHub secrets
-│       └── snap-store.md            # Snap Store publish setup and required GitHub secret
+│       ├── snap-store.md            # Snap Store publish setup and required GitHub secret
+│       └── store-screenshots.md     # How to regenerate and upload store listing screenshots
+│
+├── docs/store-screenshots/          # Generated store screenshots (microsoft-store/, snap-store/)
 │
 ├── src/
 │   ├── Lumyn.App/                   # UI / Presentation layer
@@ -125,7 +128,8 @@ lumyn-media-player/
 ├── scripts/
 │   ├── build-linux.sh               # Linux .deb packaging (266 lines)
 │   ├── build-windows.ps1            # Windows installer via Inno Setup (363 lines, PowerShell)
-│   └── build-snap.sh                # Snap / Ubuntu App Center packaging wrapper
+│   ├── build-snap.sh                # Snap / Ubuntu App Center packaging wrapper
+│   └── capture-store-screenshots.sh # Xvfb + xdotool capture of store screenshots
 │
 ├── packaging/
 │   ├── windows/                     # Inno Setup .iss config
@@ -729,4 +733,5 @@ dotnet test Lumyn.sln
 - **Seek-thumbnail bitmap cache**: `MainWindow._thumbBitmapCache` (decoded hover-preview bitmaps, 0–1999 progress-bucket keys) is an LRU bounded to `MaxThumbBitmaps` (64); evicted and file-change/closed bitmaps are disposed. Keep eviction + disposal when touching it so heavy scrubbing can't grow memory unbounded.
 - **Bundled libmpv is old**: the `.deb` ships libmpv 0.37 (plus its FFmpeg/PipeWire/dbus) in `/opt/lumyn/lib`, while dev machines usually run a newer distro libmpv, so a bug can be invisible in `dotnet run`. Known trap: keyed sub-properties of `af-metadata` (`af-metadata/<label>/<key>`) segfault libmpv 0.37. Read the whole map (`af-metadata/viz`, a flat JSON object) and parse it, as `PlaybackService.GetAudioLevel` / `TryReadRmsLevel` do. To reproduce packaged behaviour from source: `LD_LIBRARY_PATH=/opt/lumyn/lib` (plus `LD_PRELOAD` of the system `libcrypto.so.3`/`libssl.so.3`, since system .NET needs a newer OpenSSL than the bundle).
 - **Child processes and LD_LIBRARY_PATH**: the `.deb` launcher prepends `/opt/lumyn/lib`. `Program.Main` calls `LibraryPathScrubber.RemoveBundledLibDirectory()` so ffmpeg, dbus-send and xdg-open don't inherit it (they fail against the bundled libs). This is safe because .NET's `Environment.SetEnvironmentVariable` only changes the managed copy used for child processes, and glibc already read the variable at startup. Spawn processes through `System.Diagnostics.Process` so they get the cleaned environment.
+- **Store screenshots after UI changes**: after any visible UI change, run `./scripts/capture-store-screenshots.sh` (needs `xvfb`, `xdotool`) and commit the refreshed `docs/store-screenshots/`; see `docs/release/store-screenshots.md`. The script sets `LUMYN_CAPTURE_MODE=1`, which `Program.CreateX11Options` uses to allow llvmpipe GLX and `PlaybackService` uses to set mpv `ao=null`. Keep that flag scoped to capture behaviour only. If chrome positions change, update the coordinate constants in the script.
 - **Tests**: `src/Lumyn.Test` uses xUnit. Prefer tests for deterministic core logic such as subtitle parsing, settings persistence, resume/bookmarks, and format decisions. Avoid unit tests that require mpv, OpenGL, real Chromecast devices, or Avalonia windows unless those dependencies are isolated.
